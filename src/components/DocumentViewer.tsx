@@ -9,6 +9,7 @@ export function DocumentViewer() {
   const { html, isConverting, error, convert, clear } = useConversion(WASM_BASE_PATH);
   const [fileName, setFileName] = useState<string>('');
   const [commentMode, setCommentMode] = useState<CommentMode>('disabled');
+  const [renderTrackedChanges, setRenderTrackedChanges] = useState(true);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const getCommentRenderMode = (mode: CommentMode): CommentRenderMode => {
@@ -20,19 +21,31 @@ export function DocumentViewer() {
     }
   };
 
+  const getConvertOptions = (comment: CommentMode, tracked: boolean) => ({
+    commentRenderMode: getCommentRenderMode(comment),
+    renderTrackedChanges: tracked,
+  });
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFileName(file.name);
       setPendingFile(file);
-      await convert(file, { commentRenderMode: getCommentRenderMode(commentMode) });
+      await convert(file, getConvertOptions(commentMode, renderTrackedChanges));
     }
   };
 
   const handleCommentModeChange = async (mode: CommentMode) => {
     setCommentMode(mode);
     if (pendingFile) {
-      await convert(pendingFile, { commentRenderMode: getCommentRenderMode(mode) });
+      await convert(pendingFile, getConvertOptions(mode, renderTrackedChanges));
+    }
+  };
+
+  const handleTrackedChangesToggle = async (enabled: boolean) => {
+    setRenderTrackedChanges(enabled);
+    if (pendingFile) {
+      await convert(pendingFile, getConvertOptions(commentMode, enabled));
     }
   };
 
@@ -110,6 +123,18 @@ export function DocumentViewer() {
               <span>Margin</span>
             </label>
           </div>
+        </div>
+
+        <div className="option-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={renderTrackedChanges}
+              onChange={(e) => handleTrackedChangesToggle(e.target.checked)}
+              disabled={isConverting}
+            />
+            <span>Render tracked changes</span>
+          </label>
         </div>
       </div>
 
