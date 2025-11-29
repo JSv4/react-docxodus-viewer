@@ -565,6 +565,58 @@ input[type="file"] {
   gap: 0.5rem;
 }
 
+/* Filter section */
+.filter-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.filter-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  margin: 0;
+}
+
+.filter-text {
+  font-weight: 500;
+}
+
+.filter-text.insertion {
+  color: #27ae60;
+}
+
+.filter-text.deletion {
+  color: #e74c3c;
+}
+
+.filter-text.move {
+  color: #9b59b6;
+}
+
+.filter-count {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: #888;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .compare-inputs {

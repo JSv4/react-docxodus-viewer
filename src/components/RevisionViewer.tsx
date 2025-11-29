@@ -30,6 +30,11 @@ export function RevisionViewer() {
   // Store file reference for re-extraction
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
+  // Display filters
+  const [showInsertions, setShowInsertions] = useState(true);
+  const [showDeletions, setShowDeletions] = useState(true);
+  const [showMoves, setShowMoves] = useState(true);
+
   // Initialize WASM on mount
   useEffect(() => {
     const init = async () => {
@@ -110,6 +115,17 @@ export function RevisionViewer() {
       moves: revisions.filter(isMove).length,
     };
   }, [revisions]);
+
+  // Filter revisions based on display settings
+  const filteredRevisions = useMemo(() => {
+    if (!revisions) return null;
+    return revisions.filter((r) => {
+      if (isMove(r)) return showMoves;
+      if (isInsertion(r)) return showInsertions;
+      if (isDeletion(r)) return showDeletions;
+      return true;
+    });
+  }, [revisions, showInsertions, showDeletions, showMoves]);
 
   const getRevisionTypeClass = (rev: Revision): string => {
     if (isMove(rev)) return 'move';
@@ -305,8 +321,43 @@ export function RevisionViewer() {
             </div>
           </div>
 
+          <div className="filter-section">
+            <span className="filter-label">Show:</span>
+            <label className="filter-checkbox">
+              <input
+                type="checkbox"
+                checked={showInsertions}
+                onChange={(e) => setShowInsertions(e.target.checked)}
+              />
+              <span className="filter-text insertion">Insertions</span>
+            </label>
+            <label className="filter-checkbox">
+              <input
+                type="checkbox"
+                checked={showDeletions}
+                onChange={(e) => setShowDeletions(e.target.checked)}
+              />
+              <span className="filter-text deletion">Deletions</span>
+            </label>
+            {stats.moves > 0 && (
+              <label className="filter-checkbox">
+                <input
+                  type="checkbox"
+                  checked={showMoves}
+                  onChange={(e) => setShowMoves(e.target.checked)}
+                />
+                <span className="filter-text move">Moves</span>
+              </label>
+            )}
+            {filteredRevisions && (
+              <span className="filter-count">
+                Showing {filteredRevisions.length} of {revisions.length}
+              </span>
+            )}
+          </div>
+
           <div className="revisions-list">
-            {revisions.map((rev, index) => {
+            {filteredRevisions?.map((rev, index) => {
               const typeClass = getRevisionTypeClass(rev);
               const movePairInfo = getMovePairInfo(rev);
               return (
