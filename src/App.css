@@ -216,6 +216,20 @@ input[type="file"] {
   color: #666;
 }
 
+.loading-init {
+  padding: 3rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.loading-hint {
+  display: block;
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.5rem;
+}
+
 .spinner {
   width: 40px;
   height: 40px;

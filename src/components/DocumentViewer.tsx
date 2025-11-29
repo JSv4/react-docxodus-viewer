@@ -1,12 +1,15 @@
-import { useState } from 'react';
-import { useConversion, PaginatedDocument } from 'docxodus/react';
+import { useState, useCallback } from 'react';
+import { useDocxodus, PaginatedDocument } from 'docxodus/react';
 import { CommentRenderMode, PaginationMode } from 'docxodus';
 import { WASM_BASE_PATH } from '../config';
 
 type CommentMode = 'disabled' | 'endnote' | 'inline' | 'margin';
 
 export function DocumentViewer() {
-  const { html, isConverting, error, convert, clear } = useConversion(WASM_BASE_PATH);
+  const { isReady, isLoading, error: initError, convertToHtml } = useDocxodus(WASM_BASE_PATH);
+  const [html, setHtml] = useState<string | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [commentMode, setCommentMode] = useState<CommentMode>('disabled');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -33,16 +36,35 @@ export function DocumentViewer() {
     }
   };
 
-  const getConvertOptions = () => ({
-    commentRenderMode: getCommentRenderMode(commentMode),
+  const getConvertOptions = useCallback((overrides?: {
+    commentRenderMode?: CommentRenderMode;
+    paginationMode?: PaginationMode;
+    paginationScale?: number;
+    fabricateClasses?: boolean;
+  }) => ({
+    commentRenderMode: overrides?.commentRenderMode ?? getCommentRenderMode(commentMode),
     pageTitle,
     cssPrefix,
-    fabricateClasses,
+    fabricateClasses: overrides?.fabricateClasses ?? fabricateClasses,
     additionalCss: additionalCss || undefined,
     commentCssClassPrefix,
-    paginationMode: enablePagination ? PaginationMode.Paginated : PaginationMode.None,
-    paginationScale: enablePagination ? paginationScale : undefined,
-  });
+    paginationMode: overrides?.paginationMode ?? (enablePagination ? PaginationMode.Paginated : PaginationMode.None),
+    paginationScale: overrides?.paginationScale ?? (enablePagination ? paginationScale : undefined),
+  }), [commentMode, pageTitle, cssPrefix, fabricateClasses, additionalCss, commentCssClassPrefix, enablePagination, paginationScale]);
+
+  const convert = useCallback(async (file: File, options: ReturnType<typeof getConvertOptions>) => {
+    if (!isReady) return;
+    setIsConverting(true);
+    setError(null);
+    try {
+      const result = await convertToHtml(file, options);
+      setHtml(result);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setIsConverting(false);
+    }
+  }, [isReady, convertToHtml]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,33 +84,52 @@ export function DocumentViewer() {
   const handleCommentModeChange = async (mode: CommentMode) => {
     setCommentMode(mode);
     if (pendingFile) {
-      await convert(pendingFile, { ...getConvertOptions(), commentRenderMode: getCommentRenderMode(mode) });
+      await convert(pendingFile, getConvertOptions({ commentRenderMode: getCommentRenderMode(mode) }));
     }
   };
 
   const handlePaginationToggle = async (enabled: boolean) => {
     setEnablePagination(enabled);
     if (pendingFile) {
-      await convert(pendingFile, {
-        commentRenderMode: getCommentRenderMode(commentMode),
-        pageTitle,
-        cssPrefix,
-        fabricateClasses,
-        additionalCss: additionalCss || undefined,
-        commentCssClassPrefix,
+      await convert(pendingFile, getConvertOptions({
         paginationMode: enabled ? PaginationMode.Paginated : PaginationMode.None,
         paginationScale: enabled ? paginationScale : undefined,
-      });
+      }));
     }
   };
 
   const handleClear = () => {
-    clear();
+    setHtml(null);
+    setError(null);
     setFileName('');
     setPendingFile(null);
     const input = document.getElementById('docx-input') as HTMLInputElement;
     if (input) input.value = '';
   };
+
+  const isProcessing = isConverting || isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="document-viewer">
+        <div className="loading loading-init">
+          <div className="spinner"></div>
+          <p>Loading document engine...</p>
+          <span className="loading-hint">This may take a moment on first load</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (initError) {
+    return (
+      <div className="document-viewer">
+        <div className="error">
+          <p>Failed to initialize: {initError.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="document-viewer">
@@ -102,10 +143,10 @@ export function DocumentViewer() {
           type="file"
           accept=".docx"
           onChange={handleFileChange}
-          disabled={isConverting}
+          disabled={isProcessing}
         />
         {html && (
-          <button onClick={handleClear} className="clear-btn">
+          <button onClick={handleClear} className="clear-btn" disabled={isProcessing}>
             Clear
           </button>
         )}
@@ -121,7 +162,7 @@ export function DocumentViewer() {
                 name="commentMode"
                 checked={commentMode === 'disabled'}
                 onChange={() => handleCommentModeChange('disabled')}
-                disabled={isConverting}
+                disabled={isProcessing}
               />
               <span>Disabled</span>
             </label>
@@ -131,7 +172,7 @@ export function DocumentViewer() {
                 name="commentMode"
                 checked={commentMode === 'endnote'}
                 onChange={() => handleCommentModeChange('endnote')}
-                disabled={isConverting}
+                disabled={isProcessing}
               />
               <span>Endnotes</span>
             </label>
@@ -141,7 +182,7 @@ export function DocumentViewer() {
                 name="commentMode"
                 checked={commentMode === 'inline'}
                 onChange={() => handleCommentModeChange('inline')}
-                disabled={isConverting}
+                disabled={isProcessing}
               />
               <span>Inline</span>
             </label>
@@ -151,7 +192,7 @@ export function DocumentViewer() {
                 name="commentMode"
                 checked={commentMode === 'margin'}
                 onChange={() => handleCommentModeChange('margin')}
-                disabled={isConverting}
+                disabled={isProcessing}
               />
               <span>Margin</span>
             </label>
@@ -164,7 +205,7 @@ export function DocumentViewer() {
               type="checkbox"
               checked={enablePagination}
               onChange={(e) => handlePaginationToggle(e.target.checked)}
-              disabled={isConverting}
+              disabled={isProcessing}
             />
             <span>Enable pagination (PDF-style pages)</span>
           </label>
@@ -186,7 +227,7 @@ export function DocumentViewer() {
                 onChange={(e) => setPaginationScale(parseFloat(e.target.value))}
                 onMouseUp={reconvert}
                 onTouchEnd={reconvert}
-                disabled={isConverting}
+                disabled={isProcessing}
               />
             </div>
             <div className="option-group">
@@ -195,7 +236,7 @@ export function DocumentViewer() {
                   type="checkbox"
                   checked={showPageNumbers}
                   onChange={(e) => setShowPageNumbers(e.target.checked)}
-                  disabled={isConverting}
+                  disabled={isProcessing}
                 />
                 <span>Show page numbers</span>
               </label>
@@ -224,7 +265,7 @@ export function DocumentViewer() {
                 onChange={(e) => setPageTitle(e.target.value)}
                 onBlur={reconvert}
                 placeholder="Document"
-                disabled={isConverting}
+                disabled={isProcessing}
                 className="text-input"
               />
               <span className="option-hint">HTML document title</span>
@@ -239,7 +280,7 @@ export function DocumentViewer() {
                 onChange={(e) => setCssPrefix(e.target.value)}
                 onBlur={reconvert}
                 placeholder="docx-"
-                disabled={isConverting}
+                disabled={isProcessing}
                 className="text-input"
               />
               <span className="option-hint">CSS class prefix for generated styles</span>
@@ -254,7 +295,7 @@ export function DocumentViewer() {
                 onChange={(e) => setCommentCssClassPrefix(e.target.value)}
                 onBlur={reconvert}
                 placeholder="comment-"
-                disabled={isConverting}
+                disabled={isProcessing}
                 className="text-input"
               />
               <span className="option-hint">CSS prefix for comment elements</span>
@@ -268,10 +309,10 @@ export function DocumentViewer() {
                   onChange={(e) => {
                     setFabricateClasses(e.target.checked);
                     if (pendingFile) {
-                      convert(pendingFile, { ...getConvertOptions(), fabricateClasses: e.target.checked });
+                      convert(pendingFile, getConvertOptions({ fabricateClasses: e.target.checked }));
                     }
                   }}
-                  disabled={isConverting}
+                  disabled={isProcessing}
                 />
                 <span>Fabricate CSS classes</span>
               </label>
@@ -286,7 +327,7 @@ export function DocumentViewer() {
                 onChange={(e) => setAdditionalCss(e.target.value)}
                 onBlur={reconvert}
                 placeholder=".custom { color: red; }"
-                disabled={isConverting}
+                disabled={isProcessing}
                 className="textarea-input"
                 rows={3}
               />
@@ -300,6 +341,7 @@ export function DocumentViewer() {
         <div className="loading">
           <div className="spinner"></div>
           <p>Converting document...</p>
+          <span className="loading-hint">Large documents may take a while</span>
         </div>
       )}
 
@@ -309,7 +351,7 @@ export function DocumentViewer() {
         </div>
       )}
 
-      {html && (
+      {html && !isConverting && (
         <div className="document-content">
           {enablePagination ? (
             <PaginatedDocument

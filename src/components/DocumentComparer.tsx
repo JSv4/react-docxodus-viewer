@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { useComparison } from 'docxodus/react';
+import { useDocxodus, useComparison } from 'docxodus/react';
 import { WASM_BASE_PATH } from '../config';
 
 export function DocumentComparer() {
+  // Use useDocxodus just to get loading state
+  const { isLoading, error: initError } = useDocxodus(WASM_BASE_PATH);
+
+  // Use useComparison for the actual comparison functionality
   const {
     html,
     revisions,
@@ -58,6 +62,30 @@ export function DocumentComparer() {
   const deletions = revisions?.filter((r) => r.revisionType === 'Deletion' || r.revisionType === 'Deleted') || [];
   const moves = revisions?.filter((r) => r.revisionType === 'Moved' || (r as { moveGroupId?: number }).moveGroupId !== undefined) || [];
 
+  const isProcessing = isComparing || isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="document-comparer">
+        <div className="loading loading-init">
+          <div className="spinner"></div>
+          <p>Loading comparison engine...</p>
+          <span className="loading-hint">This may take a moment on first load</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (initError) {
+    return (
+      <div className="document-comparer">
+        <div className="error">
+          <p>Failed to initialize: {initError.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="document-comparer">
       <div className="compare-inputs">
@@ -74,7 +102,7 @@ export function DocumentComparer() {
               type="file"
               accept=".docx"
               onChange={handleOriginalChange}
-              disabled={isComparing}
+              disabled={isProcessing}
             />
           </div>
         </div>
@@ -92,7 +120,7 @@ export function DocumentComparer() {
               type="file"
               accept=".docx"
               onChange={handleModifiedChange}
-              disabled={isComparing}
+              disabled={isProcessing}
             />
           </div>
         </div>
@@ -105,7 +133,7 @@ export function DocumentComparer() {
             value={authorName}
             onChange={(e) => setAuthorName(e.target.value)}
             placeholder="Reviewer name"
-            disabled={isComparing}
+            disabled={isProcessing}
           />
         </div>
 
@@ -122,7 +150,7 @@ export function DocumentComparer() {
               step="0.05"
               value={detailThreshold}
               onChange={(e) => setDetailThreshold(parseFloat(e.target.value))}
-              disabled={isComparing}
+              disabled={isProcessing}
             />
             <span className="option-hint">Lower = more detailed comparison</span>
           </div>
@@ -133,7 +161,7 @@ export function DocumentComparer() {
                 type="checkbox"
                 checked={caseInsensitive}
                 onChange={(e) => setCaseInsensitive(e.target.checked)}
-                disabled={isComparing}
+                disabled={isProcessing}
               />
               <span>Case-insensitive comparison</span>
             </label>
@@ -142,7 +170,7 @@ export function DocumentComparer() {
                 type="checkbox"
                 checked={renderTrackedChanges}
                 onChange={(e) => setRenderTrackedChanges(e.target.checked)}
-                disabled={isComparing}
+                disabled={isProcessing}
               />
               <span>Show tracked changes in preview</span>
             </label>
@@ -153,13 +181,13 @@ export function DocumentComparer() {
       <div className="compare-actions">
         <button
           onClick={handleCompare}
-          disabled={!originalFile || !modifiedFile || isComparing}
+          disabled={!originalFile || !modifiedFile || isProcessing}
           className="compare-btn"
         >
           {isComparing ? 'Comparing...' : 'Compare Documents'}
         </button>
 
-        {html && (
+        {html && !isComparing && (
           <>
             <button onClick={handleDownload} className="download-btn">
               Download Redlined DOCX
@@ -175,6 +203,7 @@ export function DocumentComparer() {
         <div className="loading">
           <div className="spinner"></div>
           <p>Comparing documents...</p>
+          <span className="loading-hint">Large documents may take a while</span>
         </div>
       )}
 
@@ -184,7 +213,7 @@ export function DocumentComparer() {
         </div>
       )}
 
-      {revisions && revisions.length > 0 && (
+      {revisions && revisions.length > 0 && !isComparing && (
         <div className="revisions-summary">
           <h3>Revisions Found: {revisions.length}</h3>
           <div className="revision-stats">
@@ -203,7 +232,7 @@ export function DocumentComparer() {
         </div>
       )}
 
-      {html && (
+      {html && !isComparing && (
         <div className="document-content">
           <div
             className="html-preview comparison-preview"
