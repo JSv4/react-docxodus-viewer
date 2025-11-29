@@ -11,13 +11,20 @@ function wasmPublicPlugin(): Plugin {
 
   return {
     name: 'wasm-public-plugin',
+    enforce: 'pre',
     configureServer(server) {
-      // Add middleware to intercept WASM-related requests before Vite processes them
+      // Add middleware BEFORE Vite's internal middleware (no return = runs first)
       server.middlewares.use((req, res, next) => {
-        const url = req.url || ''
+        let url = req.url || ''
 
-        // Check if this is a request for files in /wasm/_framework/
-        if (url.startsWith('/wasm/_framework/')) {
+        // Strip query params like ?import that Vite adds for module imports
+        const queryIndex = url.indexOf('?')
+        if (queryIndex > -1) {
+          url = url.substring(0, queryIndex)
+        }
+
+        // Check if this is a request for files in /wasm/
+        if (url.startsWith('/wasm/')) {
           const filePath = join(publicDir, url)
 
           if (existsSync(filePath)) {
@@ -29,6 +36,8 @@ function wasmPublicPlugin(): Plugin {
             } else if (url.endsWith('.wasm')) {
               res.setHeader('Content-Type', 'application/wasm')
             } else if (url.endsWith('.json')) {
+              res.setHeader('Content-Type', 'application/json')
+            } else if (url.endsWith('.map')) {
               res.setHeader('Content-Type', 'application/json')
             }
 
@@ -46,8 +55,17 @@ function wasmPublicPlugin(): Plugin {
     },
     // Prevent Vite from trying to resolve/transform these imports
     resolveId(source) {
-      if (source.startsWith('/wasm/_framework/') || source.includes('/wasm/_framework/')) {
-        return { id: source, external: true }
+      if (source.includes('/wasm/')) {
+        // Return false to tell Vite this is an external module it shouldn't process
+        return false
+      }
+      return null
+    },
+    // Intercept the load to prevent Vite from throwing errors
+    load(id) {
+      if (id.includes('/wasm/')) {
+        // Return empty - browser will fetch directly
+        return ''
       }
       return null
     },
