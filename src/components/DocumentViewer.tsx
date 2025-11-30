@@ -13,35 +13,39 @@ export function DocumentViewer() {
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [fileName, setFileName] = useState<string>('');
-  const [commentMode, setCommentMode] = useState<CommentMode>('disabled');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(0);
 
-  // Pagination options
-  const [enablePagination, setEnablePagination] = useState(false);
+  // Settings modal
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Core options - defaults enabled for best experience
+  const [enablePagination] = useState(true);
   const [paginationScale, setPaginationScale] = useState(0.8);
   const [showPageNumbers, setShowPageNumbers] = useState(true);
-  const paginatedContainerRef = useRef<HTMLDivElement>(null);
+  const [renderFootnotesAndEndnotes, setRenderFootnotesAndEndnotes] = useState(true);
+  const [renderHeadersAndFooters, setRenderHeadersAndFooters] = useState(true);
 
-  // Annotation options
+  // Comment & annotation options
+  const [commentMode, setCommentMode] = useState<CommentMode>('disabled');
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>('disabled');
 
-  // Footnotes, Headers, and Tracked Changes options
-  const [renderFootnotesAndEndnotes, setRenderFootnotesAndEndnotes] = useState(false);
-  const [renderHeadersAndFooters, setRenderHeadersAndFooters] = useState(false);
+  // Tracked changes options
   const [renderTrackedChanges, setRenderTrackedChanges] = useState(false);
   const [showDeletedContent, setShowDeletedContent] = useState(true);
   const [renderMoveOperations, setRenderMoveOperations] = useState(true);
 
   // Advanced options
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [pageTitle, setPageTitle] = useState('Document');
   const [cssPrefix, setCssPrefix] = useState('docx-');
   const [fabricateClasses, setFabricateClasses] = useState(true);
   const [additionalCss, setAdditionalCss] = useState('');
   const [commentCssClassPrefix, setCommentCssClassPrefix] = useState('comment-');
   const [annotationCssClassPrefix, setAnnotationCssClassPrefix] = useState('annot-');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const paginatedContainerRef = useRef<HTMLDivElement>(null);
 
   const getCommentRenderMode = (mode: CommentMode): CommentRenderMode => {
     switch (mode) {
@@ -62,140 +66,82 @@ export function DocumentViewer() {
     }
   };
 
-  const getConvertOptions = useCallback((overrides?: {
-    commentRenderMode?: CommentRenderMode;
-    paginationMode?: PaginationMode;
-    paginationScale?: number;
-    fabricateClasses?: boolean;
-    renderAnnotations?: boolean;
-    annotationLabelMode?: AnnotationLabelMode;
-    renderFootnotesAndEndnotes?: boolean;
-    renderHeadersAndFooters?: boolean;
-    renderTrackedChanges?: boolean;
-    showDeletedContent?: boolean;
-    renderMoveOperations?: boolean;
-  }) => ({
-    commentRenderMode: overrides?.commentRenderMode ?? getCommentRenderMode(commentMode),
+  const getConvertOptions = useCallback(() => ({
+    commentRenderMode: getCommentRenderMode(commentMode),
     pageTitle,
     cssPrefix,
-    fabricateClasses: overrides?.fabricateClasses ?? fabricateClasses,
+    fabricateClasses,
     additionalCss: additionalCss || undefined,
     commentCssClassPrefix,
-    paginationMode: overrides?.paginationMode ?? (enablePagination ? PaginationMode.Paginated : PaginationMode.None),
-    paginationScale: overrides?.paginationScale ?? (enablePagination ? paginationScale : undefined),
-    renderAnnotations: overrides?.renderAnnotations ?? (annotationMode !== 'disabled'),
-    annotationLabelMode: overrides?.annotationLabelMode ?? getAnnotationLabelMode(annotationMode),
+    paginationMode: enablePagination ? PaginationMode.Paginated : PaginationMode.None,
+    paginationScale: enablePagination ? paginationScale : undefined,
+    renderAnnotations: annotationMode !== 'disabled',
+    annotationLabelMode: getAnnotationLabelMode(annotationMode),
     annotationCssClassPrefix,
-    renderFootnotesAndEndnotes: overrides?.renderFootnotesAndEndnotes ?? renderFootnotesAndEndnotes,
-    renderHeadersAndFooters: overrides?.renderHeadersAndFooters ?? renderHeadersAndFooters,
-    renderTrackedChanges: overrides?.renderTrackedChanges ?? renderTrackedChanges,
-    showDeletedContent: overrides?.showDeletedContent ?? showDeletedContent,
-    renderMoveOperations: overrides?.renderMoveOperations ?? renderMoveOperations,
+    renderFootnotesAndEndnotes,
+    renderHeadersAndFooters,
+    renderTrackedChanges,
+    showDeletedContent,
+    renderMoveOperations,
   }), [commentMode, pageTitle, cssPrefix, fabricateClasses, additionalCss, commentCssClassPrefix, enablePagination, paginationScale, annotationMode, annotationCssClassPrefix, renderFootnotesAndEndnotes, renderHeadersAndFooters, renderTrackedChanges, showDeletedContent, renderMoveOperations]);
 
-  const convert = useCallback(async (file: File, options: ReturnType<typeof getConvertOptions>) => {
+  const convert = useCallback(async (file: File) => {
     if (!isReady) return;
     setIsConverting(true);
     setError(null);
-    setHtml(null); // Clear previous result to show loading indicator
     try {
-      const result = await convertToHtml(file, options);
+      const result = await convertToHtml(file, getConvertOptions());
       setHtml(result);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsConverting(false);
     }
-  }, [isReady, convertToHtml]);
+  }, [isReady, convertToHtml, getConvertOptions]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFileName(file.name);
       setPendingFile(file);
-      await convert(file, getConvertOptions());
+      await convert(file);
     }
   };
 
-  const reconvert = async () => {
+  const reconvert = useCallback(async () => {
     if (pendingFile) {
-      await convert(pendingFile, getConvertOptions());
+      await convert(pendingFile);
     }
-  };
-
-  const handleCommentModeChange = async (mode: CommentMode) => {
-    setCommentMode(mode);
-    if (pendingFile) {
-      await convert(pendingFile, getConvertOptions({ commentRenderMode: getCommentRenderMode(mode) }));
-    }
-  };
-
-  const handlePaginationToggle = async (enabled: boolean) => {
-    setEnablePagination(enabled);
-    if (pendingFile) {
-      await convert(pendingFile, getConvertOptions({
-        paginationMode: enabled ? PaginationMode.Paginated : PaginationMode.None,
-        paginationScale: enabled ? paginationScale : undefined,
-      }));
-    }
-  };
-
-  const handleAnnotationModeChange = async (mode: AnnotationMode) => {
-    setAnnotationMode(mode);
-    if (pendingFile) {
-      await convert(pendingFile, getConvertOptions({
-        renderAnnotations: mode !== 'disabled',
-        annotationLabelMode: getAnnotationLabelMode(mode),
-      }));
-    }
-  };
+  }, [pendingFile, convert]);
 
   const handleClear = () => {
     setHtml(null);
     setError(null);
     setFileName('');
     setPendingFile(null);
+    setCurrentPage(1);
+    setTotalPages(0);
     const input = document.getElementById('docx-input') as HTMLInputElement;
     if (input) input.value = '';
   };
 
   // Zoom controls
-  const handleZoomIn = () => {
-    const newScale = Math.min(paginationScale + 0.1, 2.0);
-    setPaginationScale(newScale);
-  };
-
-  const handleZoomOut = () => {
-    const newScale = Math.max(paginationScale - 0.1, 0.3);
-    setPaginationScale(newScale);
-  };
-
-  const handleZoomChange = (value: number) => {
-    setPaginationScale(Math.max(0.3, Math.min(2.0, value)));
-  };
+  const handleZoomIn = () => setPaginationScale(Math.min(paginationScale + 0.1, 2.0));
+  const handleZoomOut = () => setPaginationScale(Math.max(paginationScale - 0.1, 0.3));
+  const handleZoomChange = (value: number) => setPaginationScale(Math.max(0.3, Math.min(2.0, value)));
 
   // Page navigation
   const goToPage = (pageNum: number) => {
     const container = paginatedContainerRef.current;
     if (!container || pageNum < 1 || pageNum > totalPages) return;
-
     const pageElement = container.querySelector(`[data-page-number="${pageNum}"]`);
     if (pageElement) {
       pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  const goToPreviousPage = () => {
-    if (currentPage > 1) {
-      goToPage(currentPage - 1);
-    }
-  };
-
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      goToPage(currentPage + 1);
-    }
-  };
+  const goToPreviousPage = () => currentPage > 1 && goToPage(currentPage - 1);
+  const goToNextPage = () => currentPage < totalPages && goToPage(currentPage + 1);
 
   // Handle footnote/anchor clicks in paginated view
   useEffect(() => {
@@ -216,11 +162,8 @@ export function DocumentViewer() {
 
       if (targetElement) {
         targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Highlight briefly
         targetElement.classList.add('footnote-highlight');
-        setTimeout(() => {
-          targetElement.classList.remove('footnote-highlight');
-        }, 2000);
+        setTimeout(() => targetElement.classList.remove('footnote-highlight'), 2000);
       }
     };
 
@@ -228,506 +171,327 @@ export function DocumentViewer() {
     return () => container.removeEventListener('click', handleAnchorClick);
   }, [enablePagination, html]);
 
+  // Settings Modal Component
+  const SettingsModal = () => (
+    <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+      <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="settings-header">
+          <h3>Viewer Settings</h3>
+          <button className="settings-close" onClick={() => setShowSettings(false)}>×</button>
+        </div>
+        <div className="settings-body">
+          <div className="settings-section">
+            <h4>Display Options</h4>
+            <label className="settings-checkbox">
+              <input
+                type="checkbox"
+                checked={renderFootnotesAndEndnotes}
+                onChange={(e) => setRenderFootnotesAndEndnotes(e.target.checked)}
+              />
+              <span>Show footnotes and endnotes</span>
+            </label>
+            <label className="settings-checkbox">
+              <input
+                type="checkbox"
+                checked={renderHeadersAndFooters}
+                onChange={(e) => setRenderHeadersAndFooters(e.target.checked)}
+              />
+              <span>Show headers and footers</span>
+            </label>
+            <label className="settings-checkbox">
+              <input
+                type="checkbox"
+                checked={showPageNumbers}
+                onChange={(e) => setShowPageNumbers(e.target.checked)}
+              />
+              <span>Show page numbers</span>
+            </label>
+          </div>
+
+          <div className="settings-section">
+            <h4>Comment Rendering</h4>
+            <div className="settings-radio-group">
+              {(['disabled', 'endnote', 'inline', 'margin'] as CommentMode[]).map((mode) => (
+                <label key={mode} className="settings-radio">
+                  <input
+                    type="radio"
+                    name="commentMode"
+                    checked={commentMode === mode}
+                    onChange={() => setCommentMode(mode)}
+                  />
+                  <span>{mode.charAt(0).toUpperCase() + mode.slice(1)}{mode === 'endnote' ? 's' : ''}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <h4>Annotation Rendering</h4>
+            <div className="settings-radio-group">
+              {(['disabled', 'above', 'inline', 'tooltip', 'none'] as AnnotationMode[]).map((mode) => (
+                <label key={mode} className="settings-radio">
+                  <input
+                    type="radio"
+                    name="annotationMode"
+                    checked={annotationMode === mode}
+                    onChange={() => setAnnotationMode(mode)}
+                  />
+                  <span>{mode === 'none' ? 'Highlight Only' : mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <h4>Tracked Changes</h4>
+            <label className="settings-checkbox">
+              <input
+                type="checkbox"
+                checked={renderTrackedChanges}
+                onChange={(e) => setRenderTrackedChanges(e.target.checked)}
+              />
+              <span>Show tracked changes</span>
+            </label>
+            {renderTrackedChanges && (
+              <div className="settings-subsection">
+                <label className="settings-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={showDeletedContent}
+                    onChange={(e) => setShowDeletedContent(e.target.checked)}
+                  />
+                  <span>Show deleted content</span>
+                </label>
+                <label className="settings-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={renderMoveOperations}
+                    onChange={(e) => setRenderMoveOperations(e.target.checked)}
+                  />
+                  <span>Distinguish move operations</span>
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div className="settings-section">
+            <button
+              className="settings-toggle-advanced"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? '▼' : '▶'} Advanced Options
+            </button>
+            {showAdvanced && (
+              <div className="settings-advanced">
+                <div className="settings-field">
+                  <label>Page Title</label>
+                  <input type="text" value={pageTitle} onChange={(e) => setPageTitle(e.target.value)} />
+                </div>
+                <div className="settings-field">
+                  <label>CSS Prefix</label>
+                  <input type="text" value={cssPrefix} onChange={(e) => setCssPrefix(e.target.value)} />
+                </div>
+                <div className="settings-field">
+                  <label>Comment CSS Prefix</label>
+                  <input type="text" value={commentCssClassPrefix} onChange={(e) => setCommentCssClassPrefix(e.target.value)} />
+                </div>
+                <div className="settings-field">
+                  <label>Annotation CSS Prefix</label>
+                  <input type="text" value={annotationCssClassPrefix} onChange={(e) => setAnnotationCssClassPrefix(e.target.value)} />
+                </div>
+                <label className="settings-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={fabricateClasses}
+                    onChange={(e) => setFabricateClasses(e.target.checked)}
+                  />
+                  <span>Fabricate CSS classes</span>
+                </label>
+                <div className="settings-field">
+                  <label>Additional CSS</label>
+                  <textarea
+                    value={additionalCss}
+                    onChange={(e) => setAdditionalCss(e.target.value)}
+                    rows={3}
+                    placeholder=".custom { color: red; }"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="settings-footer">
+          <button className="settings-apply" onClick={() => { reconvert(); setShowSettings(false); }}>
+            Apply & Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const isProcessing = isConverting || isLoading;
 
-  if (isLoading) {
-    return (
-      <div className="document-viewer">
-        <div className="loading loading-init">
-          <div className="spinner"></div>
-          <p>Loading document engine...</p>
-          <span className="loading-hint">This may take a moment on first load</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (initError) {
-    return (
-      <div className="document-viewer">
-        <div className="error">
-          <p>Failed to initialize: {initError.message}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="document-viewer">
-      <div className="upload-section">
-        <label htmlFor="docx-input" className="file-label">
-          <span className="file-icon">📄</span>
-          {fileName || 'Choose a DOCX file'}
-        </label>
-        <input
-          id="docx-input"
-          type="file"
-          accept=".docx"
-          onChange={handleFileChange}
-          disabled={isProcessing}
-        />
-        {html && (
-          <button onClick={handleClear} className="clear-btn" disabled={isProcessing}>
-            Clear
-          </button>
-        )}
-      </div>
-
-      <div className="options-section">
-        <div className="option-group">
-          <label>Comment Rendering</label>
-          <div className="radio-group">
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="commentMode"
-                checked={commentMode === 'disabled'}
-                onChange={() => handleCommentModeChange('disabled')}
-                disabled={isProcessing}
-              />
-              <span>Disabled</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="commentMode"
-                checked={commentMode === 'endnote'}
-                onChange={() => handleCommentModeChange('endnote')}
-                disabled={isProcessing}
-              />
-              <span>Endnotes</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="commentMode"
-                checked={commentMode === 'inline'}
-                onChange={() => handleCommentModeChange('inline')}
-                disabled={isProcessing}
-              />
-              <span>Inline</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="commentMode"
-                checked={commentMode === 'margin'}
-                onChange={() => handleCommentModeChange('margin')}
-                disabled={isProcessing}
-              />
-              <span>Margin</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="option-group">
-          <label>Annotation Rendering</label>
-          <div className="radio-group">
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="annotationMode"
-                checked={annotationMode === 'disabled'}
-                onChange={() => handleAnnotationModeChange('disabled')}
-                disabled={isProcessing}
-              />
-              <span>Disabled</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="annotationMode"
-                checked={annotationMode === 'above'}
-                onChange={() => handleAnnotationModeChange('above')}
-                disabled={isProcessing}
-              />
-              <span>Above</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="annotationMode"
-                checked={annotationMode === 'inline'}
-                onChange={() => handleAnnotationModeChange('inline')}
-                disabled={isProcessing}
-              />
-              <span>Inline</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="annotationMode"
-                checked={annotationMode === 'tooltip'}
-                onChange={() => handleAnnotationModeChange('tooltip')}
-                disabled={isProcessing}
-              />
-              <span>Tooltip</span>
-            </label>
-            <label className="radio-label">
-              <input
-                type="radio"
-                name="annotationMode"
-                checked={annotationMode === 'none'}
-                onChange={() => handleAnnotationModeChange('none')}
-                disabled={isProcessing}
-              />
-              <span>Highlight Only</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="option-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={enablePagination}
-              onChange={(e) => handlePaginationToggle(e.target.checked)}
-              disabled={isProcessing}
-            />
-            <span>Enable pagination (PDF-style pages)</span>
+    <div className="docx-viewer">
+      {/* Toolbar */}
+      <div className="viewer-toolbar">
+        <div className="toolbar-left">
+          <label htmlFor="docx-input" className="toolbar-file-btn">
+            {fileName || 'Open Document'}
           </label>
-        </div>
-
-        {enablePagination && (
-          <div className="pagination-options">
-            <div className="option-group">
-              <label htmlFor="pagination-scale">
-                Page Scale: {Math.round(paginationScale * 100)}%
-              </label>
-              <input
-                id="pagination-scale"
-                type="range"
-                min="0.5"
-                max="1.5"
-                step="0.1"
-                value={paginationScale}
-                onChange={(e) => setPaginationScale(parseFloat(e.target.value))}
-              />
-            </div>
-            <div className="option-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={showPageNumbers}
-                  onChange={(e) => setShowPageNumbers(e.target.checked)}
-                  disabled={isProcessing}
-                />
-                <span>Show page numbers</span>
-              </label>
-            </div>
-          </div>
-        )}
-
-        <div className="option-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={renderFootnotesAndEndnotes}
-              onChange={(e) => {
-                setRenderFootnotesAndEndnotes(e.target.checked);
-                if (pendingFile) {
-                  convert(pendingFile, getConvertOptions({ renderFootnotesAndEndnotes: e.target.checked }));
-                }
-              }}
-              disabled={isProcessing}
-            />
-            <span>Show footnotes and endnotes</span>
-          </label>
-        </div>
-
-        <div className="option-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={renderHeadersAndFooters}
-              onChange={(e) => {
-                setRenderHeadersAndFooters(e.target.checked);
-                if (pendingFile) {
-                  convert(pendingFile, getConvertOptions({ renderHeadersAndFooters: e.target.checked }));
-                }
-              }}
-              disabled={isProcessing}
-            />
-            <span>Show headers and footers</span>
-          </label>
-        </div>
-
-        <div className="option-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={renderTrackedChanges}
-              onChange={(e) => {
-                setRenderTrackedChanges(e.target.checked);
-                if (pendingFile) {
-                  convert(pendingFile, getConvertOptions({ renderTrackedChanges: e.target.checked }));
-                }
-              }}
-              disabled={isProcessing}
-            />
-            <span>Show tracked changes (insertions/deletions)</span>
-          </label>
-        </div>
-
-        {renderTrackedChanges && (
-          <div className="tracked-changes-options">
-            <div className="option-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={showDeletedContent}
-                  onChange={(e) => {
-                    setShowDeletedContent(e.target.checked);
-                    if (pendingFile) {
-                      convert(pendingFile, getConvertOptions({ showDeletedContent: e.target.checked }));
-                    }
-                  }}
-                  disabled={isProcessing}
-                />
-                <span>Show deleted content with strikethrough</span>
-              </label>
-            </div>
-            <div className="option-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={renderMoveOperations}
-                  onChange={(e) => {
-                    setRenderMoveOperations(e.target.checked);
-                    if (pendingFile) {
-                      convert(pendingFile, getConvertOptions({ renderMoveOperations: e.target.checked }));
-                    }
-                  }}
-                  disabled={isProcessing}
-                />
-                <span>Distinguish move operations</span>
-              </label>
-            </div>
-          </div>
-        )}
-
-        <div className="option-group">
-          <button
-            type="button"
-            className="toggle-advanced-btn"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? '▼' : '▶'} Advanced Options
-          </button>
-        </div>
-
-        {showAdvanced && (
-          <div className="advanced-options">
-            <div className="option-group">
-              <label htmlFor="page-title">Page Title</label>
-              <input
-                id="page-title"
-                type="text"
-                value={pageTitle}
-                onChange={(e) => setPageTitle(e.target.value)}
-                onBlur={reconvert}
-                placeholder="Document"
-                disabled={isProcessing}
-                className="text-input"
-              />
-              <span className="option-hint">HTML document title</span>
-            </div>
-
-            <div className="option-group">
-              <label htmlFor="css-prefix">CSS Prefix</label>
-              <input
-                id="css-prefix"
-                type="text"
-                value={cssPrefix}
-                onChange={(e) => setCssPrefix(e.target.value)}
-                onBlur={reconvert}
-                placeholder="docx-"
-                disabled={isProcessing}
-                className="text-input"
-              />
-              <span className="option-hint">CSS class prefix for generated styles</span>
-            </div>
-
-            <div className="option-group">
-              <label htmlFor="comment-css-prefix">Comment CSS Prefix</label>
-              <input
-                id="comment-css-prefix"
-                type="text"
-                value={commentCssClassPrefix}
-                onChange={(e) => setCommentCssClassPrefix(e.target.value)}
-                onBlur={reconvert}
-                placeholder="comment-"
-                disabled={isProcessing}
-                className="text-input"
-              />
-              <span className="option-hint">CSS prefix for comment elements</span>
-            </div>
-
-            <div className="option-group">
-              <label htmlFor="annotation-css-prefix">Annotation CSS Prefix</label>
-              <input
-                id="annotation-css-prefix"
-                type="text"
-                value={annotationCssClassPrefix}
-                onChange={(e) => setAnnotationCssClassPrefix(e.target.value)}
-                onBlur={reconvert}
-                placeholder="annot-"
-                disabled={isProcessing}
-                className="text-input"
-              />
-              <span className="option-hint">CSS prefix for annotation elements</span>
-            </div>
-
-            <div className="option-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={fabricateClasses}
-                  onChange={(e) => {
-                    setFabricateClasses(e.target.checked);
-                    if (pendingFile) {
-                      convert(pendingFile, getConvertOptions({ fabricateClasses: e.target.checked }));
-                    }
-                  }}
-                  disabled={isProcessing}
-                />
-                <span>Fabricate CSS classes</span>
-              </label>
-              <span className="option-hint">Generate CSS classes for styling</span>
-            </div>
-
-            <div className="option-group">
-              <label htmlFor="additional-css">Additional CSS</label>
-              <textarea
-                id="additional-css"
-                value={additionalCss}
-                onChange={(e) => setAdditionalCss(e.target.value)}
-                onBlur={reconvert}
-                placeholder=".custom { color: red; }"
-                disabled={isProcessing}
-                className="textarea-input"
-                rows={3}
-              />
-              <span className="option-hint">Custom CSS to include in output</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {isConverting && (
-        <div className="loading loading-processing">
-          <div className="spinner"></div>
-          <p>Processing document...</p>
-          <span className="loading-hint">This may take 10+ seconds for large documents</span>
-        </div>
-      )}
-
-      {error && !isConverting && (
-        <div className="error">
-          <p>Error: {error.message}</p>
-        </div>
-      )}
-
-      {html && !isConverting && (
-        <div className="document-content">
-          {enablePagination ? (
-            <div className="paginated-wrapper">
-              {/* PDF.js style toolbar */}
-              <div className="pdf-toolbar">
-                <div className="toolbar-group">
-                  <button
-                    className="toolbar-btn"
-                    onClick={goToPreviousPage}
-                    disabled={currentPage <= 1}
-                    title="Previous Page"
-                  >
-                    ◀
-                  </button>
-                  <div className="page-input-group">
-                    <input
-                      type="number"
-                      className="page-input"
-                      value={currentPage}
-                      min={1}
-                      max={totalPages}
-                      onChange={(e) => {
-                        const page = parseInt(e.target.value);
-                        if (!isNaN(page)) goToPage(page);
-                      }}
-                    />
-                    <span className="page-total">/ {totalPages}</span>
-                  </div>
-                  <button
-                    className="toolbar-btn"
-                    onClick={goToNextPage}
-                    disabled={currentPage >= totalPages}
-                    title="Next Page"
-                  >
-                    ▶
-                  </button>
-                </div>
-
-                <div className="toolbar-separator" />
-
-                <div className="toolbar-group">
-                  <button
-                    className="toolbar-btn"
-                    onClick={handleZoomOut}
-                    disabled={paginationScale <= 0.3}
-                    title="Zoom Out"
-                  >
-                    −
-                  </button>
-                  <select
-                    className="zoom-select"
-                    value={paginationScale}
-                    onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
-                  >
-                    <option value="0.5">50%</option>
-                    <option value="0.75">75%</option>
-                    <option value="0.8">80%</option>
-                    <option value="0.9">90%</option>
-                    <option value="1">100%</option>
-                    <option value="1.25">125%</option>
-                    <option value="1.5">150%</option>
-                    <option value="2">200%</option>
-                  </select>
-                  <button
-                    className="toolbar-btn"
-                    onClick={handleZoomIn}
-                    disabled={paginationScale >= 2.0}
-                    title="Zoom In"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div ref={paginatedContainerRef} className="paginated-scroll-container">
-                <PaginatedDocument
-                  html={html}
-                  scale={paginationScale}
-                  showPageNumbers={showPageNumbers}
-                  pageGap={20}
-                  backgroundColor="#525659"
-                  className="paginated-preview"
-                  onPaginationComplete={(result: PaginationResult) => {
-                    setTotalPages(result.totalPages);
-                  }}
-                  onPageVisible={(pageNumber: number) => {
-                    setCurrentPage(pageNumber);
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div
-              className="html-preview"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+          <input
+            id="docx-input"
+            type="file"
+            accept=".docx"
+            onChange={handleFileChange}
+            disabled={isProcessing}
+            style={{ display: 'none' }}
+          />
+          {fileName && (
+            <button className="toolbar-btn toolbar-clear" onClick={handleClear} disabled={isProcessing}>
+              ×
+            </button>
           )}
         </div>
-      )}
+
+        <div className="toolbar-center">
+          {html && totalPages > 0 && (
+            <>
+              <button
+                className="toolbar-btn"
+                onClick={goToPreviousPage}
+                disabled={currentPage <= 1}
+                title="Previous Page"
+              >
+                ◀
+              </button>
+              <div className="page-input-group">
+                <input
+                  type="number"
+                  className="page-input"
+                  value={currentPage}
+                  min={1}
+                  max={totalPages}
+                  onChange={(e) => {
+                    const page = parseInt(e.target.value);
+                    if (!isNaN(page)) goToPage(page);
+                  }}
+                />
+                <span className="page-total">/ {totalPages}</span>
+              </div>
+              <button
+                className="toolbar-btn"
+                onClick={goToNextPage}
+                disabled={currentPage >= totalPages}
+                title="Next Page"
+              >
+                ▶
+              </button>
+
+              <div className="toolbar-separator" />
+
+              <button
+                className="toolbar-btn"
+                onClick={handleZoomOut}
+                disabled={paginationScale <= 0.3}
+                title="Zoom Out"
+              >
+                −
+              </button>
+              <select
+                className="zoom-select"
+                value={paginationScale}
+                onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+              >
+                <option value="0.5">50%</option>
+                <option value="0.75">75%</option>
+                <option value="0.8">80%</option>
+                <option value="0.9">90%</option>
+                <option value="1">100%</option>
+                <option value="1.25">125%</option>
+                <option value="1.5">150%</option>
+                <option value="2">200%</option>
+              </select>
+              <button
+                className="toolbar-btn"
+                onClick={handleZoomIn}
+                disabled={paginationScale >= 2.0}
+                title="Zoom In"
+              >
+                +
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="toolbar-right">
+          <button
+            className="toolbar-btn toolbar-settings"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+          >
+            ⚙
+          </button>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="viewer-content">
+        {isLoading && (
+          <div className="viewer-message">
+            <div className="spinner"></div>
+            <p>Loading document engine...</p>
+          </div>
+        )}
+
+        {initError && (
+          <div className="viewer-message error">
+            <p>Failed to initialize: {initError.message}</p>
+          </div>
+        )}
+
+        {!isLoading && !initError && !html && !isConverting && (
+          <div className="viewer-message placeholder">
+            <div className="placeholder-icon">📄</div>
+            <p>Open a DOCX file to view</p>
+          </div>
+        )}
+
+        {isConverting && (
+          <div className="viewer-message">
+            <div className="spinner"></div>
+            <p>Processing document...</p>
+          </div>
+        )}
+
+        {error && !isConverting && (
+          <div className="viewer-message error">
+            <p>Error: {error.message}</p>
+          </div>
+        )}
+
+        {html && !isConverting && (
+          <div ref={paginatedContainerRef} className="viewer-pages">
+            <PaginatedDocument
+              html={html}
+              scale={paginationScale}
+              showPageNumbers={showPageNumbers}
+              pageGap={20}
+              backgroundColor="#525659"
+              className="paginated-document"
+              onPaginationComplete={(result: PaginationResult) => {
+                setTotalPages(result.totalPages);
+              }}
+              onPageVisible={(pageNumber: number) => {
+                setCurrentPage(pageNumber);
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Settings Modal */}
+      {showSettings && <SettingsModal />}
     </div>
   );
 }
