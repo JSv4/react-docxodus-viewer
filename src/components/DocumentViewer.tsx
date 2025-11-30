@@ -229,7 +229,6 @@ export function DocumentViewer() {
                 step="0.1"
                 value={paginationScale}
                 onChange={(e) => setPaginationScale(parseFloat(e.target.value))}
-                disabled={isProcessing}
               />
             </div>
             <div className="option-group">
