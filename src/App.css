@@ -732,7 +732,120 @@ input[type="file"] {
   flex: 0 0 auto;
 }
 
-/* Pagination info */
+/* PDF.js style toolbar */
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #323639;
+  border-bottom: 1px solid #1a1a1a;
+  border-radius: 6px 6px 0 0;
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.toolbar-btn {
+  background: #474c50;
+  border: none;
+  color: #d4d4d4;
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: bold;
+  min-width: 32px;
+  transition: background 0.2s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #5a6066;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #474c50;
+  border-radius: 4px;
+  padding: 0 0.5rem;
+}
+
+.page-input {
+  width: 50px;
+  background: transparent;
+  border: none;
+  color: #d4d4d4;
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 0.4rem 0;
+  -moz-appearance: textfield;
+}
+
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.page-input:focus {
+  outline: none;
+}
+
+.page-total {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: #555;
+  margin: 0 0.5rem;
+}
+
+.zoom-select {
+  background: #474c50;
+  border: none;
+  color: #d4d4d4;
+  padding: 0.4rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.zoom-select:focus {
+  outline: none;
+}
+
+/* Footnote highlight animation */
+.footnote-highlight {
+  animation: highlight-pulse 2s ease-out;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: #fef08a;
+    box-shadow: 0 0 10px #fef08a;
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Pagination info (legacy - keeping for compatibility) */
 .pagination-info {
   padding: 0.5rem 1rem;
   background: #2c3e50;

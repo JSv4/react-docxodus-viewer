@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDocxodus, PaginatedDocument } from 'docxodus/react';
 import { CommentRenderMode, PaginationMode, AnnotationLabelMode } from 'docxodus';
 import type { PaginationResult } from 'docxodus/react';
@@ -22,6 +22,7 @@ export function DocumentViewer() {
   const [enablePagination, setEnablePagination] = useState(false);
   const [paginationScale, setPaginationScale] = useState(0.8);
   const [showPageNumbers, setShowPageNumbers] = useState(true);
+  const paginatedContainerRef = useRef<HTMLDivElement>(null);
 
   // Annotation options
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>('disabled');
@@ -157,6 +158,75 @@ export function DocumentViewer() {
     const input = document.getElementById('docx-input') as HTMLInputElement;
     if (input) input.value = '';
   };
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    const newScale = Math.min(paginationScale + 0.1, 2.0);
+    setPaginationScale(newScale);
+  };
+
+  const handleZoomOut = () => {
+    const newScale = Math.max(paginationScale - 0.1, 0.3);
+    setPaginationScale(newScale);
+  };
+
+  const handleZoomChange = (value: number) => {
+    setPaginationScale(Math.max(0.3, Math.min(2.0, value)));
+  };
+
+  // Page navigation
+  const goToPage = (pageNum: number) => {
+    const container = paginatedContainerRef.current;
+    if (!container || pageNum < 1 || pageNum > totalPages) return;
+
+    const pageElement = container.querySelector(`[data-page-number="${pageNum}"]`);
+    if (pageElement) {
+      pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+    }
+  };
+
+  // Handle footnote/anchor clicks in paginated view
+  useEffect(() => {
+    const container = paginatedContainerRef.current;
+    if (!container || !enablePagination) return;
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href || !href.startsWith('#')) return;
+
+      e.preventDefault();
+      const targetId = href.substring(1);
+      const targetElement = container.querySelector(`[id="${targetId}"], [name="${targetId}"]`);
+
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight briefly
+        targetElement.classList.add('footnote-highlight');
+        setTimeout(() => {
+          targetElement.classList.remove('footnote-highlight');
+        }, 2000);
+      }
+    };
+
+    container.addEventListener('click', handleAnchorClick);
+    return () => container.removeEventListener('click', handleAnchorClick);
+  }, [enablePagination, html]);
 
   const isProcessing = isConverting || isLoading;
 
@@ -562,25 +632,93 @@ export function DocumentViewer() {
         <div className="document-content">
           {enablePagination ? (
             <>
-              {totalPages > 0 && (
-                <div className="pagination-info">
-                  Page {currentPage} of {totalPages}
+              {/* PDF.js style toolbar */}
+              <div className="pdf-toolbar">
+                <div className="toolbar-group">
+                  <button
+                    className="toolbar-btn"
+                    onClick={goToPreviousPage}
+                    disabled={currentPage <= 1}
+                    title="Previous Page"
+                  >
+                    ◀
+                  </button>
+                  <div className="page-input-group">
+                    <input
+                      type="number"
+                      className="page-input"
+                      value={currentPage}
+                      min={1}
+                      max={totalPages}
+                      onChange={(e) => {
+                        const page = parseInt(e.target.value);
+                        if (!isNaN(page)) goToPage(page);
+                      }}
+                    />
+                    <span className="page-total">/ {totalPages}</span>
+                  </div>
+                  <button
+                    className="toolbar-btn"
+                    onClick={goToNextPage}
+                    disabled={currentPage >= totalPages}
+                    title="Next Page"
+                  >
+                    ▶
+                  </button>
                 </div>
-              )}
-              <PaginatedDocument
-                html={html}
-                scale={paginationScale}
-                showPageNumbers={showPageNumbers}
-                pageGap={20}
-                backgroundColor="#525659"
-                className="paginated-preview"
-                onPaginationComplete={(result: PaginationResult) => {
-                  setTotalPages(result.totalPages);
-                }}
-                onPageVisible={(pageNumber: number) => {
-                  setCurrentPage(pageNumber);
-                }}
-              />
+
+                <div className="toolbar-separator" />
+
+                <div className="toolbar-group">
+                  <button
+                    className="toolbar-btn"
+                    onClick={handleZoomOut}
+                    disabled={paginationScale <= 0.3}
+                    title="Zoom Out"
+                  >
+                    −
+                  </button>
+                  <select
+                    className="zoom-select"
+                    value={paginationScale}
+                    onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+                  >
+                    <option value="0.5">50%</option>
+                    <option value="0.75">75%</option>
+                    <option value="0.8">80%</option>
+                    <option value="0.9">90%</option>
+                    <option value="1">100%</option>
+                    <option value="1.25">125%</option>
+                    <option value="1.5">150%</option>
+                    <option value="2">200%</option>
+                  </select>
+                  <button
+                    className="toolbar-btn"
+                    onClick={handleZoomIn}
+                    disabled={paginationScale >= 2.0}
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div ref={paginatedContainerRef}>
+                <PaginatedDocument
+                  html={html}
+                  scale={paginationScale}
+                  showPageNumbers={showPageNumbers}
+                  pageGap={20}
+                  backgroundColor="#525659"
+                  className="paginated-preview"
+                  onPaginationComplete={(result: PaginationResult) => {
+                    setTotalPages(result.totalPages);
+                  }}
+                  onPageVisible={(pageNumber: number) => {
+                    setCurrentPage(pageNumber);
+                  }}
+                />
+              </div>
             </>
           ) : (
             <div
