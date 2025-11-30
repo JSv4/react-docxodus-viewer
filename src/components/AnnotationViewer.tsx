@@ -1,27 +1,25 @@
-import { useState } from 'react';
-import { useAnnotations, useDocumentStructure } from 'docxodus/react';
-import type { AddAnnotationRequest } from 'docxodus/react';
+import { useState, useCallback } from 'react';
+import { useDocxodus, AnnotationLabelMode } from 'docxodus/react';
+import type { Annotation, AddAnnotationRequest } from 'docxodus/react';
 import { WASM_BASE_PATH } from '../config';
 
 export function AnnotationViewer() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>('');
+  const [documentBytes, setDocumentBytes] = useState<Uint8Array | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [html, setHtml] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const {
-    annotations,
-    isLoading: isLoadingAnnotations,
-    error: annotationError,
-    add,
-    remove,
-    documentBytes,
-  } = useAnnotations(file, WASM_BASE_PATH);
-
-  const {
-    structure,
-    isLoading: isLoadingStructure,
-    paragraphs,
-    tables,
-  } = useDocumentStructure(file, WASM_BASE_PATH);
+    isReady,
+    isLoading: isInitializing,
+    convertToHtml,
+    getAnnotations,
+    addAnnotation,
+    removeAnnotation,
+  } = useDocxodus(WASM_BASE_PATH);
 
   // New annotation form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -36,21 +34,54 @@ export function AnnotationViewer() {
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadDocument = useCallback(async (docFile: File) => {
+    if (!isReady) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Get annotations first
+      const annots = await getAnnotations(docFile);
+      setAnnotations(annots);
+
+      // Convert to HTML with annotations rendered
+      const htmlResult = await convertToHtml(docFile, {
+        renderAnnotations: true,
+        annotationLabelMode: AnnotationLabelMode.Above,
+      });
+      setHtml(htmlResult);
+
+      // Store original bytes for modification
+      const bytes = new Uint8Array(await docFile.arrayBuffer());
+      setDocumentBytes(bytes);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to load document'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isReady, getAnnotations, convertToHtml]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
       setFileName(selectedFile.name);
       setShowAddForm(false);
       setAddError(null);
+      await loadDocument(selectedFile);
     }
   };
 
   const handleClear = () => {
     setFile(null);
     setFileName('');
+    setDocumentBytes(null);
+    setAnnotations([]);
+    setHtml(null);
     setShowAddForm(false);
     setAddError(null);
+    setError(null);
     const input = document.getElementById('annotation-input') as HTMLInputElement;
     if (input) input.value = '';
   };
@@ -58,6 +89,11 @@ export function AnnotationViewer() {
   const handleAddAnnotation = async () => {
     if (!newAnnotation.label || !newAnnotation.searchText) {
       setAddError('Label and search text are required');
+      return;
+    }
+
+    if (!documentBytes) {
+      setAddError('No document loaded');
       return;
     }
 
@@ -74,8 +110,26 @@ export function AnnotationViewer() {
         occurrence: newAnnotation.occurrence || 1,
       };
 
-      const result = await add(request);
-      if (result?.success) {
+      const result = await addAnnotation(documentBytes, request);
+      if (result?.success && result.documentBytes) {
+        // Decode base64 to Uint8Array
+        const binaryString = atob(result.documentBytes);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        setDocumentBytes(bytes);
+
+        // Refresh annotations and HTML
+        const annots = await getAnnotations(bytes);
+        setAnnotations(annots);
+
+        const htmlResult = await convertToHtml(bytes, {
+          renderAnnotations: true,
+          annotationLabelMode: AnnotationLabelMode.Above,
+        });
+        setHtml(htmlResult);
+
         setNewAnnotation({
           id: '',
           labelId: '',
@@ -96,8 +150,29 @@ export function AnnotationViewer() {
   };
 
   const handleRemoveAnnotation = async (annotationId: string) => {
+    if (!documentBytes) return;
+
     try {
-      await remove(annotationId);
+      const result = await removeAnnotation(documentBytes, annotationId);
+      if (result?.success && result.documentBytes) {
+        // Decode base64 to Uint8Array
+        const binaryString = atob(result.documentBytes);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        setDocumentBytes(bytes);
+
+        // Refresh annotations and HTML
+        const annots = await getAnnotations(bytes);
+        setAnnotations(annots);
+
+        const htmlResult = await convertToHtml(bytes, {
+          renderAnnotations: true,
+          annotationLabelMode: AnnotationLabelMode.Above,
+        });
+        setHtml(htmlResult);
+      }
     } catch (err) {
       console.error('Failed to remove annotation:', err);
     }
@@ -116,7 +191,7 @@ export function AnnotationViewer() {
     URL.revokeObjectURL(url);
   };
 
-  const isLoading = isLoadingAnnotations || isLoadingStructure;
+  const isProcessing = isLoading || isInitializing;
 
   return (
     <div className="annotation-viewer">
@@ -130,10 +205,10 @@ export function AnnotationViewer() {
           type="file"
           accept=".docx"
           onChange={handleFileChange}
-          disabled={isLoading}
+          disabled={isProcessing}
         />
         {file && (
-          <button onClick={handleClear} className="clear-btn" disabled={isLoading}>
+          <button onClick={handleClear} className="clear-btn" disabled={isProcessing}>
             Clear
           </button>
         )}
@@ -144,32 +219,21 @@ export function AnnotationViewer() {
         with labels that can mark important sections of text.
       </p>
 
-      {isLoading && (
+      {isProcessing && (
         <div className="loading loading-processing">
           <div className="spinner"></div>
-          <p>Loading document...</p>
+          <p>{isInitializing ? 'Initializing...' : 'Loading document...'}</p>
         </div>
       )}
 
-      {annotationError && !isLoading && (
+      {error && !isProcessing && (
         <div className="error">
-          <p>Error: {annotationError.message}</p>
+          <p>Error: {error.message}</p>
         </div>
       )}
 
-      {file && !isLoading && (
+      {file && !isProcessing && !error && (
         <>
-          {/* Document Structure Summary */}
-          {structure && (
-            <div className="structure-summary">
-              <h3>Document Structure</h3>
-              <div className="structure-stats">
-                <span className="stat">Paragraphs: {paragraphs.length}</span>
-                <span className="stat">Tables: {tables.length}</span>
-              </div>
-            </div>
-          )}
-
           {/* Annotations Summary */}
           <div className="annotations-summary">
             <div className="summary-header">
@@ -328,6 +392,17 @@ export function AnnotationViewer() {
               </div>
             )}
           </div>
+
+          {/* Document Preview */}
+          {html && (
+            <div className="annotation-preview">
+              <h3>Document Preview</h3>
+              <div
+                className="preview-content document-preview"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
