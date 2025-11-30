@@ -631,7 +631,7 @@ export function DocumentViewer() {
       {html && !isConverting && (
         <div className="document-content">
           {enablePagination ? (
-            <>
+            <div className="paginated-wrapper">
               {/* PDF.js style toolbar */}
               <div className="pdf-toolbar">
                 <div className="toolbar-group">
@@ -703,7 +703,7 @@ export function DocumentViewer() {
                 </div>
               </div>
 
-              <div ref={paginatedContainerRef}>
+              <div ref={paginatedContainerRef} className="paginated-scroll-container">
                 <PaginatedDocument
                   html={html}
                   scale={paginationScale}
@@ -719,7 +719,7 @@ export function DocumentViewer() {
                   }}
                 />
               </div>
-            </>
+            </div>
           ) : (
             <div
               className="html-preview"

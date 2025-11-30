@@ -856,12 +856,27 @@ input[type="file"] {
   border-radius: 6px 6px 0 0;
 }
 
+/* Paginated document wrapper - fills remaining viewport */
+.paginated-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 400px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Scroll container for pages */
+.paginated-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: #525659;
+}
+
 /* Paginated document container */
 .paginated-preview {
-  min-height: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-  border-radius: 0 0 8px 8px;
+  min-height: 100%;
 }
 
 /* Responsive */
