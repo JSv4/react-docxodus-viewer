@@ -89,6 +89,10 @@ export function DocumentViewer() {
     if (!isReady) return;
     setIsConverting(true);
     setError(null);
+
+    // Allow React to render loading state before heavy WASM work blocks the thread
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
     try {
       const result = await convertToHtml(file, getConvertOptions());
       setHtml(result);
