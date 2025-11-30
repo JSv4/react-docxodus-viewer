@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "DocxodusWasm.dll",
   "resources": {
-    "hash": "sha256-IJZ7gkapGa2l3nS3/j9EKdVmei3MpXDqhJnBORPMlBo=",
+    "hash": "sha256-Cbm32qfvp//StUP2ApkgwfzATQlHWN5nuwK29JXakt0=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-YLwjs9CPwrZG7YKULjmqr5bYsmhxwcWJOhQNM4bG6Gc="
     },
@@ -17,8 +17,8 @@
     "assembly": {
       "DocumentFormat.OpenXml.wasm": "sha256-edAN2rIA7QQ8K5qp1o5QXplt8M80fEiVmuMgT/MBmLM=",
       "DocumentFormat.OpenXml.Framework.wasm": "sha256-CFdrD1dSpnkcOk0gxZcKb2T5p+q2ck9ivs+TOML6Jmw=",
-      "Docxodus.wasm": "sha256-ZsuMwXS7B6Z7RJkbh17oKJt8S5Z7aBDD3bjzKCcWR+A=",
-      "DocxodusWasm.wasm": "sha256-wSTIKJRTdb1a+ZTHXDYQdYBLPGJ5P0+DbvHpLrZKIhk=",
+      "Docxodus.wasm": "sha256-XLvVJlohhJOSeKez0XJCy00vSDqLASka7v6emIGF8kY=",
+      "DocxodusWasm.wasm": "sha256-4OdGPGuqUc8osMCPQ2QTKnt9gLklQtyuP7gF+zi8nVU=",
       "SkiaSharp.wasm": "sha256-U6RbqUVBn8Vx8qpghJC5+r/DC1NSBY+EIRDxP8o6dsk=",
       "System.Collections.Concurrent.wasm": "sha256-xXJbJWNeQ2DSYvAGUoUHjF9y4Iajv2ed0eACOxWD19U=",
       "System.Collections.wasm": "sha256-J1FML3h2WBTlmekS0TVLGCvZGbIRG+AZnGmlZn3Y5+Q=",

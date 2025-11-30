@@ -1,64 +1,10 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
-import { useDocxodus, usePagination } from 'docxodus/react';
+import { useState, useCallback } from 'react';
+import { useDocxodus, PaginatedDocument } from 'docxodus/react';
 import { CommentRenderMode, PaginationMode } from 'docxodus';
+import type { PaginationResult } from 'docxodus/react';
 import { WASM_BASE_PATH } from '../config';
 
 type CommentMode = 'disabled' | 'endnote' | 'inline' | 'margin';
-
-// Custom PaginatedDocument that properly memoizes options to avoid infinite re-renders
-// This works around a bug in docxodus 3.4.1's PaginatedDocument component
-function StablePaginatedDocument({
-  html,
-  scale = 1,
-  showPageNumbers = true,
-  pageGap = 20,
-  backgroundColor = '#525659',
-  className,
-}: {
-  html: string;
-  scale?: number;
-  showPageNumbers?: boolean;
-  pageGap?: number;
-  backgroundColor?: string;
-  className?: string;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Memoize options to prevent infinite re-render loop
-  const options = useMemo(
-    () => ({
-      scale,
-      showPageNumbers,
-      pageGap,
-      cssPrefix: 'page-',
-    }),
-    [scale, showPageNumbers, pageGap]
-  );
-
-  const { error, isPaginating } = usePagination(html, containerRef, options);
-
-  if (error) {
-    return (
-      <div style={{ color: 'red', padding: '20px', backgroundColor }}>
-        Pagination error: {error.message}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={{
-        backgroundColor,
-        minHeight: '100vh',
-        overflow: 'auto',
-      }}
-    >
-      {isPaginating ? 'Loading...' : null}
-    </div>
-  );
-}
 
 export function DocumentViewer() {
   const { isReady, isLoading, error: initError, convertToHtml } = useDocxodus(WASM_BASE_PATH);
@@ -68,6 +14,8 @@ export function DocumentViewer() {
   const [fileName, setFileName] = useState<string>('');
   const [commentMode, setCommentMode] = useState<CommentMode>('disabled');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
 
   // Pagination options
   const [enablePagination, setEnablePagination] = useState(false);
@@ -410,14 +358,27 @@ export function DocumentViewer() {
       {html && !isConverting && (
         <div className="document-content">
           {enablePagination ? (
-            <StablePaginatedDocument
-              html={html}
-              scale={paginationScale}
-              showPageNumbers={showPageNumbers}
-              pageGap={20}
-              backgroundColor="#525659"
-              className="paginated-preview"
-            />
+            <>
+              {totalPages > 0 && (
+                <div className="pagination-info">
+                  Page {currentPage} of {totalPages}
+                </div>
+              )}
+              <PaginatedDocument
+                html={html}
+                scale={paginationScale}
+                showPageNumbers={showPageNumbers}
+                pageGap={20}
+                backgroundColor="#525659"
+                className="paginated-preview"
+                onPaginationComplete={(result: PaginationResult) => {
+                  setTotalPages(result.totalPages);
+                }}
+                onPageVisible={(pageNumber: number) => {
+                  setCurrentPage(pageNumber);
+                }}
+              />
+            </>
           ) : (
             <div
               className="html-preview"

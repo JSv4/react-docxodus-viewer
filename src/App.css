@@ -315,6 +315,10 @@ input[type="file"] {
   color: #9b59b6;
 }
 
+.stat.format-change {
+  color: #e67e22;
+}
+
 /* Document content */
 .document-content {
   border: 1px solid #e0e0e0;
@@ -465,6 +469,10 @@ input[type="file"] {
   border-left: 4px solid #9b59b6;
 }
 
+.revision-item.format-change {
+  border-left: 4px solid #e67e22;
+}
+
 .revision-header {
   display: flex;
   align-items: center;
@@ -496,6 +504,11 @@ input[type="file"] {
 .revision-type.move {
   background: #e8daef;
   color: #5b2c6f;
+}
+
+.revision-type.format-change {
+  background: #fdebd0;
+  color: #935116;
 }
 
 .revision-author {
@@ -536,6 +549,15 @@ input[type="file"] {
   font-size: 0.85rem;
   color: #5b2c6f;
   font-style: italic;
+}
+
+.format-change-info {
+  padding: 0.5rem 0.75rem;
+  background: #fef9f3;
+  border-top: 1px solid #fdebd0;
+  font-size: 0.85rem;
+  color: #935116;
+  font-family: monospace;
 }
 
 /* Advanced options */
@@ -647,6 +669,10 @@ input[type="file"] {
   color: #9b59b6;
 }
 
+.filter-text.format-change {
+  color: #e67e22;
+}
+
 .filter-count {
   margin-left: auto;
   font-size: 0.85rem;
@@ -673,12 +699,23 @@ input[type="file"] {
   width: 150px;
 }
 
+/* Pagination info */
+.pagination-info {
+  padding: 0.5rem 1rem;
+  background: #2c3e50;
+  color: white;
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 500;
+  border-radius: 6px 6px 0 0;
+}
+
 /* Paginated document container */
 .paginated-preview {
   min-height: 600px;
   max-height: 80vh;
   overflow-y: auto;
-  border-radius: 8px;
+  border-radius: 0 0 8px 8px;
 }
 
 /* Responsive */

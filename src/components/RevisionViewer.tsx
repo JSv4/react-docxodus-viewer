@@ -1,15 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getRevisions as getRevisionsFromDoc, isMove, isMoveSource, findMovePair, isInsertion, isDeletion, RevisionType, initialize, isInitialized } from 'docxodus';
+import { getRevisions as getRevisionsFromDoc, isMove, isMoveSource, findMovePair, isInsertion, isDeletion, isFormatChange, initialize, isInitialized } from 'docxodus';
+import type { Revision } from 'docxodus';
 import { WASM_BASE_PATH } from '../config';
-
-interface Revision {
-  author: string;
-  date: string;
-  revisionType: RevisionType | string;
-  text: string;
-  moveGroupId?: number;
-  isMoveSource?: boolean;
-}
 
 export function RevisionViewer() {
   const [isReady, setIsReady] = useState(false);
@@ -34,6 +26,7 @@ export function RevisionViewer() {
   const [showInsertions, setShowInsertions] = useState(true);
   const [showDeletions, setShowDeletions] = useState(true);
   const [showMoves, setShowMoves] = useState(true);
+  const [showFormatChanges, setShowFormatChanges] = useState(true);
 
   // Initialize WASM on mount
   useEffect(() => {
@@ -109,11 +102,12 @@ export function RevisionViewer() {
 
   // Compute statistics
   const stats = useMemo(() => {
-    if (!revisions) return { insertions: 0, deletions: 0, moves: 0 };
+    if (!revisions) return { insertions: 0, deletions: 0, moves: 0, formatChanges: 0 };
     return {
       insertions: revisions.filter((r) => isInsertion(r) && !isMove(r)).length,
       deletions: revisions.filter((r) => isDeletion(r) && !isMove(r)).length,
       moves: revisions.filter(isMove).length,
+      formatChanges: revisions.filter(isFormatChange).length,
     };
   }, [revisions]);
 
@@ -122,14 +116,16 @@ export function RevisionViewer() {
     if (!revisions) return null;
     return revisions.filter((r) => {
       if (isMove(r)) return showMoves;
+      if (isFormatChange(r)) return showFormatChanges;
       if (isInsertion(r)) return showInsertions;
       if (isDeletion(r)) return showDeletions;
       return true;
     });
-  }, [revisions, showInsertions, showDeletions, showMoves]);
+  }, [revisions, showInsertions, showDeletions, showMoves, showFormatChanges]);
 
   const getRevisionTypeClass = (rev: Revision): string => {
     if (isMove(rev)) return 'move';
+    if (isFormatChange(rev)) return 'format-change';
     if (isInsertion(rev)) return 'insertion';
     if (isDeletion(rev)) return 'deletion';
     return '';
@@ -139,9 +135,23 @@ export function RevisionViewer() {
     if (isMove(rev)) {
       return isMoveSource(rev) ? 'Moved From' : 'Moved To';
     }
+    if (isFormatChange(rev)) return 'Format Changed';
     if (isInsertion(rev)) return 'Inserted';
     if (isDeletion(rev)) return 'Deleted';
     return String(rev.revisionType);
+  };
+
+  const formatChangeDescription = (rev: Revision): string | null => {
+    if (!isFormatChange(rev) || !rev.formatChange) return null;
+    const { changedPropertyNames, oldProperties, newProperties } = rev.formatChange;
+    if (!changedPropertyNames || changedPropertyNames.length === 0) return null;
+
+    const changes = changedPropertyNames.map(prop => {
+      const oldVal = oldProperties?.[prop] ?? '(none)';
+      const newVal = newProperties?.[prop] ?? '(none)';
+      return `${prop}: ${oldVal} → ${newVal}`;
+    });
+    return changes.join(', ');
   };
 
   const getMovePairInfo = (rev: Revision): string | null => {
@@ -320,6 +330,9 @@ export function RevisionViewer() {
               {stats.moves > 0 && (
                 <span className="stat move">Moves: {stats.moves}</span>
               )}
+              {stats.formatChanges > 0 && (
+                <span className="stat format-change">Format Changes: {stats.formatChanges}</span>
+              )}
             </div>
           </div>
 
@@ -351,6 +364,16 @@ export function RevisionViewer() {
                 <span className="filter-text move">Moves</span>
               </label>
             )}
+            {stats.formatChanges > 0 && (
+              <label className="filter-checkbox">
+                <input
+                  type="checkbox"
+                  checked={showFormatChanges}
+                  onChange={(e) => setShowFormatChanges(e.target.checked)}
+                />
+                <span className="filter-text format-change">Format Changes</span>
+              </label>
+            )}
             {filteredRevisions && (
               <span className="filter-count">
                 Showing {filteredRevisions.length} of {revisions.length}
@@ -362,6 +385,7 @@ export function RevisionViewer() {
             {filteredRevisions?.map((rev, index) => {
               const typeClass = getRevisionTypeClass(rev);
               const movePairInfo = getMovePairInfo(rev);
+              const formatInfo = formatChangeDescription(rev);
               return (
                 <div
                   key={index}
@@ -385,6 +409,11 @@ export function RevisionViewer() {
                   {movePairInfo && (
                     <div className="move-pair-info">
                       {movePairInfo}
+                    </div>
+                  )}
+                  {formatInfo && (
+                    <div className="format-change-info">
+                      {formatInfo}
                     </div>
                   )}
                 </div>
