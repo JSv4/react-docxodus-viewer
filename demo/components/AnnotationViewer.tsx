@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useDocxodus, AnnotationLabelMode } from 'docxodus/react';
 import type { Annotation, AddAnnotationRequest } from 'docxodus/react';
-import { WASM_BASE_PATH } from '../config';
+
+// WASM base path - relative to deployed URL base
+const WASM_BASE_PATH = import.meta.env.BASE_URL + 'wasm/';
 
 export function AnnotationViewer() {
   const [file, setFile] = useState<File | null>(null);

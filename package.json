@@ -1,29 +1,67 @@
 {
-  "name": "docxodus-viewer",
-  "private": true,
-  "version": "0.0.0",
+  "name": "react-docx-viewer",
+  "version": "0.1.0",
+  "description": "A React component for viewing DOCX documents in the browser, powered by Docxodus",
   "type": "module",
+  "main": "./dist/react-docx-viewer.cjs.js",
+  "module": "./dist/react-docx-viewer.es.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/react-docx-viewer.es.js",
+      "require": "./dist/react-docx-viewer.cjs.js"
+    },
+    "./styles.css": "./dist/react-docx-viewer.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:lib && npm run build:demo",
+    "build:lib": "BUILD_LIB=true vite build && tsc -p tsconfig.lib.json",
+    "build:demo": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:lib"
   },
-  "dependencies": {
-    "docxodus": "3.9",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/react-docx-viewer"
   },
+  "keywords": [
+    "react",
+    "docx",
+    "viewer",
+    "word",
+    "document",
+    "office",
+    "docxodus"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "docxodus": ">=3.9",
+    "react": ">=18"
+  },
+  "dependencies": {},
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "docxodus": "3.9",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"

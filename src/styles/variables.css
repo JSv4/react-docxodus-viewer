@@ -1,0 +1,57 @@
+/**
+ * react-docx-viewer CSS Custom Properties
+ * Override these to customize the viewer appearance
+ */
+
+.rdv-viewer {
+  /* Viewer container */
+  --rdv-border-radius: 8px;
+  --rdv-background: #525659;
+  --rdv-min-height: 500px;
+  --rdv-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+  /* Toolbar */
+  --rdv-toolbar-bg: #323639;
+  --rdv-toolbar-border: #1a1a1a;
+  --rdv-toolbar-height: auto;
+  --rdv-toolbar-padding: 0.5rem 1rem;
+
+  /* Toolbar buttons */
+  --rdv-btn-bg: #474c50;
+  --rdv-btn-bg-hover: #5a6066;
+  --rdv-btn-color: #d4d4d4;
+  --rdv-btn-radius: 4px;
+  --rdv-btn-disabled-opacity: 0.4;
+
+  /* Page input */
+  --rdv-input-bg: #474c50;
+  --rdv-input-color: #d4d4d4;
+  --rdv-input-muted: #9ca3af;
+
+  /* Separator */
+  --rdv-separator-color: #555;
+
+  /* Messages */
+  --rdv-message-color: #9ca3af;
+  --rdv-error-color: #ef4444;
+
+  /* Highlight animation */
+  --rdv-highlight-color: #fef08a;
+
+  /* Settings modal */
+  --rdv-modal-overlay: rgba(0, 0, 0, 0.6);
+  --rdv-modal-bg: white;
+  --rdv-modal-radius: 12px;
+  --rdv-modal-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  --rdv-modal-border: #e5e7eb;
+  --rdv-modal-title-color: #1f2937;
+  --rdv-modal-text-color: #4b5563;
+  --rdv-modal-muted-color: #6b7280;
+  --rdv-modal-section-bg: #f3f4f6;
+  --rdv-modal-section-bg-hover: #e5e7eb;
+  --rdv-modal-advanced-bg: #f9fafb;
+  --rdv-modal-input-border: #d1d5db;
+  --rdv-modal-input-focus: #3b82f6;
+  --rdv-modal-btn-bg: #3b82f6;
+  --rdv-modal-btn-bg-hover: #2563eb;
+}

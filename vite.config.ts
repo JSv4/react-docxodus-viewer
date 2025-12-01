@@ -1,11 +1,9 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 
 // Plugin to serve WASM files from public directory during dev
-// This works around Vite's restriction on dynamic imports from /public
-// See: https://github.com/vitejs/vite/issues/14850
 function wasmPublicPlugin(): Plugin {
   const publicDir = join(process.cwd(), 'public')
 
@@ -13,24 +11,20 @@ function wasmPublicPlugin(): Plugin {
     name: 'wasm-public-plugin',
     enforce: 'pre',
     configureServer(server) {
-      // Add middleware BEFORE Vite's internal middleware (no return = runs first)
       server.middlewares.use((req, res, next) => {
         let url = req.url || ''
 
-        // Strip query params like ?import that Vite adds for module imports
         const queryIndex = url.indexOf('?')
         if (queryIndex > -1) {
           url = url.substring(0, queryIndex)
         }
 
-        // Check if this is a request for files in /wasm/
         if (url.startsWith('/wasm/')) {
           const filePath = join(publicDir, url)
 
           if (existsSync(filePath)) {
             const content = readFileSync(filePath)
 
-            // Set appropriate content type
             if (url.endsWith('.js')) {
               res.setHeader('Content-Type', 'application/javascript')
             } else if (url.endsWith('.wasm')) {
@@ -41,7 +35,6 @@ function wasmPublicPlugin(): Plugin {
               res.setHeader('Content-Type', 'application/json')
             }
 
-            // Add CORS headers for WASM
             res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
             res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
 
@@ -53,18 +46,14 @@ function wasmPublicPlugin(): Plugin {
         next()
       })
     },
-    // Prevent Vite from trying to resolve/transform these imports
     resolveId(source) {
       if (source.includes('/wasm/')) {
-        // Return false to tell Vite this is an external module it shouldn't process
         return false
       }
       return null
     },
-    // Intercept the load to prevent Vite from throwing errors
     load(id) {
       if (id.includes('/wasm/')) {
-        // Return empty - browser will fetch directly
         return ''
       }
       return null
@@ -72,19 +61,55 @@ function wasmPublicPlugin(): Plugin {
   }
 }
 
-// https://vite.dev/config/
-export default defineConfig({
-  // Base path for GitHub Pages - uses repo name from env or defaults to '/'
+const isLibBuild = process.env.BUILD_LIB === 'true'
+
+// Library build configuration
+const libConfig = defineConfig({
+  plugins: [react()],
+  publicDir: false, // Don't copy public assets to lib dist
+  build: {
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'ReactDocxViewer',
+      fileName: (format) => `react-docx-viewer.${format}.js`,
+      formats: ['es', 'cjs'],
+    },
+    rollupOptions: {
+      external: ['react', 'react-dom', 'react/jsx-runtime', 'docxodus', 'docxodus/react'],
+      output: {
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM',
+          'react/jsx-runtime': 'jsxRuntime',
+          docxodus: 'docxodus',
+          'docxodus/react': 'docxodusReact',
+        },
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'style.css') {
+            return 'react-docx-viewer.css'
+          }
+          return assetInfo.name || 'asset'
+        },
+      },
+    },
+    cssCodeSplit: false,
+    sourcemap: true,
+    outDir: 'dist',
+    emptyOutDir: true,
+  },
+})
+
+// Demo app configuration
+const demoConfig = defineConfig({
   base: process.env.GITHUB_ACTIONS ? '/Docxodus-Viewer/' : '/',
   plugins: [wasmPublicPlugin(), react()],
+  root: '.',
   server: {
     headers: {
-      // Required for SharedArrayBuffer used by .NET WASM
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
     hmr: {
-      // Disable error overlay - WASM loading errors can be misleading
       overlay: false,
     },
   },
@@ -95,11 +120,15 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    // Don't pre-bundle docxodus - it has dynamic imports to WASM files
     exclude: ['docxodus'],
   },
   build: {
-    // Don't warn about large chunks
     chunkSizeWarningLimit: 1000,
+    outDir: 'dist-demo',
+    rollupOptions: {
+      input: resolve(__dirname, 'demo/index.html'),
+    },
   },
 })
+
+export default isLibBuild ? libConfig : demoConfig
