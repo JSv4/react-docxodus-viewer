@@ -4,6 +4,7 @@
 
 export type CommentMode = 'disabled' | 'endnote' | 'inline' | 'margin';
 export type AnnotationMode = 'disabled' | 'above' | 'inline' | 'tooltip' | 'none';
+export type ViewMode = 'document' | 'revisions';
 
 export interface ViewerSettings {
   /** Zoom scale (0.3 - 2.0) */
@@ -54,6 +55,8 @@ export interface DocumentViewerProps {
   onError?: (error: Error) => void;
   /** Callback when visible page changes */
   onPageChange?: (page: number, total: number) => void;
+  /** Callback when revisions are extracted from document */
+  onRevisionsExtracted?: (revisions: import('docxodus').Revision[]) => void;
 
   /** Initial/controlled viewer settings */
   settings?: Partial<ViewerSettings>;
@@ -70,6 +73,8 @@ export interface DocumentViewerProps {
   toolbar?: 'top' | 'bottom' | 'none';
   /** Show settings button in toolbar */
   showSettingsButton?: boolean;
+  /** Show revisions tab when document has tracked changes */
+  showRevisionsTab?: boolean;
   /** Placeholder text when no document is loaded */
   placeholder?: string;
 

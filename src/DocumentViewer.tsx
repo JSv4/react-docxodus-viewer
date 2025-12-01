@@ -1,14 +1,16 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useDocxodus, PaginatedDocument } from 'docxodus/react';
+import type { PaginationResult, Revision } from 'docxodus/react';
 import { CommentRenderMode, PaginationMode, AnnotationLabelMode } from 'docxodus';
-import type { PaginationResult } from 'docxodus/react';
 import type {
   DocumentViewerProps,
   ViewerSettings,
   CommentMode,
   AnnotationMode,
+  ViewMode,
 } from './types';
 import { DEFAULT_SETTINGS } from './types';
+import { RevisionPanel } from './components/RevisionPanel';
 
 // Default WASM path - consumers should override this
 const DEFAULT_WASM_PATH = '/wasm/';
@@ -40,6 +42,7 @@ export function DocumentViewer({
   onConversionComplete,
   onError,
   onPageChange,
+  onRevisionsExtracted,
   settings: controlledSettings,
   defaultSettings,
   onSettingsChange,
@@ -47,6 +50,7 @@ export function DocumentViewer({
   style,
   toolbar = 'top',
   showSettingsButton = true,
+  showRevisionsTab = true,
   placeholder = 'Open a DOCX file to view',
   wasmBasePath = DEFAULT_WASM_PATH,
 }: DocumentViewerProps) {
@@ -72,7 +76,7 @@ export function DocumentViewer({
   );
 
   // Docxodus hook
-  const { isReady, isLoading, error: initError, convertToHtml } = useDocxodus(wasmBasePath);
+  const { isReady, isLoading, error: initError, convertToHtml, getRevisions } = useDocxodus(wasmBasePath);
 
   // Local UI state
   const [isConverting, setIsConverting] = useState(false);
@@ -81,6 +85,9 @@ export function DocumentViewer({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('document');
+  const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [isExtractingRevisions, setIsExtractingRevisions] = useState(false);
 
   const paginatedContainerRef = useRef<HTMLDivElement>(null);
 
@@ -104,12 +111,31 @@ export function DocumentViewer({
     renderMoveOperations: settings.renderMoveOperations,
   }), [settings]);
 
+  // Extract revisions from document
+  const extractRevisions = useCallback(async (fileToExtract: File) => {
+    if (!isReady || !showRevisionsTab) return;
+
+    setIsExtractingRevisions(true);
+    try {
+      const extractedRevisions = await getRevisions(fileToExtract);
+      setRevisions(extractedRevisions);
+      onRevisionsExtracted?.(extractedRevisions);
+    } catch {
+      // Revision extraction is non-critical, silently fail
+      setRevisions([]);
+    } finally {
+      setIsExtractingRevisions(false);
+    }
+  }, [isReady, getRevisions, showRevisionsTab, onRevisionsExtracted]);
+
   // Convert file to HTML
   const convert = useCallback(async (fileToConvert: File) => {
     if (!isReady) return;
 
     setIsConverting(true);
     setError(null);
+    setRevisions([]);
+    setViewMode('document');
     onConversionStart?.();
 
     // Allow React to render loading state before heavy WASM work
@@ -122,6 +148,9 @@ export function DocumentViewer({
         setInternalHtml(result);
       }
       onConversionComplete?.(result);
+
+      // Extract revisions in background after conversion
+      extractRevisions(fileToConvert);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -129,7 +158,7 @@ export function DocumentViewer({
     } finally {
       setIsConverting(false);
     }
-  }, [isReady, convertToHtml, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete, onError]);
+  }, [isReady, convertToHtml, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete, onError, extractRevisions]);
 
   // Auto-convert when WASM ready and file available
   useEffect(() => {
@@ -181,6 +210,8 @@ export function DocumentViewer({
     setFileName('');
     setCurrentPage(1);
     setTotalPages(0);
+    setRevisions([]);
+    setViewMode('document');
     onFileChange?.(null);
 
     const input = document.getElementById('rdv-file-input') as HTMLInputElement;
@@ -375,6 +406,8 @@ export function DocumentViewer({
     </div>
   );
 
+  const hasRevisions = revisions.length > 0;
+
   // Toolbar component
   const Toolbar = () => (
     <div className="rdv-toolbar">
@@ -395,10 +428,36 @@ export function DocumentViewer({
             ×
           </button>
         )}
+        {showRevisionsTab && hasRevisions && (
+          <>
+            <div className="rdv-toolbar-separator" />
+            <div className="rdv-view-tabs">
+              <button
+                className={`rdv-view-tab ${viewMode === 'document' ? 'rdv-view-tab--active' : ''}`}
+                onClick={() => setViewMode('document')}
+                title="View Document"
+              >
+                Document
+              </button>
+              <button
+                className={`rdv-view-tab ${viewMode === 'revisions' ? 'rdv-view-tab--active' : ''}`}
+                onClick={() => setViewMode('revisions')}
+                title="View Tracked Changes"
+              >
+                Changes ({revisions.length})
+              </button>
+            </div>
+          </>
+        )}
+        {showRevisionsTab && isExtractingRevisions && (
+          <span className="rdv-extracting-indicator" title="Extracting tracked changes...">
+            ...
+          </span>
+        )}
       </div>
 
       <div className="rdv-toolbar-center">
-        {html && totalPages > 0 && (
+        {html && totalPages > 0 && viewMode === 'document' && (
           <>
             <button
               className="rdv-toolbar-btn"
@@ -520,7 +579,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {html && !isConverting && (
+        {html && !isConverting && viewMode === 'document' && (
           <div ref={paginatedContainerRef} className="rdv-pages">
             <PaginatedDocument
               html={html}
@@ -535,6 +594,10 @@ export function DocumentViewer({
               onPageVisible={handlePageVisible}
             />
           </div>
+        )}
+
+        {html && !isConverting && viewMode === 'revisions' && (
+          <RevisionPanel revisions={revisions} />
         )}
       </div>
 

@@ -15,9 +15,11 @@ export type {
   ViewerSettings,
   CommentMode,
   AnnotationMode,
+  ViewMode,
 } from './types';
 
 export { DEFAULT_SETTINGS } from './types';
 
 // Re-export useful types from docxodus for convenience
-export type { PaginationResult } from 'docxodus/react';
+export type { PaginationResult, Revision } from 'docxodus/react';
+export { RevisionType, isInsertion, isDeletion, isMove, isFormatChange } from 'docxodus';
