@@ -8,6 +8,7 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
+    environment: Publisher
 
     permissions:
       contents: read
