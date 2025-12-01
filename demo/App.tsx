@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { DocumentViewer } from './components/DocumentViewer';
+import { DocumentViewer } from '../src';
 import { DocumentComparer } from './components/DocumentComparer';
-import { RevisionViewer } from './components/RevisionViewer';
 import { AnnotationViewer } from './components/AnnotationViewer';
+import '../src/styles/DocumentViewer.css';
 import './App.css';
 
-type Tab = 'viewer' | 'compare' | 'revisions' | 'annotations';
+// WASM base path - relative to deployed URL base
+const WASM_BASE_PATH = import.meta.env.BASE_URL + 'wasm/';
+
+type Tab = 'viewer' | 'compare' | 'annotations';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('viewer');
@@ -31,12 +34,6 @@ function App() {
           Compare Documents
         </button>
         <button
-          className={`tab-btn ${activeTab === 'revisions' ? 'active' : ''}`}
-          onClick={() => setActiveTab('revisions')}
-        >
-          Extract Revisions
-        </button>
-        <button
           className={`tab-btn ${activeTab === 'annotations' ? 'active' : ''}`}
           onClick={() => setActiveTab('annotations')}
         >
@@ -45,14 +42,19 @@ function App() {
       </nav>
 
       <main className="app-main">
-        {activeTab === 'viewer' && <DocumentViewer />}
+        {activeTab === 'viewer' && (
+          <DocumentViewer
+            wasmBasePath={WASM_BASE_PATH}
+            onError={(err) => console.error('Viewer error:', err)}
+            onPageChange={(page, total) => console.log(`Page ${page}/${total}`)}
+          />
+        )}
         {activeTab === 'compare' && <DocumentComparer />}
-        {activeTab === 'revisions' && <RevisionViewer />}
         {activeTab === 'annotations' && <AnnotationViewer />}
       </main>
 
       <footer className="app-footer">
-        <p>Powered by Docxodus - 100% client-side document processing</p>
+        <p>Powered by <a href="https://www.npmjs.com/package/docxodus" target="_blank" rel="noopener noreferrer">Docxodus</a> - 100% client-side document processing</p>
       </footer>
     </div>
   );

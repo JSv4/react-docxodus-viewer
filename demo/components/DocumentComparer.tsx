@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useDocxodus, useComparison } from 'docxodus/react';
-import { WASM_BASE_PATH } from '../config';
+
+// WASM base path - relative to deployed URL base
+const WASM_BASE_PATH = import.meta.env.BASE_URL + 'wasm/';
 
 export function DocumentComparer() {
   // Use useDocxodus just to get loading state

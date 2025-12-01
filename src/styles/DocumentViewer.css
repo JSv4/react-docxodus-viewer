@@ -1,0 +1,771 @@
+/**
+ * react-docx-viewer styles
+ * Import variables.css first for customization support
+ */
+
+@import './variables.css';
+
+/* ============================================
+   DOCX VIEWER - Main container
+   ============================================ */
+
+.rdv-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: var(--rdv-min-height);
+  border-radius: var(--rdv-border-radius);
+  overflow: hidden;
+  background: var(--rdv-background);
+  box-shadow: var(--rdv-shadow);
+}
+
+/* ============================================
+   TOOLBAR
+   ============================================ */
+
+.rdv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--rdv-toolbar-padding);
+  background: var(--rdv-toolbar-bg);
+  border-bottom: 1px solid var(--rdv-toolbar-border);
+  flex-shrink: 0;
+}
+
+.rdv-toolbar-left,
+.rdv-toolbar-center,
+.rdv-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rdv-toolbar-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.rdv-toolbar-file-btn {
+  background: var(--rdv-btn-bg);
+  color: var(--rdv-btn-color);
+  padding: 0.5rem 1rem;
+  border-radius: var(--rdv-btn-radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  border: none;
+}
+
+.rdv-toolbar-file-btn:hover {
+  background: var(--rdv-btn-bg-hover);
+}
+
+.rdv-toolbar-btn {
+  background: var(--rdv-btn-bg);
+  border: none;
+  color: var(--rdv-btn-color);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--rdv-btn-radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: bold;
+  min-width: 32px;
+  transition: background 0.2s;
+}
+
+.rdv-toolbar-btn:hover:not(:disabled) {
+  background: var(--rdv-btn-bg-hover);
+}
+
+.rdv-toolbar-btn:disabled {
+  opacity: var(--rdv-btn-disabled-opacity);
+  cursor: not-allowed;
+}
+
+.rdv-toolbar-clear {
+  padding: 0.4rem 0.6rem;
+  font-size: 1rem;
+}
+
+.rdv-toolbar-settings {
+  font-size: 1.1rem;
+}
+
+.rdv-page-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--rdv-input-bg);
+  border-radius: var(--rdv-btn-radius);
+  padding: 0 0.5rem;
+}
+
+.rdv-page-input {
+  width: 50px;
+  background: transparent;
+  border: none;
+  color: var(--rdv-input-color);
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 0.4rem 0;
+  -moz-appearance: textfield;
+}
+
+.rdv-page-input::-webkit-outer-spin-button,
+.rdv-page-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.rdv-page-input:focus {
+  outline: none;
+}
+
+.rdv-page-total {
+  color: var(--rdv-input-muted);
+  font-size: 0.9rem;
+}
+
+.rdv-toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: var(--rdv-separator-color);
+  margin: 0 0.5rem;
+}
+
+.rdv-zoom-select {
+  background: var(--rdv-btn-bg);
+  border: none;
+  color: var(--rdv-btn-color);
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--rdv-btn-radius);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.rdv-zoom-select:focus {
+  outline: none;
+}
+
+/* Hidden file input */
+.rdv-file-input {
+  display: none;
+}
+
+/* ============================================
+   CONTENT AREA
+   ============================================ */
+
+.rdv-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.rdv-pages {
+  flex: 1;
+  overflow: auto;
+}
+
+.rdv-paginated-document {
+  min-height: 100%;
+}
+
+/* ============================================
+   MESSAGES (loading, error, placeholder)
+   ============================================ */
+
+.rdv-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  color: var(--rdv-message-color);
+  text-align: center;
+  padding: 2rem;
+}
+
+.rdv-message--error {
+  color: var(--rdv-error-color);
+}
+
+.rdv-message__icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.rdv-message p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+/* ============================================
+   SPINNER
+   ============================================ */
+
+.rdv-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--rdv-btn-color);
+  border-radius: 50%;
+  animation: rdv-spin 1s linear infinite;
+}
+
+@keyframes rdv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   FOOTNOTE HIGHLIGHT
+   ============================================ */
+
+.rdv-footnote-highlight {
+  animation: rdv-highlight-pulse 2s ease-out;
+}
+
+@keyframes rdv-highlight-pulse {
+  0% {
+    background-color: var(--rdv-highlight-color);
+    box-shadow: 0 0 10px var(--rdv-highlight-color);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* ============================================
+   SETTINGS MODAL
+   ============================================ */
+
+.rdv-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--rdv-modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.rdv-settings-modal {
+  background: var(--rdv-modal-bg);
+  border-radius: var(--rdv-modal-radius);
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--rdv-modal-shadow);
+}
+
+.rdv-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--rdv-modal-border);
+}
+
+.rdv-settings-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--rdv-modal-title-color);
+}
+
+.rdv-settings-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--rdv-modal-muted-color);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.rdv-settings-close:hover {
+  color: var(--rdv-modal-title-color);
+}
+
+.rdv-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+}
+
+.rdv-settings-section {
+  margin-bottom: 1.5rem;
+}
+
+.rdv-settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.rdv-settings-section h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rdv-settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+
+.rdv-settings-checkbox input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.rdv-settings-checkbox span {
+  color: var(--rdv-modal-text-color);
+  font-size: 0.95rem;
+}
+
+.rdv-settings-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rdv-settings-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--rdv-modal-section-bg);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.rdv-settings-radio:hover {
+  background: var(--rdv-modal-section-bg-hover);
+}
+
+.rdv-settings-radio input {
+  cursor: pointer;
+}
+
+.rdv-settings-radio span {
+  font-size: 0.9rem;
+  color: var(--rdv-modal-text-color);
+}
+
+.rdv-settings-subsection {
+  margin-left: 1.5rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--rdv-modal-border);
+}
+
+.rdv-settings-toggle-advanced {
+  background: none;
+  border: none;
+  color: var(--rdv-modal-muted-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rdv-settings-toggle-advanced:hover {
+  color: #374151;
+}
+
+.rdv-settings-advanced {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--rdv-modal-advanced-bg);
+  border-radius: 8px;
+}
+
+.rdv-settings-field {
+  margin-bottom: 1rem;
+}
+
+.rdv-settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.rdv-settings-field label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--rdv-modal-muted-color);
+  margin-bottom: 0.25rem;
+}
+
+.rdv-settings-field input,
+.rdv-settings-field textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--rdv-modal-input-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.rdv-settings-field input:focus,
+.rdv-settings-field textarea:focus {
+  outline: none;
+  border-color: var(--rdv-modal-input-focus);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.rdv-settings-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--rdv-modal-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rdv-settings-apply {
+  background: var(--rdv-modal-btn-bg);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.rdv-settings-apply:hover {
+  background: var(--rdv-modal-btn-bg-hover);
+}
+
+/* ============================================
+   VIEW MODE TABS
+   ============================================ */
+
+.rdv-view-tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--rdv-btn-radius);
+  padding: 2px;
+}
+
+.rdv-view-tab {
+  background: transparent;
+  border: none;
+  color: var(--rdv-btn-color);
+  padding: 0.35rem 0.75rem;
+  border-radius: calc(var(--rdv-btn-radius) - 2px);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.rdv-view-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rdv-view-tab--active {
+  background: var(--rdv-btn-bg);
+  color: var(--rdv-btn-color);
+}
+
+.rdv-view-tab--active:hover {
+  background: var(--rdv-btn-bg-hover);
+}
+
+.rdv-extracting-indicator {
+  color: var(--rdv-input-muted);
+  font-size: 0.8rem;
+  animation: rdv-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes rdv-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ============================================
+   REVISION PANEL
+   ============================================ */
+
+.rdv-revision-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--rdv-background);
+}
+
+.rdv-revision-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--rdv-toolbar-bg);
+  border-bottom: 1px solid var(--rdv-toolbar-border);
+  flex-shrink: 0;
+}
+
+.rdv-revision-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rdv-revision-stat {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.rdv-revision-stat--total {
+  color: var(--rdv-btn-color);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rdv-revision-stat--insertion {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.rdv-revision-stat--deletion {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.rdv-revision-stat--move {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.rdv-revision-stat--format {
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.rdv-revision-filter {
+  background: var(--rdv-btn-bg);
+  border: none;
+  color: var(--rdv-btn-color);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--rdv-btn-radius);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.rdv-revision-filter:focus {
+  outline: none;
+}
+
+.rdv-revision-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rdv-revision-item {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  border-left: 3px solid #94a3b8;
+}
+
+.rdv-revision-item.rdv-revision--insertion {
+  border-left-color: #22c55e;
+  background: linear-gradient(to right, rgba(34, 197, 94, 0.08), #f8fafc 50%);
+}
+
+.rdv-revision-item.rdv-revision--deletion {
+  border-left-color: #ef4444;
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.08), #f8fafc 50%);
+}
+
+.rdv-revision-item.rdv-revision--move {
+  border-left-color: #3b82f6;
+  background: linear-gradient(to right, rgba(59, 130, 246, 0.08), #f8fafc 50%);
+}
+
+.rdv-revision-item.rdv-revision--format {
+  border-left-color: #a855f7;
+  background: linear-gradient(to right, rgba(168, 85, 247, 0.08), #f8fafc 50%);
+}
+
+.rdv-revision-item__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rdv-revision-type {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #475569;
+}
+
+.rdv-revision--insertion .rdv-revision-type {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.rdv-revision--deletion .rdv-revision-type {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.rdv-revision--move .rdv-revision-type {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}
+
+.rdv-revision--format .rdv-revision-type {
+  background: rgba(168, 85, 247, 0.15);
+  color: #9333ea;
+}
+
+.rdv-revision-author {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.rdv-revision-date {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-left: auto;
+}
+
+.rdv-revision-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rdv-revision-text {
+  font-size: 0.9rem;
+  color: #1e293b;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.rdv-revision--deletion .rdv-revision-text {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.rdv-revision-expand {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.25rem;
+  align-self: flex-start;
+}
+
+.rdv-revision-expand:hover {
+  text-decoration: underline;
+}
+
+.rdv-revision-item__format-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.rdv-revision-item__format-details span {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.rdv-revision-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  color: var(--rdv-message-color);
+  text-align: center;
+  padding: 2rem;
+}
+
+.rdv-revision-empty__icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.rdv-revision-empty p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: #64748b;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .rdv-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .rdv-toolbar-center {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .rdv-revision-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rdv-revision-filter {
+    width: 100%;
+  }
+}
