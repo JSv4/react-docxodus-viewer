@@ -86,15 +86,9 @@ export interface DocumentViewerProps {
   wasmBasePath?: string;
   /**
    * Use Web Worker for document conversion (keeps UI responsive).
-   * Only applies when useLazyLoading is false. Default: true
-   */
-  useWorker?: boolean;
-  /**
-   * Enable lazy loading - pages are rendered on-demand as they scroll into view.
-   * Dramatically reduces initial load time and memory for large documents.
    * Default: true
    */
-  useLazyLoading?: boolean;
+  useWorker?: boolean;
 }
 
 export const DEFAULT_SETTINGS: ViewerSettings = {

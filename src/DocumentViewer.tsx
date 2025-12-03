@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useDocxodus, PaginatedDocument, VirtualPaginatedDocument } from 'docxodus/react';
-import type { PaginationResult, Revision, DocumentMetadata, RenderPageRangeOptions } from 'docxodus/react';
+import { useDocxodus, PaginatedDocument } from 'docxodus/react';
+import type { PaginationResult, Revision, DocumentMetadata } from 'docxodus/react';
 import { CommentRenderMode, PaginationMode, AnnotationLabelMode, getDocumentMetadata } from 'docxodus';
 import { createWorkerDocxodus, isWorkerSupported } from 'docxodus/worker';
 import type { WorkerDocxodus } from 'docxodus/worker';
@@ -53,7 +53,6 @@ export function DocumentViewer({
   placeholder = 'Open a DOCX file to view',
   wasmBasePath,
   useWorker = true,
-  useLazyLoading = true,
 }: DocumentViewerProps) {
   // Merge default settings
   const mergedDefaults = useMemo(
@@ -85,12 +84,11 @@ export function DocumentViewer({
   const [workerLoading, setWorkerLoading] = useState(false);
   const [workerError, setWorkerError] = useState<Error | null>(null);
 
-  // Create/destroy worker based on useWorker prop (only when lazy loading is disabled)
+  // Create/destroy worker based on useWorker prop
   const workerRef = useRef<WorkerDocxodus | null>(null);
 
   useEffect(() => {
-    // Worker is only used for full document conversion (non-lazy mode)
-    if (useLazyLoading || !useWorker || !isWorkerSupported()) {
+    if (!useWorker || !isWorkerSupported()) {
       return;
     }
 
@@ -125,13 +123,12 @@ export function DocumentViewer({
         setWorkerReady(false);
       }
     };
-  }, [useLazyLoading, useWorker, wasmBasePath]);
+  }, [useWorker, wasmBasePath]);
 
   // Unified ready/loading/error state
-  // When lazy loading is enabled, VirtualPaginatedDocument handles its own initialization
-  const isReady = useLazyLoading ? true : (useWorker ? workerReady : hookResult.isReady);
-  const isLoading = useLazyLoading ? false : (useWorker ? workerLoading : hookResult.isLoading);
-  const initError = useLazyLoading ? null : (useWorker ? workerError : hookResult.error);
+  const isReady = useWorker ? workerReady : hookResult.isReady;
+  const isLoading = useWorker ? workerLoading : hookResult.isLoading;
+  const initError = useWorker ? workerError : hookResult.error;
 
   // Local UI state
   const [isConverting, setIsConverting] = useState(false);
@@ -167,21 +164,6 @@ export function DocumentViewer({
     renderTrackedChanges: settings.renderTrackedChanges,
     showDeletedContent: settings.showDeletedContent,
     renderMoveOperations: settings.renderMoveOperations,
-  }), [settings]);
-
-  // Build render options for lazy loading (VirtualPaginatedDocument)
-  const getLazyRenderOptions = useCallback((): RenderPageRangeOptions => ({
-    pageTitle: settings.pageTitle,
-    cssPrefix: settings.cssPrefix,
-    fabricateClasses: settings.fabricateClasses,
-    additionalCss: settings.additionalCss || undefined,
-    paginationScale: settings.paginationScale,
-    renderFootnotesAndEndnotes: settings.renderFootnotesAndEndnotes,
-    renderHeadersAndFooters: settings.renderHeadersAndFooters,
-    renderTrackedChanges: settings.renderTrackedChanges,
-    showDeletedContent: settings.showDeletedContent,
-    renderComments: settings.commentMode !== 'disabled',
-    commentRenderMode: getCommentRenderMode(settings.commentMode),
   }), [settings]);
 
   // Fetch document metadata quickly (for progressive loading placeholders)
@@ -254,12 +236,12 @@ export function DocumentViewer({
     }
   }, [isReady, useWorker, worker, hookResult, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete, onError, extractRevisions]);
 
-  // Auto-convert when WASM ready and file available (only when not using lazy loading)
+  // Auto-convert when WASM ready and file available
   useEffect(() => {
-    if (!useLazyLoading && isReady && file && !html && !isConverting && controlledHtml === undefined) {
+    if (isReady && file && !html && !isConverting && controlledHtml === undefined) {
       convert(file);
     }
-  }, [useLazyLoading, isReady, file, html, isConverting, convert, controlledHtml]);
+  }, [isReady, file, html, isConverting, convert, controlledHtml]);
 
   // Handle file input change
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,18 +261,10 @@ export function DocumentViewer({
       }
       onFileChange?.(selectedFile);
 
-      if (useLazyLoading) {
-        // Lazy loading mode: VirtualPaginatedDocument handles everything
-        // Just extract revisions in background
-        if (showRevisionsTab) {
-          extractRevisions(selectedFile);
-        }
-      } else {
-        // Non-lazy mode: fetch metadata first for placeholders, then convert
-        fetchMetadata(selectedFile);
-        if (isReady && controlledHtml === undefined) {
-          await convert(selectedFile);
-        }
+      // Fetch metadata first for placeholders, then convert
+      fetchMetadata(selectedFile);
+      if (isReady && controlledHtml === undefined) {
+        await convert(selectedFile);
       }
     }
   };
@@ -536,7 +510,7 @@ export function DocumentViewer({
             ×
           </button>
         )}
-        {showRevisionsTab && hasRevisions && (useLazyLoading ? file : html) && (
+        {showRevisionsTab && hasRevisions && html && (
           <>
             <div className="rdv-toolbar-separator" />
             <div className="rdv-view-tabs">
@@ -565,7 +539,7 @@ export function DocumentViewer({
       </div>
 
       <div className="rdv-toolbar-center">
-        {((useLazyLoading && file) || html) && totalPages > 0 && viewMode === 'document' && (
+        {html && totalPages > 0 && viewMode === 'document' && (
           <>
             <button
               className="rdv-toolbar-btn"
@@ -729,27 +703,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {viewMode === 'document' && useLazyLoading && file && !error && (
-          <div ref={paginatedContainerRef} className="rdv-pages">
-            <VirtualPaginatedDocument
-              document={file}
-              scale={settings.paginationScale}
-              bufferPages={3}
-              pageGap={20}
-              backgroundColor="#525659"
-              className="rdv-paginated-document"
-              wasmBasePath={wasmBasePath}
-              renderOptions={getLazyRenderOptions()}
-              onMetadataLoaded={(metadata: DocumentMetadata) => {
-                setTotalPages(metadata.estimatedPageCount);
-                setDocumentMetadata(metadata);
-              }}
-              onPageVisible={handlePageVisible}
-            />
-          </div>
-        )}
-
-        {viewMode === 'document' && !useLazyLoading && html && !isConverting && (
+        {viewMode === 'document' && html && !isConverting && (
           <div ref={paginatedContainerRef} className="rdv-pages">
             <PaginatedDocument
               html={html}
@@ -766,7 +720,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {viewMode === 'revisions' && (useLazyLoading ? file : (html && !isConverting)) && (
+        {viewMode === 'revisions' && html && !isConverting && (
           <RevisionPanel revisions={revisions} />
         )}
       </div>

@@ -57,17 +57,6 @@ vi.mock('docxodus/react', () => ({
   PaginatedDocument: ({ html }: { html: string }) => (
     <div data-testid="paginated-document">{html}</div>
   ),
-  VirtualPaginatedDocument: ({ document, onMetadataLoaded }: { document: File | null, onMetadataLoaded?: (metadata: { estimatedPageCount: number }) => void }) => {
-    // Simulate metadata loading
-    if (document && onMetadataLoaded) {
-      setTimeout(() => onMetadataLoaded({ estimatedPageCount: 3 }), 0);
-    }
-    return (
-      <div data-testid="virtual-paginated-document">
-        {document ? `Viewing: ${document.name}` : 'No document'}
-      </div>
-    );
-  },
 }))
 
 vi.mock('docxodus/worker', () => ({
