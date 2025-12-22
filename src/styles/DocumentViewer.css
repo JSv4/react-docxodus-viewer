@@ -195,6 +195,15 @@
 
 .rdv-paginated-document {
   min-height: 100%;
+  /* Mobile text rendering fix - ensures text is visible on Android Chrome
+     Some devices have issues with certain color formats or font rendering */
+  color: #000;
+  -webkit-text-fill-color: initial;
+}
+
+.rdv-paginated-document * {
+  /* Ensure text-fill-color doesn't override actual colors */
+  -webkit-text-fill-color: inherit;
 }
 
 /* ============================================
