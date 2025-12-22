@@ -37,6 +37,17 @@ export interface ViewerSettings {
   commentCssClassPrefix: string;
   /** CSS class prefix for annotations */
   annotationCssClassPrefix: string;
+  /**
+   * Show placeholders for unsupported content (WMF/EMF images, math equations, form fields, etc.)
+   * When enabled, unsupported content displays as styled placeholders instead of being silently dropped.
+   */
+  renderUnsupportedContentPlaceholders: boolean;
+  /**
+   * Override the document's default language for the HTML lang attribute.
+   * If empty, the language is auto-detected from document settings.
+   * Examples: "en-US", "fr-FR", "de-DE", "ja-JP"
+   */
+  documentLanguage: string;
 }
 
 export interface DocumentViewerProps {
@@ -107,4 +118,6 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   additionalCss: '',
   commentCssClassPrefix: 'comment-',
   annotationCssClassPrefix: 'annot-',
+  renderUnsupportedContentPlaceholders: true,
+  documentLanguage: '',
 };
