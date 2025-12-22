@@ -386,6 +386,45 @@
   border-left: 2px solid var(--rdv-modal-border);
 }
 
+.rdv-settings-hint {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.75rem;
+  font-size: 0.8rem;
+  color: var(--rdv-modal-muted-color);
+  line-height: 1.4;
+}
+
+.rdv-settings-input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.rdv-settings-input-label span {
+  font-size: 0.9rem;
+  color: var(--rdv-modal-text-color);
+}
+
+.rdv-settings-text-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rdv-modal-input-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--rdv-modal-text-color);
+  background: var(--rdv-modal-section-bg);
+}
+
+.rdv-settings-text-input:focus {
+  outline: none;
+  border-color: var(--rdv-modal-input-focus);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.rdv-settings-text-input::placeholder {
+  color: var(--rdv-modal-muted-color);
+}
+
 .rdv-settings-toggle-advanced {
   background: none;
   border: none;

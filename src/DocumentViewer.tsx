@@ -164,6 +164,8 @@ export function DocumentViewer({
     renderTrackedChanges: settings.renderTrackedChanges,
     showDeletedContent: settings.showDeletedContent,
     renderMoveOperations: settings.renderMoveOperations,
+    renderUnsupportedContentPlaceholders: settings.renderUnsupportedContentPlaceholders,
+    documentLanguage: settings.documentLanguage || undefined,
   }), [settings]);
 
   // Fetch document metadata quickly (for progressive loading placeholders)
@@ -477,6 +479,31 @@ export function DocumentViewer({
                 </label>
               </div>
             )}
+          </div>
+
+          <div className="rdv-settings-section">
+            <h4>Advanced</h4>
+            <label className="rdv-settings-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.renderUnsupportedContentPlaceholders}
+                onChange={(e) => updateSettings({ renderUnsupportedContentPlaceholders: e.target.checked })}
+              />
+              <span>Show placeholders for unsupported content</span>
+            </label>
+            <p className="rdv-settings-hint">
+              Display visual indicators for WMF/EMF images, math equations, form fields, and other unsupported elements
+            </p>
+            <label className="rdv-settings-input-label">
+              <span>Document language override</span>
+              <input
+                type="text"
+                className="rdv-settings-text-input"
+                value={settings.documentLanguage}
+                onChange={(e) => updateSettings({ documentLanguage: e.target.value })}
+                placeholder="Auto-detect (e.g., en-US, fr-FR)"
+              />
+            </label>
           </div>
         </div>
         <div className="rdv-settings-footer">
