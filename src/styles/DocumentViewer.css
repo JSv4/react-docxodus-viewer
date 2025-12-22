@@ -22,6 +22,21 @@
 }
 
 /* ============================================
+   TRACKED CHANGES - Copy behavior
+   Make deleted/moved-from content non-selectable so
+   copying text gives you the "final" version only
+   ============================================ */
+
+.rdv-viewer del,
+.rdv-viewer [data-revision-type="deleted"],
+.rdv-viewer [data-move-source="true"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* ============================================
    TOOLBAR
    ============================================ */
 
