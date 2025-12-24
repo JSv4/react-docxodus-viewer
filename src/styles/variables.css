@@ -12,6 +12,14 @@
   --rdv-max-height: 90vh;
   --rdv-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 
+  /* Layout stability (pdf.js-like behavior)
+   * Set --rdv-stable-width to a fixed value (e.g., 816px for US Letter at 96dpi)
+   * to prevent layout shifts when content loads or settings change.
+   * Use 'auto' for flexible sizing that adapts to content.
+   */
+  --rdv-stable-width: auto;
+  --rdv-stable-height: auto;
+
   /* Toolbar */
   --rdv-toolbar-bg: #323639;
   --rdv-toolbar-border: #1a1a1a;

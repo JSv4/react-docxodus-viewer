@@ -33,6 +33,11 @@ function getAnnotationLabelMode(mode: AnnotationMode): AnnotationLabelMode | und
   }
 }
 
+function toCssLength(value: number | string | undefined): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return typeof value === 'number' ? `${value}px` : value;
+}
+
 export function DocumentViewer({
   file: controlledFile,
   html: controlledHtml,
@@ -664,8 +669,15 @@ export function DocumentViewer({
 
         {!initError && (isLoading || isConverting) && (
           documentMetadata && isConverting ? (
-            // Show page placeholders while converting
-            <div className="rdv-pages rdv-pages--loading">
+            // Show page placeholders while converting - matches actual page dimensions for stable layout
+            <div
+              className="rdv-pages rdv-pages--loading"
+              style={{
+                // Apply stable dimensions to match rendered state - prevents layout shift
+                ...(settings.stableWidth && { '--rdv-stable-width': toCssLength(settings.stableWidth) }),
+                ...(settings.stableHeight && { minHeight: toCssLength(settings.stableHeight) }),
+              } as React.CSSProperties}
+            >
               <div className="rdv-page-placeholders" style={{ backgroundColor: '#525659' }}>
                 {Array.from({ length: documentMetadata.estimatedPageCount || 1 }).map((_, index) => {
                   // Get section for this page (approximate - use first section if not enough)
@@ -718,7 +730,14 @@ export function DocumentViewer({
         )}
 
         {!isLoading && !initError && !html && !isConverting && !file && (
-          <div className="rdv-message">
+          <div
+            className="rdv-message"
+            style={{
+              // Apply stable dimensions for consistent sizing across all states
+              ...(settings.stableWidth && { width: toCssLength(settings.stableWidth), maxWidth: '100%' }),
+              ...(settings.stableHeight && { minHeight: toCssLength(settings.stableHeight) }),
+            }}
+          >
             <div className="rdv-message__icon">📄</div>
             <p>{placeholder}</p>
           </div>
@@ -731,7 +750,15 @@ export function DocumentViewer({
         )}
 
         {viewMode === 'document' && html && !isConverting && (
-          <div ref={paginatedContainerRef} className="rdv-pages">
+          <div
+            ref={paginatedContainerRef}
+            className="rdv-pages"
+            style={{
+              // Apply stable dimensions if provided - provides pdf.js-like sizing behavior
+              ...(settings.stableWidth && { '--rdv-stable-width': toCssLength(settings.stableWidth) }),
+              ...(settings.stableHeight && { minHeight: toCssLength(settings.stableHeight) }),
+            } as React.CSSProperties}
+          >
             <PaginatedDocument
               html={html}
               scale={settings.paginationScale}
