@@ -184,6 +184,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0; /* Important for flex children to respect overflow */
+  /* CSS containment for layout stability - prevents content changes from
+     affecting layout outside this container (pdf.js-like behavior) */
+  contain: strict;
 }
 
 .rdv-pages {
@@ -191,6 +194,21 @@
   overflow: auto;
   min-height: 0; /* Important for flex children to respect overflow */
   scroll-behavior: smooth;
+  /* Contain layout to prevent reflows from propagating */
+  contain: layout style;
+  /* Apply stable width if provided via CSS variable (pdf.js-like behavior) */
+  width: var(--rdv-stable-width, 100%);
+  max-width: 100%;
+}
+
+/* Stable sizing wrapper - when explicit dimensions are provided,
+   this wrapper maintains consistent size regardless of content state */
+.rdv-pages__stable-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+  /* These are set via inline styles when stableWidth/stableHeight are provided */
 }
 
 .rdv-paginated-document {

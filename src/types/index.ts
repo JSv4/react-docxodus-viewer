@@ -48,6 +48,28 @@ export interface ViewerSettings {
    * Examples: "en-US", "fr-FR", "de-DE", "ja-JP"
    */
   documentLanguage: string;
+  /**
+   * Fixed width for the page container.
+   * Accepts a number (pixels) or CSS length string (e.g., "80vw", "100%", "50rem").
+   * When set, the viewer maintains this width regardless of content or zoom level,
+   * providing pdf.js-like stable sizing behavior. The pages will be centered within
+   * this container, and the container will scroll horizontally if content exceeds it.
+   * Set to undefined/null for flexible sizing that adapts to content.
+   * @example 816 // pixels
+   * @example "80vw" // viewport width
+   * @example "100%" // percentage of parent
+   */
+  stableWidth?: number | string;
+  /**
+   * Fixed minimum height for the page container.
+   * Accepts a number (pixels) or CSS length string (e.g., "60vh", "500px", "100%").
+   * When set, the viewer reserves this much vertical space regardless of content,
+   * preventing layout shifts during loading. Set to undefined/null for flexible sizing.
+   * @example 600 // pixels
+   * @example "70vh" // viewport height
+   * @example "100%" // percentage of parent
+   */
+  stableHeight?: number | string;
 }
 
 export interface DocumentViewerProps {
