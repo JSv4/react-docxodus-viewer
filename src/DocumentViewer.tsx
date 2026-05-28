@@ -716,7 +716,7 @@ export function DocumentViewer({
         )}
       </div>
 
-      <div className="rdv-toolbar-center">
+      <div className="rdv-toolbar-right">
         {html && totalPages > 0 && viewMode === 'document' && (
           <>
             <button
@@ -791,24 +791,28 @@ export function DocumentViewer({
             </div>
           </>
         )}
-      </div>
-
-      <div className="rdv-toolbar-right">
         {toolbarActions && toolbarActions.length > 0 && (
           <>
+            {html && totalPages > 0 && viewMode === 'document' && (
+              <div className="rdv-toolbar-separator" />
+            )}
             {toolbarActions.map(renderToolbarAction)}
-            {showSettingsButton && <div className="rdv-toolbar-separator" />}
           </>
         )}
         {showSettingsButton && (
-          <button
-            className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-settings"
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            aria-label="Settings"
-          >
-            ⚙
-          </button>
+          <>
+            {(toolbarActions?.length || (html && totalPages > 0 && viewMode === 'document')) && (
+              <div className="rdv-toolbar-separator" />
+            )}
+            <button
+              className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-settings"
+              onClick={() => setShowSettings(true)}
+              title="Settings"
+              aria-label="Settings"
+            >
+              ⚙
+            </button>
+          </>
         )}
       </div>
     </div>

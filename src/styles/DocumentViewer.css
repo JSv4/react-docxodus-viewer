@@ -51,16 +51,10 @@
 }
 
 .rdv-toolbar-left,
-.rdv-toolbar-center,
 .rdv-toolbar-right {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-}
-
-.rdv-toolbar-center {
-  flex: 1;
-  justify-content: center;
 }
 
 .rdv-toolbar-btn {
@@ -942,17 +936,9 @@
     gap: 0.5rem;
   }
 
-  .rdv-toolbar-center {
-    order: 3;
-    flex-basis: 100%;
+  .rdv-toolbar-right {
     flex-wrap: wrap;
-    justify-content: flex-start;
     row-gap: 0.5rem;
-  }
-
-  /* Cosmetic separator eats horizontal space at narrow widths */
-  .rdv-toolbar-center .rdv-toolbar-separator {
-    display: none;
   }
 
   /* Filename takes the most horizontal room and is least essential — hide it
