@@ -10,6 +10,7 @@ import type {
   CommentMode,
   AnnotationMode,
   ViewMode,
+  FitMode,
 } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { RevisionPanel } from './components/RevisionPanel';
@@ -38,6 +39,27 @@ function toCssLength(value: number | string | undefined): string | undefined {
   return typeof value === 'number' ? `${value}px` : value;
 }
 
+const PAGE_PT_TO_PX = 96 / 72;
+const FIT_PADDING_PX = 40;
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 2.0;
+
+function computeFitScale(
+  mode: Exclude<FitMode, 'manual'>,
+  containerWidth: number,
+  containerHeight: number,
+  pageWidthPt: number,
+  pageHeightPt: number,
+): number {
+  const pageWidthPx = pageWidthPt * PAGE_PT_TO_PX;
+  const pageHeightPx = pageHeightPt * PAGE_PT_TO_PX;
+  const widthScale = (containerWidth - FIT_PADDING_PX) / pageWidthPx;
+  const heightScale = (containerHeight - FIT_PADDING_PX) / pageHeightPx;
+  const raw = mode === 'page-width' ? widthScale : Math.min(widthScale, heightScale);
+  const clamped = Math.max(MIN_SCALE, Math.min(MAX_SCALE, raw));
+  return Math.round(clamped * 100) / 100;
+}
+
 export function DocumentViewer({
   file: controlledFile,
   html: controlledHtml,
@@ -58,6 +80,7 @@ export function DocumentViewer({
   placeholder = 'Open a DOCX file to view',
   wasmBasePath,
   useWorker = true,
+  fitMode = 'manual',
 }: DocumentViewerProps) {
   // Merge default settings
   const mergedDefaults = useMemo(
@@ -149,7 +172,23 @@ export function DocumentViewer({
   // Document metadata for progressive loading placeholders
   const [documentMetadata, setDocumentMetadata] = useState<DocumentMetadata | null>(null);
 
+  const viewerRef = useRef<HTMLDivElement>(null);
   const paginatedContainerRef = useRef<HTMLDivElement>(null);
+
+  // Inter-page gap read from --rdv-page-gap CSS variable (defaults to 20)
+  const [pageGap, setPageGap] = useState(20);
+  useEffect(() => {
+    const readGap = () => {
+      const el = viewerRef.current;
+      if (!el) return;
+      const value = getComputedStyle(el).getPropertyValue('--rdv-page-gap').trim();
+      const parsed = parseFloat(value);
+      if (!Number.isNaN(parsed)) setPageGap(parsed);
+    };
+    readGap();
+    window.addEventListener('resize', readGap);
+    return () => window.removeEventListener('resize', readGap);
+  }, []);
 
   // Build conversion options from settings
   const getConvertOptions = useCallback(() => ({
@@ -326,6 +365,45 @@ export function DocumentViewer({
   const handleZoomChange = (value: number) => updateSettings({
     paginationScale: Math.max(0.3, Math.min(2.0, value))
   });
+
+  // Auto-fit: when fitMode is not 'manual', pick a scale that fits the page
+  // into the viewer on initial render and whenever the viewer resizes.
+  // settingsRef avoids putting `settings` in this effect's deps, which would
+  // re-create the ResizeObserver on every scale change and cause loops.
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  });
+  useEffect(() => {
+    if (fitMode === 'manual' || !documentMetadata || !html) return;
+    const container = paginatedContainerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    const section = documentMetadata.sections[0];
+    const pageWidthPt = section?.pageWidthPt ?? 612;
+    const pageHeightPt = section?.pageHeightPt ?? 792;
+
+    const applyFit = () => {
+      const scale = computeFitScale(
+        fitMode,
+        container.clientWidth,
+        container.clientHeight,
+        pageWidthPt,
+        pageHeightPt,
+      );
+      if (Math.abs(settingsRef.current.paginationScale - scale) < 0.005) return;
+      const newSettings = { ...settingsRef.current, paginationScale: scale };
+      if (controlledSettings === undefined) {
+        setInternalSettings(newSettings);
+      }
+      onSettingsChange?.(newSettings);
+    };
+
+    applyFit();
+    const ro = new ResizeObserver(applyFit);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [fitMode, documentMetadata, html, controlledSettings, onSettingsChange]);
 
   // Page navigation
   const goToPage = (pageNum: number) => {
@@ -657,7 +735,7 @@ export function DocumentViewer({
   const rootClassName = ['rdv-viewer', className].filter(Boolean).join(' ');
 
   return (
-    <div className={rootClassName} style={style}>
+    <div ref={viewerRef} className={rootClassName} style={style}>
       {toolbar === 'top' && <Toolbar />}
 
       <div className="rdv-content">
@@ -696,7 +774,6 @@ export function DocumentViewer({
                       style={{
                         width: `${width}px`,
                         height: `${height}px`,
-                        marginBottom: '20px',
                       }}
                     >
                       <div className="rdv-page-placeholder__shimmer" />
@@ -763,7 +840,7 @@ export function DocumentViewer({
               html={html}
               scale={settings.paginationScale}
               showPageNumbers={settings.showPageNumbers}
-              pageGap={20}
+              pageGap={pageGap}
               backgroundColor="#525659"
               className="rdv-paginated-document"
               onPaginationComplete={(result: PaginationResult) => {

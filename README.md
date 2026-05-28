@@ -52,6 +52,7 @@ function App() {
 | `placeholder` | `string` | `'Open a DOCX file to view'` | Empty state message |
 | `useWorker` | `boolean` | `true` | Use Web Worker for conversion |
 | `wasmBasePath` | `string` | - | Custom WASM file location |
+| `fitMode` | `'manual' \| 'page-width' \| 'page'` | `'manual'` | Auto-fit zoom on render and resize |
 | `className` | `string` | - | Additional CSS class |
 | `style` | `CSSProperties` | - | Inline styles |
 
@@ -87,6 +88,9 @@ Override CSS variables to customize the viewer:
   --rdv-toolbar-bg: #323639;
   --rdv-btn-bg: #474c50;
   --rdv-btn-color: #d4d4d4;
+
+  /* Gap between pages (placeholders and rendered) */
+  --rdv-page-gap: 20px;
 }
 ```
 

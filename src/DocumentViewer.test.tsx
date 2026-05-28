@@ -92,4 +92,11 @@ describe('DocumentViewer', () => {
     expect(input).toBeInTheDocument()
     expect(input).toHaveAttribute('accept', '.docx')
   })
+
+  it('accepts fitMode prop without crashing', () => {
+    expect(() => {
+      render(<DocumentViewer useWorker={false} fitMode="page-width" />)
+    }).not.toThrow()
+    expect(screen.getByText('Open Document')).toBeInTheDocument()
+  })
 })

@@ -5,6 +5,14 @@
 export type CommentMode = 'disabled' | 'endnote' | 'inline' | 'margin';
 export type AnnotationMode = 'disabled' | 'above' | 'inline' | 'tooltip' | 'none';
 export type ViewMode = 'document' | 'revisions';
+/**
+ * Automatic zoom-fit mode.
+ * - `manual` (default): user controls zoom via the toolbar.
+ * - `page-width`: scale so a page's width fills the viewer.
+ * - `page`: scale so an entire page fits in the viewer (width and height).
+ * Recomputes on initial render and on viewer resize.
+ */
+export type FitMode = 'manual' | 'page-width' | 'page';
 
 export interface ViewerSettings {
   /** Zoom scale (0.3 - 2.0) */
@@ -122,6 +130,12 @@ export interface DocumentViewerProps {
    * Default: true
    */
   useWorker?: boolean;
+  /**
+   * Automatic zoom-fit mode. When set to `page-width` or `page`, the viewer
+   * picks a zoom level that fits the rendered page in the viewer on initial
+   * render and on viewer resize. Defaults to `manual` (user-controlled zoom).
+   */
+  fitMode?: FitMode;
 }
 
 export const DEFAULT_SETTINGS: ViewerSettings = {

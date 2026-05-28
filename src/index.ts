@@ -16,6 +16,7 @@ export type {
   CommentMode,
   AnnotationMode,
   ViewMode,
+  FitMode,
 } from './types';
 
 export { DEFAULT_SETTINGS } from './types';

@@ -20,6 +20,10 @@
   --rdv-stable-width: auto;
   --rdv-stable-height: auto;
 
+  /* Inter-page gap (between rendered pages and placeholders).
+   * Override to tighten vertical real estate on narrow viewports. */
+  --rdv-page-gap: 20px;
+
   /* Toolbar */
   --rdv-toolbar-bg: #323639;
   --rdv-toolbar-border: #1a1a1a;
