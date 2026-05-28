@@ -892,7 +892,19 @@
   .rdv-toolbar-center {
     order: 3;
     flex-basis: 100%;
+    flex-wrap: wrap;
     justify-content: flex-start;
+    row-gap: 0.5rem;
+  }
+
+  /* Cosmetic separator eats horizontal space at narrow widths */
+  .rdv-toolbar-center .rdv-toolbar-separator {
+    display: none;
+  }
+
+  .rdv-zoom-select {
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .rdv-revision-header {
@@ -930,6 +942,11 @@
   border-radius: 2px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+  margin-bottom: var(--rdv-page-gap);
+}
+
+.rdv-page-placeholder:last-child {
+  margin-bottom: 0;
 }
 
 .rdv-page-placeholder__shimmer {
