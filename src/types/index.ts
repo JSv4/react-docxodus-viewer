@@ -80,6 +80,38 @@ export interface ViewerSettings {
   stableHeight?: number | string;
 }
 
+/**
+ * A custom action button that can be injected into the viewer's toolbar.
+ * Renders as an icon button on the right side of the toolbar (before the
+ * settings gear), styled to match the built-in toolbar buttons.
+ */
+export interface ToolbarAction {
+  /** Stable React key for this action. */
+  key: string;
+  /**
+   * The icon to render inside the button. Accepts any React node — an inline
+   * SVG, an icon-library component, an emoji, or a single character. Sized
+   * via the parent button (~16px).
+   */
+  icon: React.ReactNode;
+  /**
+   * Accessible label, also shown as a tooltip on hover.
+   */
+  label: string;
+  /** Click handler. */
+  onClick: () => void;
+  /** Disable the button. */
+  disabled?: boolean;
+  /**
+   * Visual variant.
+   * - `default`: matches existing toolbar buttons.
+   * - `primary`: filled accent color, useful for the main action (e.g. Download).
+   */
+  variant?: 'default' | 'primary';
+  /** Optional extra className appended to the button. */
+  className?: string;
+}
+
 export interface DocumentViewerProps {
   /** File to display (controlled mode) */
   file?: File | null;
@@ -103,6 +135,15 @@ export interface DocumentViewerProps {
   settings?: Partial<ViewerSettings>;
   /** Default settings (used for uncontrolled mode) */
   defaultSettings?: Partial<ViewerSettings>;
+  /**
+   * Convenience shortcut for the initial zoom level (uncontrolled mode).
+   * Equivalent to `defaultSettings.paginationScale`. Range 0.3 – 2.0.
+   * Ignored if `fitMode` is set to anything other than `'manual'`,
+   * since the auto-fit logic will override the initial scale.
+   * @example 1   // 100%
+   * @example 0.75 // 75%
+   */
+  defaultZoom?: number;
   /** Callback when settings change */
   onSettingsChange?: (settings: ViewerSettings) => void;
 
@@ -118,6 +159,13 @@ export interface DocumentViewerProps {
   showRevisionsTab?: boolean;
   /** Placeholder text when no document is loaded */
   placeholder?: string;
+  /**
+   * Custom icon-button actions to render in the toolbar's right section,
+   * just before the settings button. Useful for hosting apps that want to
+   * surface document-level actions (Download, Share, Print, Open Ticket, ...)
+   * inside the viewer's chrome rather than awkwardly above it.
+   */
+  toolbarActions?: ToolbarAction[];
 
   /**
    * Base path for WASM files.

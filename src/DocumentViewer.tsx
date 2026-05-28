@@ -11,9 +11,28 @@ import type {
   AnnotationMode,
   ViewMode,
   FitMode,
+  ToolbarAction,
 } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { RevisionPanel } from './components/RevisionPanel';
+
+const OpenDocumentIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
 
 function getCommentRenderMode(mode: CommentMode): CommentRenderMode {
   switch (mode) {
@@ -71,6 +90,7 @@ export function DocumentViewer({
   onRevisionsExtracted,
   settings: controlledSettings,
   defaultSettings,
+  defaultZoom,
   onSettingsChange,
   className,
   style,
@@ -81,12 +101,18 @@ export function DocumentViewer({
   wasmBasePath,
   useWorker = true,
   fitMode = 'manual',
+  toolbarActions,
 }: DocumentViewerProps) {
-  // Merge default settings
-  const mergedDefaults = useMemo(
-    () => ({ ...DEFAULT_SETTINGS, ...defaultSettings }),
-    [defaultSettings]
-  );
+  // Merge default settings. `defaultZoom` is a convenience shortcut for
+  // `defaultSettings.paginationScale`; explicit `defaultSettings` wins if both
+  // are provided.
+  const mergedDefaults = useMemo(() => {
+    const base: ViewerSettings = { ...DEFAULT_SETTINGS };
+    if (defaultZoom !== undefined) {
+      base.paginationScale = Math.max(0.3, Math.min(2.0, defaultZoom));
+    }
+    return { ...base, ...defaultSettings };
+  }, [defaultSettings, defaultZoom]);
 
   // Internal state (uncontrolled mode)
   const [internalFile, setInternalFile] = useState<File | null>(null);
@@ -600,12 +626,43 @@ export function DocumentViewer({
 
   const hasRevisions = revisions.length > 0;
 
+  // Render a single custom toolbar action button
+  const renderToolbarAction = (action: ToolbarAction) => {
+    const variantClass = action.variant === 'primary' ? 'rdv-toolbar-icon-btn--primary' : '';
+    const classes = [
+      'rdv-toolbar-btn',
+      'rdv-toolbar-icon-btn',
+      variantClass,
+      action.className,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <button
+        key={action.key}
+        type="button"
+        className={classes}
+        onClick={action.onClick}
+        disabled={action.disabled}
+        title={action.label}
+        aria-label={action.label}
+      >
+        {action.icon}
+      </button>
+    );
+  };
+
   // Toolbar component
   const Toolbar = () => (
     <div className="rdv-toolbar">
       <div className="rdv-toolbar-left">
-        <label htmlFor="rdv-file-input" className="rdv-toolbar-file-btn">
-          {fileName || 'Open Document'}
+        <label
+          htmlFor="rdv-file-input"
+          className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-open-btn"
+          title="Open Document"
+          aria-label="Open Document"
+        >
+          <OpenDocumentIcon />
         </label>
         <input
           id="rdv-file-input"
@@ -616,7 +673,18 @@ export function DocumentViewer({
           className="rdv-file-input"
         />
         {fileName && (
-          <button className="rdv-toolbar-btn rdv-toolbar-clear" onClick={handleClear} disabled={isProcessing}>
+          <span className="rdv-toolbar-filename" title={fileName}>
+            {fileName}
+          </span>
+        )}
+        {fileName && (
+          <button
+            className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-clear"
+            onClick={handleClear}
+            disabled={isProcessing}
+            title="Clear Document"
+            aria-label="Clear Document"
+          >
             ×
           </button>
         )}
@@ -652,10 +720,11 @@ export function DocumentViewer({
         {html && totalPages > 0 && viewMode === 'document' && (
           <>
             <button
-              className="rdv-toolbar-btn"
+              className="rdv-toolbar-btn rdv-toolbar-icon-btn"
               onClick={goToPreviousPage}
               disabled={currentPage <= 1}
               title="Previous Page"
+              aria-label="Previous Page"
             >
               ◀
             </button>
@@ -674,56 +743,69 @@ export function DocumentViewer({
               <span className="rdv-page-total">/ {totalPages}</span>
             </div>
             <button
-              className="rdv-toolbar-btn"
+              className="rdv-toolbar-btn rdv-toolbar-icon-btn"
               onClick={goToNextPage}
               disabled={currentPage >= totalPages}
               title="Next Page"
+              aria-label="Next Page"
             >
               ▶
             </button>
 
             <div className="rdv-toolbar-separator" />
 
-            <button
-              className="rdv-toolbar-btn"
-              onClick={handleZoomOut}
-              disabled={settings.paginationScale <= 0.3}
-              title="Zoom Out"
-            >
-              −
-            </button>
-            <select
-              className="rdv-zoom-select"
-              value={settings.paginationScale}
-              onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
-            >
-              <option value="0.5">50%</option>
-              <option value="0.75">75%</option>
-              <option value="0.8">80%</option>
-              <option value="0.9">90%</option>
-              <option value="1">100%</option>
-              <option value="1.25">125%</option>
-              <option value="1.5">150%</option>
-              <option value="2">200%</option>
-            </select>
-            <button
-              className="rdv-toolbar-btn"
-              onClick={handleZoomIn}
-              disabled={settings.paginationScale >= 2.0}
-              title="Zoom In"
-            >
-              +
-            </button>
+            <div className="rdv-zoom-group">
+              <button
+                className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-zoom-btn"
+                onClick={handleZoomOut}
+                disabled={settings.paginationScale <= 0.3}
+                title="Zoom Out"
+                aria-label="Zoom Out"
+              >
+                −
+              </button>
+              <select
+                className="rdv-zoom-select"
+                value={settings.paginationScale}
+                onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+                aria-label="Zoom level"
+              >
+                <option value="0.5">50%</option>
+                <option value="0.75">75%</option>
+                <option value="0.8">80%</option>
+                <option value="0.9">90%</option>
+                <option value="1">100%</option>
+                <option value="1.25">125%</option>
+                <option value="1.5">150%</option>
+                <option value="2">200%</option>
+              </select>
+              <button
+                className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-zoom-btn"
+                onClick={handleZoomIn}
+                disabled={settings.paginationScale >= 2.0}
+                title="Zoom In"
+                aria-label="Zoom In"
+              >
+                +
+              </button>
+            </div>
           </>
         )}
       </div>
 
       <div className="rdv-toolbar-right">
+        {toolbarActions && toolbarActions.length > 0 && (
+          <>
+            {toolbarActions.map(renderToolbarAction)}
+            {showSettingsButton && <div className="rdv-toolbar-separator" />}
+          </>
+        )}
         {showSettingsButton && (
           <button
-            className="rdv-toolbar-btn rdv-toolbar-settings"
+            className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-settings"
             onClick={() => setShowSettings(true)}
             title="Settings"
+            aria-label="Settings"
           >
             ⚙
           </button>

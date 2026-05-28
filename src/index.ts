@@ -17,6 +17,7 @@ export type {
   AnnotationMode,
   ViewMode,
   FitMode,
+  ToolbarAction,
 } from './types';
 
 export { DEFAULT_SETTINGS } from './types';
