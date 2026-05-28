@@ -53,8 +53,51 @@ function App() {
 | `useWorker` | `boolean` | `true` | Use Web Worker for conversion |
 | `wasmBasePath` | `string` | - | Custom WASM file location |
 | `fitMode` | `'manual' \| 'page-width' \| 'page'` | `'manual'` | Auto-fit zoom on render and resize |
+| `defaultZoom` | `number` | `0.8` | Initial zoom level (0.3 – 2.0) when uncontrolled |
+| `toolbarActions` | `ToolbarAction[]` | - | Custom icon buttons in the toolbar (right side) |
 | `className` | `string` | - | Additional CSS class |
 | `style` | `CSSProperties` | - | Inline styles |
+
+## Custom Toolbar Actions
+
+Add your own icon buttons to the viewer toolbar — useful for hosting apps that
+want to surface document-level actions (Download, Share, Print, Open Ticket)
+inside the viewer chrome rather than awkwardly above it.
+
+```tsx
+import { DocumentViewer, type ToolbarAction } from 'react-docxodus-viewer';
+
+const DownloadIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const actions: ToolbarAction[] = [
+  {
+    key: 'download',
+    icon: <DownloadIcon />,
+    label: 'Download',
+    onClick: () => downloadFile(),
+    variant: 'primary',
+  },
+  {
+    key: 'ticket',
+    icon: '🎫',
+    label: 'Open Ticket',
+    onClick: () => openTicket(),
+  },
+];
+
+<DocumentViewer toolbarActions={actions} defaultZoom={1.0} />
+```
+
+Each action accepts any React node as its `icon` (inline SVG, icon-library
+component, emoji, or character). The `label` is used as both the tooltip and
+accessible name. Set `variant: 'primary'` for an accent-colored primary action.
 
 ## Viewer Settings
 
