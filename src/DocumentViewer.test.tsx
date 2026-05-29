@@ -1,7 +1,23 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DocumentViewer } from './DocumentViewer'
+
+// Mock the worker module so we can drive warmup behavior deterministically.
+// Existing tests pass useWorker={false} and never touch these mocks.
+// vi.hoisted lets the spy be referenced inside the hoisted vi.mock factory.
+const { prepareSpy } = vi.hoisted(() => ({ prepareSpy: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('docxodus/worker', () => ({
+  isWorkerSupported: () => true,
+  createWorkerDocxodus: vi.fn().mockResolvedValue({
+    convertDocxToHtml: vi.fn(),
+    getRevisions: vi.fn().mockResolvedValue([]),
+    getDocumentMetadata: vi.fn(),
+    prepare: prepareSpy,
+    terminate: vi.fn(),
+    isActive: () => true,
+  }),
+}))
 
 // Use useWorker={false} in tests to avoid async worker initialization
 // which causes act() warnings
@@ -147,6 +163,27 @@ describe('DocumentViewer', () => {
     // We can't read settings directly here without a document loaded, but we
     // verify defaultSettings.paginationScale takes precedence when both are set:
     expect(onSettingsChange).not.toHaveBeenCalled()
+  })
+
+  it('does not pre-warm in worker mode when warmup is not set', async () => {
+    prepareSpy.mockClear()
+    render(<DocumentViewer warmup={false} />)
+    await waitFor(() => expect(screen.getByLabelText('Open Document')).toBeInTheDocument())
+    // Give the worker init effect a chance to run, then confirm no warmup.
+    await new Promise((r) => setTimeout(r, 0))
+    expect(prepareSpy).not.toHaveBeenCalled()
+  })
+
+  it('pre-warms the comparison path when warmup is set (worker mode)', async () => {
+    prepareSpy.mockClear()
+    render(<DocumentViewer warmup />)
+    await waitFor(() => expect(prepareSpy).toHaveBeenCalledOnce())
+  })
+
+  it('warmup is a no-op in non-worker mode', () => {
+    prepareSpy.mockClear()
+    expect(() => render(<DocumentViewer useWorker={false} warmup />)).not.toThrow()
+    expect(prepareSpy).not.toHaveBeenCalled()
   })
 
   it('defaultSettings.paginationScale wins over defaultZoom when both are set', () => {
