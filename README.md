@@ -51,6 +51,7 @@ function App() {
 | `showRevisionsTab` | `boolean` | `true` | Show tracked changes tab |
 | `placeholder` | `string` | `'Open a DOCX file to view'` | Empty state message |
 | `useWorker` | `boolean` | `true` | Use Web Worker for conversion |
+| `warmup` | `boolean` | `false` | Pre-warm the comparison code path on mount (worker mode only) so the first comparison is instant |
 | `wasmBasePath` | `string` | - | Custom WASM file location |
 | `fitMode` | `'manual' \| 'page-width' \| 'page'` | `'manual'` | Auto-fit zoom on render and resize |
 | `defaultZoom` | `number` | `0.8` | Initial zoom level (0.3 – 2.0) when uncontrolled |

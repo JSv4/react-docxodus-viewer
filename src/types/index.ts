@@ -179,6 +179,21 @@ export interface DocumentViewerProps {
    */
   useWorker?: boolean;
   /**
+   * Eagerly pre-warm the docxodus comparison code path as soon as the worker
+   * is ready, before any user action.
+   *
+   * Creating the worker only warms the conversion runtime; the .NET WASM
+   * comparison assemblies stay unloaded until the first compare, which then
+   * pays ~3s of assembly-load latency. When `warmup` is true the viewer calls
+   * docxodus's `prepare()` on mount so that cost is paid up front and the first
+   * comparison is instant. The call is idempotent and fire-and-forget.
+   *
+   * Only applies in worker mode (`useWorker` is true, the default); it is a
+   * no-op when `useWorker={false}`.
+   * Default: false
+   */
+  warmup?: boolean;
+  /**
    * Automatic zoom-fit mode. When set to `page-width` or `page`, the viewer
    * picks a zoom level that fits the rendered page in the viewer on initial
    * render and on viewer resize. Defaults to `manual` (user-controlled zoom).

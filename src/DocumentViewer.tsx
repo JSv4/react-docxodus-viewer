@@ -100,6 +100,7 @@ export function DocumentViewer({
   placeholder = 'Open a DOCX file to view',
   wasmBasePath,
   useWorker = true,
+  warmup = false,
   fitMode = 'manual',
   toolbarActions,
 }: DocumentViewerProps) {
@@ -178,6 +179,17 @@ export function DocumentViewer({
       }
     };
   }, [useWorker, wasmBasePath]);
+
+  // Eagerly pre-warm the comparison code path once the worker is ready, so the
+  // first comparison doesn't pay the ~3s assembly-load latency. `prepare()` is
+  // idempotent and only exists on the worker, so this is a no-op in non-worker
+  // mode. Fire-and-forget: warmup failure must not surface as a viewer error.
+  useEffect(() => {
+    if (!warmup || !worker) return;
+    worker.prepare().catch(() => {
+      // Pre-warming is a best-effort optimization; ignore failures.
+    });
+  }, [warmup, worker]);
 
   // Unified ready/loading/error state
   const isReady = useWorker ? workerReady : hookResult.isReady;
