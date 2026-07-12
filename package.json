@@ -1,6 +1,6 @@
 {
   "name": "react-docxodus-viewer",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "A React component for viewing DOCX documents in the browser, powered by Docxodus",
   "type": "module",
   "main": "./dist/react-docxodus-viewer.cjs.js",
@@ -52,7 +52,7 @@
   "author": "",
   "license": "MIT",
   "peerDependencies": {
-    "docxodus": ">=6.2",
+    "docxodus": ">=7.0",
     "react": ">=18"
   },
   "devDependencies": {
@@ -65,7 +65,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.0.14",
-    "docxodus": "^6.2.0",
+    "docxodus": "^7.0.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
