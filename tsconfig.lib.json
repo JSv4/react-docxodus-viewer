@@ -19,6 +19,7 @@
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "outDir": "dist/types",
+    "rootDir": "src",
 
     /* Linting */
     "strict": true,

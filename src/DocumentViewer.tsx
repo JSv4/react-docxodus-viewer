@@ -136,8 +136,10 @@ export function DocumentViewer({
   // Worker instance state (used when useWorker=true)
   const [worker, setWorker] = useState<WorkerDocxodus | null>(null);
   const [workerReady, setWorkerReady] = useState(false);
-  const [workerLoading, setWorkerLoading] = useState(false);
   const [workerError, setWorkerError] = useState<Error | null>(null);
+  // Derived rather than tracked separately: true exactly while a worker
+  // creation attempt is in flight (started, not yet ready, not yet errored).
+  const workerLoading = useWorker && isWorkerSupported() && !workerReady && !workerError;
 
   // Create/destroy worker based on useWorker prop
   const workerRef = useRef<WorkerDocxodus | null>(null);
@@ -148,8 +150,6 @@ export function DocumentViewer({
     }
 
     let cancelled = false;
-    setWorkerLoading(true);
-    setWorkerError(null);
 
     createWorkerDocxodus({ wasmBasePath })
       .then((workerInstance) => {
@@ -157,7 +157,7 @@ export function DocumentViewer({
           workerRef.current = workerInstance;
           setWorker(workerInstance);
           setWorkerReady(true);
-          setWorkerLoading(false);
+          setWorkerError(null);
         } else {
           workerInstance.terminate();
         }
@@ -165,7 +165,6 @@ export function DocumentViewer({
       .catch((err) => {
         if (!cancelled) {
           setWorkerError(err instanceof Error ? err : new Error(String(err)));
-          setWorkerLoading(false);
         }
       });
 
@@ -320,9 +319,13 @@ export function DocumentViewer({
     }
   }, [isReady, useWorker, worker, hookResult, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete, onError, extractRevisions]);
 
-  // Auto-convert when WASM ready and file available
+  // Auto-convert when WASM ready and file available. `convert` sets
+  // isConverting synchronously so the UI can show a spinner immediately;
+  // that can't be derived instead without breaking controlled-`html` mode,
+  // where `html` can stay non-null across a reconvert.
   useEffect(() => {
     if (isReady && file && !html && !isConverting && controlledHtml === undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
       convert(file);
     }
   }, [isReady, file, html, isConverting, convert, controlledHtml]);
@@ -500,7 +503,7 @@ export function DocumentViewer({
   const isProcessing = isConverting || isLoading;
 
   // Settings Modal
-  const SettingsModal = () => (
+  const renderSettingsModal = () => (
     <div className="rdv-settings-overlay" onClick={() => setShowSettings(false)}>
       <div className="rdv-settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="rdv-settings-header">
@@ -665,7 +668,7 @@ export function DocumentViewer({
   };
 
   // Toolbar component
-  const Toolbar = () => (
+  const renderToolbar = () => (
     <div className="rdv-toolbar">
       <div className="rdv-toolbar-left">
         <label
@@ -834,7 +837,7 @@ export function DocumentViewer({
 
   return (
     <div ref={viewerRef} className={rootClassName} style={style}>
-      {toolbar === 'top' && <Toolbar />}
+      {toolbar === 'top' && renderToolbar()}
 
       <div className="rdv-content">
         {initError && (
@@ -954,9 +957,9 @@ export function DocumentViewer({
         )}
       </div>
 
-      {toolbar === 'bottom' && <Toolbar />}
+      {toolbar === 'bottom' && renderToolbar()}
 
-      {showSettings && <SettingsModal />}
+      {showSettings && renderSettingsModal()}
     </div>
   );
 }
