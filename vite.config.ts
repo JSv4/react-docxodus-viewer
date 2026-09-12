@@ -71,7 +71,7 @@ const libConfig = defineConfig({
   publicDir: false, // Don't copy public assets to lib dist
   build: {
     lib: {
-      entry: Object.fromEntries(['index', 'engine', 'worker', 'export-browser', 'server'].map(name => [name, resolve(__dirname, `src/${name}.ts`)])),
+      entry: Object.fromEntries(['index', 'viewer', 'editor', 'engine', 'worker', 'export-browser', 'server'].map(name => [name, resolve(__dirname, `src/${name}.ts`)])),
       name: 'ReactDocxodusViewer',
       fileName: (format, name) => `${name === 'index' ? 'react-docxodus-viewer' : name}.${format}.js`,
       formats: ['es'],

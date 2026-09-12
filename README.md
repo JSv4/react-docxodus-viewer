@@ -6,7 +6,7 @@ engine and a React-owned pagination component; it does not load the upstream
 browser editor or ribbon.
 
 [Demo](https://jsv4.github.io/react-docxodus-viewer/) ·
-[API guide](docs/API.md) · [Migration from 0.6–0.7](docs/MIGRATION-0.8.md) ·
+[API guide](docs/API.md) · [Embedding modules](docs/embedding.md) · [Migration from 0.6–0.7](docs/MIGRATION-0.8.md) ·
 [Runtime deployment](WASM_CDN_ISSUES.md)
 
 ## Install
@@ -129,6 +129,8 @@ continue to style the viewer controls and panels.
 ## Entry points
 
 - `react-docxodus-viewer`: React UI/hooks, all core engine exports and worker APIs.
+- `/viewer`: standalone viewer, paginator, and optional runtime provider.
+- `/editor`: session ownership and composable editing controls.
 - `/engine`: the complete `docxodus/core` API, without React UI.
 - `/worker`: the complete worker proxy API.
 - `/export-browser`: complete upstream browser export contracts/helpers. Keep the

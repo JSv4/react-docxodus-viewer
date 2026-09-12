@@ -12,6 +12,14 @@
       "import": "./dist/react-docxodus-viewer.es.js"
     },
     "./styles.css": "./dist/react-docxodus-viewer.css",
+    "./viewer": {
+      "types": "./dist/types/viewer.d.ts",
+      "import": "./dist/viewer.es.js"
+    },
+    "./editor": {
+      "types": "./dist/types/editor.d.ts",
+      "import": "./dist/editor.es.js"
+    },
     "./engine": {
       "types": "./dist/types/engine.d.ts",
       "import": "./dist/engine.es.js"

@@ -24,12 +24,18 @@ await writeFile(join(temp, 'package.json'), '{"type":"module"}');
 await writeFile(join(temp, 'consumer.mjs'), `
 import assert from 'node:assert/strict';
 import * as viewer from 'react-docxodus-viewer';
+import * as viewing from 'react-docxodus-viewer/viewer';
+import * as editing from 'react-docxodus-viewer/editor';
 import * as engine from 'react-docxodus-viewer/engine';
 import * as worker from 'react-docxodus-viewer/worker';
 import * as browser from 'react-docxodus-viewer/export-browser';
 import * as server from 'react-docxodus-viewer/server';
 import { copyDocxodusRuntime } from 'react-docxodus-viewer/assets';
 assert.equal(viewer.openDocxSession, engine.openDocxSession);
+assert.equal(viewing.DocumentViewer, viewer.DocumentViewer);
+assert.equal(editing.SessionEditorPanel, viewer.SessionEditorPanel);
+assert.equal(editing.useDocxSession, viewer.useDocxSession);
+assert(!('SessionEditorPanel' in viewing));
 assert.equal(typeof worker.createWorkerDocxodus, 'function');
 assert.equal(typeof browser.convertDocxToPaginatedHtml, 'function');
 assert.equal(typeof server.convertDocxToPdf, 'function');
@@ -40,6 +46,8 @@ console.log('Packed ESM entry points and runtime-copy helper passed.');
 process.stdout.write(run(process.execPath, [join(temp, 'consumer.mjs')], temp));
 await writeFile(join(temp, 'consumer.tsx'), `
 import { DocumentViewer, useDocxSession, useSessionCommands, useDocumentHistory, useDocxodusOperation, type DocxSession } from 'react-docxodus-viewer';
+import { DocumentViewer as EmbeddedViewer } from 'react-docxodus-viewer/viewer';
+import { SessionEditorPanel } from 'react-docxodus-viewer/editor';
 import { copyDocxodusRuntime } from 'react-docxodus-viewer/assets';
 import { convertDocxToPdf } from 'react-docxodus-viewer/server';
 export function Consumer() {
@@ -48,7 +56,7 @@ export function Consumer() {
   const comparison = useDocxodusOperation('docxDiffCompareProducts');
   const history = useDocumentHistory({ documentId: 'consumer', indexedDbName: 'consumer' });
   void commands; void comparison; void history; void copyDocxodusRuntime; void convertDocxToPdf;
-  return <DocumentViewer session={document.controller} />;
+  return <><DocumentViewer session={document.controller} /><EmbeddedViewer session={document.controller} /><SessionEditorPanel session={document.controller} /></>;
 }
 `);
 run(process.execPath, [resolve(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--jsx', 'react-jsx', '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'bundler', '--types', 'react,node', 'consumer.tsx'], temp);
