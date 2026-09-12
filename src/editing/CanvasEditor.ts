@@ -236,7 +236,19 @@ export class CanvasEditor {
       const block = fallback ?? canvasParagraphs(this.root)[0]?.dataset.sourceAnchorId;
       if (block) this.range = collapsed({ anchorId: block, offset: Math.min(this.fallback?.offset ?? 0, this.text(block).length) });
     }
-    restoreCanvasRange(this.root, this.range, this.restoreFocus);
+    if (!restoreCanvasRange(this.root, this.range, this.restoreFocus)) return;
+    const selection = shadowSelection(this.root);
+    const viewport = (this.root.getRootNode() as ShadowRoot).host.closest<HTMLElement>('.rdv-pages');
+    if (selection?.focusNode && viewport) {
+      const caret = document.createRange(); caret.setStart(selection.focusNode, selection.focusOffset); caret.collapse(true);
+      let rect = caret.getBoundingClientRect();
+      if (!rect.height) rect = domPoint(this.root, this.range.backward ? this.range.start : this.range.end)?.block.getBoundingClientRect() ?? rect;
+      const visible = viewport.getBoundingClientRect();
+      if (rect.height) {
+        if (rect.bottom > visible.bottom - 20) viewport.scrollTop += rect.bottom - visible.bottom + 20;
+        else if (rect.top < visible.top + 20) viewport.scrollTop -= visible.top + 20 - rect.top;
+      }
+    }
   }
   private patch(anchorId: string, after?: string) {
     if (!this.root) return;
