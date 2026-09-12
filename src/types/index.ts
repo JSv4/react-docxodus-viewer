@@ -131,6 +131,8 @@ export interface DocumentViewerProps {
   document?: import('../session').DocumentSource | null;
   /** Live session: committed edits automatically refresh the viewer. */
   session?: import('../session').DocxSessionController;
+  /** Direct page editing binding supplied by useDocumentEditor().viewerProps. */
+  canvasEditor?: import('../editing/CanvasEditor').CanvasEditor;
   /** Native revision data for a host-rendered HTML view. */
   revisions?: import('docxodus/core').RevisionListEntry[];
   /** Converter overrides; the viewer owns pagination mode and scale. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { TrackedChangeMode } from 'docxodus/core';
 import type { CharSpan, DocxSession, EditResult, FormatOp, ParagraphFormatOp, RunFormattingInfo } from 'docxodus/core';
 import { documentBytes } from '../session';
@@ -6,6 +6,7 @@ import type { DocxSessionController } from '../session';
 import type { DocumentTextSelection } from '../types';
 import { useSessionQuery, useSessionState } from './useDocxSession';
 import { editableText, replaceParagraphText } from '../editing/text';
+import { CanvasEditor } from '../editing/CanvasEditor';
 
 export interface EditorSelection {
   anchorId: string;
@@ -13,6 +14,8 @@ export interface EditorSelection {
   span: CharSpan | null;
   text: string;
   version: number;
+  /** A canvas caret changes the formatting of subsequent typing. */
+  source?: 'canvas' | 'paragraph';
 }
 export interface UseDocumentEditorOptions { readOnly?: boolean; onError?: (error: Error) => void }
 const styles = (session: DocxSession) => session.listStyles().filter(style => style.type === 'paragraph');
@@ -28,6 +31,9 @@ function assertResult(value: unknown) {
 /** Shared selection and native commands for an editor, toolbar, or custom host layout. */
 export function useDocumentEditor(controller: DocxSessionController, options: UseDocumentEditorOptions = {}) {
   const state = useSessionState(controller);
+  const canvasEditor = useMemo(() => new CanvasEditor(controller), [controller]);
+  const canvasState = useSyncExternalStore(canvasEditor.subscribe, canvasEditor.getSnapshot, canvasEditor.getSnapshot);
+  useLayoutEffect(() => () => canvasEditor.dispose(), [canvasEditor]);
   const [picked, setPicked] = useState<{ owner: DocxSession; selection: EditorSelection } | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [notice, setNotice] = useState('');
@@ -42,7 +48,7 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
     const failure = cause instanceof Error ? cause : new Error(String(cause));
     setError(failure); setNotice(''); optionsRef.current.onError?.(failure); return false;
   }, []);
-  const select = useCallback((anchorId: string, span: CharSpan | null = null) => {
+  const select = useCallback((anchorId: string, span: CharSpan | null = null, source: EditorSelection['source'] = 'paragraph') => {
     try {
       const snapshot = controller.getSnapshot();
       if (!snapshot.session) return false;
@@ -50,7 +56,8 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       if (!info || !['p', 'h', 'li'].includes(info.kind)) throw new Error('Choose a paragraph or heading to edit.');
       const text = controller.read(session => editableText(session.getFormatting(info.id)));
       if (span && (span.start < 0 || span.length < 0 || span.start + span.length > text.length)) throw new Error('Select text inside this paragraph.');
-      const next = { anchorId: info.id, span, text, version: snapshot.version };
+      const next = { anchorId: info.id, span, text, version: snapshot.version, source };
+      if (selectionOwner.current === snapshot.session && JSON.stringify(selectionRef.current) === JSON.stringify(next)) return true;
       selectionRef.current = next;
       selectionOwner.current = snapshot.session;
       setPicked({ owner: snapshot.session, selection: next }); setError(null); setNotice(''); return true;
@@ -81,17 +88,20 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
   const runs = useMemo(() => {
     const all = details.data?.formatting?.runs ?? [];
     const span = selection?.span;
-    return !span ? all : all.filter(run => span.length
-      ? run.span.start < span.start + span.length && run.span.start + run.span.length > span.start
-      : run.span.start <= span.start && run.span.start + run.span.length >= span.start);
+    if (!span) return all;
+    if (!span.length) return [all.find(run => run.span.start < span.start && run.span.start + run.span.length >= span.start) ?? all[0]].filter(Boolean);
+    return all.filter(run => run.span.start < span.start + span.length && run.span.start + run.span.length > span.start);
   }, [details.data, selection]);
   const formatValue = <K extends keyof RunFormattingInfo>(key: K): RunFormattingInfo[K] | 'mixed' => {
+    const pending = canvasState.format as Partial<RunFormattingInfo> | null;
+    if (selection?.source === 'canvas' && !selection.span?.length && pending?.[key] !== undefined) return pending[key];
     const values = runs.map(run => run.effective[key]);
     return values.every(value => value === values[0]) ? values[0] : 'mixed';
   };
   const run = useCallback((operation: (session: DocxSession, selection: EditorSelection | null) => unknown, needsSelection = true, selectCreated = false) => {
     try {
       if (optionsRef.current.readOnly) throw new Error('This editor is read-only.');
+      if (!canvasEditor.beforeCommand()) return false;
       const snapshot = controller.getSnapshot();
       if (!snapshot.session || snapshot.isLoading) throw new Error('Wait for the document to finish opening.');
       const target = selectionRef.current;
@@ -113,14 +123,37 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
         if (anchor) {
           const text = controller.read(session => editableText(session.getFormatting(anchor)));
           const span = target.span && target.span.start + target.span.length <= text.length ? target.span : null;
-          select(anchor, span);
+          select(anchor, span, target.source);
         } else { selectionRef.current = null; setPicked(null); }
       }
+      if (target?.source === 'canvas') canvasEditor.afterCommand();
       setError(null); setNotice(result === false ? 'No further history in that direction.' : 'Change applied');
       return true;
     } catch (cause) { return fail(cause); }
-  }, [controller, fail, select]);
-  const format = (op: FormatOp) => run((session, target) => session.applyFormat(target!.anchorId, target!.span?.length ? target!.span : null, op));
+  }, [controller, fail, select, canvasEditor]);
+  const format = (op: FormatOp) => selectionRef.current?.source === 'canvas' && !selectionRef.current.span?.length
+    ? canvasEditor.setTypingFormat(op)
+    : run((session, target) => session.applyFormat(target!.anchorId, target!.span?.length ? target!.span : null, op));
+  const toggleFormat = (key: 'bold' | 'italic' | 'underline' | 'strike') => {
+    if (!canvasEditor.beforeCommand()) return false;
+    const target = selectionRef.current;
+    if (target?.source === 'canvas' && !target.span?.length) {
+      const pending = canvasEditor.getSnapshot().format?.[key];
+      const runs = controller.read(session => session.getFormatting(target.anchorId)?.runs ?? []);
+      const run = runs.find(run => run.span.start < target.span!.start && run.span.start + run.span.length >= target.span!.start) ?? runs[0];
+      return format({ [key]: !(pending ?? run?.effective[key]) });
+    }
+    return run((session, target) => {
+      const span = target!.span?.length ? target!.span : null;
+      const runs = session.getFormatting(target!.anchorId)?.runs.filter(run => !span ||
+        (run.span.start < span.start + span.length && run.span.start + run.span.length > span.start)) ?? [];
+      return session.applyFormat(target!.anchorId, span, { [key]: !runs.length || !runs.every(run => run.effective[key]) });
+    });
+  };
+  useLayoutEffect(() => { canvasEditor.configure({ readOnly: !!options.readOnly,
+    onSelect: (anchor, span) => { select(anchor, span, 'canvas'); }, onError: fail,
+    onHistory: direction => run(session => session[direction](), false), onFormat: toggleFormat,
+  }); });
   const paragraph = (op: ParagraphFormatOp) => run((session, target) => session.setParagraphFormat(target!.anchorId, op));
   const insertImage = async (file: File) => {
     const owner = controller.getSnapshot().session;
@@ -134,20 +167,13 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
     finally { setBusy(false); }
   };
   return {
-    controller, state, selection, details: details.data, styles: availableStyles.data ?? [],
+    controller, state, selection, canvasEditor, canvasState, details: details.data, styles: availableStyles.data ?? [],
     error: error ?? details.error ?? availableStyles.error, notice, busy,
     readOnly: !!options.readOnly, ready: !!state.session && !state.isLoading,
     canEdit: !!selection && !!state.session && !state.isLoading && !options.readOnly && !busy,
     selectAnchor: (anchorId: string) => select(anchorId), select, selectText, formatValue,
-    viewerProps: { session: controller, selectedAnchorId: selection?.anchorId, onAnchorSelect: (id: string) => select(id), onTextSelectionChange: selectText, allowRevisionResolution: !options.readOnly },
-    format, paragraph,
-    toggleFormat: (key: 'bold' | 'italic' | 'underline' | 'strike') => run((session, target) => {
-      // beforeAction can commit a draft and change the selected range synchronously.
-      const span = target!.span?.length ? target!.span : null;
-      const runs = session.getFormatting(target!.anchorId)?.runs.filter(run => !span ||
-        (run.span.start < span.start + span.length && run.span.start + run.span.length > span.start)) ?? [];
-      return session.applyFormat(target!.anchorId, span, { [key]: !runs.length || !runs.every(run => run.effective[key]) });
-    }),
+    viewerProps: { session: controller, canvasEditor: options.readOnly ? undefined : canvasEditor, selectedAnchorId: selection?.anchorId, onAnchorSelect: (id: string) => select(id), onTextSelectionChange: selectText, allowRevisionResolution: !options.readOnly },
+    format, paragraph, toggleFormat,
     setStyle: (styleId: string) => run((session, target) => session.setParagraphStyle(target!.anchorId, styleId)),
     setList: (kind: 'bullet' | 'decimal' | 'none') => run((session, target) => session.applyListFormat(target!.anchorId, kind)),
     indent: (direction: -1 | 1) => details.data?.list ? run((session, target) => session.setListLevel(target!.anchorId, direction)) : paragraph({ indentDelta: direction * 720 }),

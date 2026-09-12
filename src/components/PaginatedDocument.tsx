@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { PaginationEngine, clearPageCitationHighlight, navigateToPageCitation } from 'docxodus/core';
-import type { PageCitation, PaginationOptions, PaginationResult } from 'docxodus/core';
+import type { DocxSession, PageCitation, PaginationOptions, PaginationResult } from 'docxodus/core';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
 import { paragraphSelector, readTextSelection, shadowSelection } from '../editing/selection';
 import type { DocumentTextSelection } from '../types';
+import type { CanvasEditor } from '../editing/CanvasEditor';
 
 export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' | 'showPageNumbers' | 'pageGap' | 'cssPrefix' | 'fragmentParagraphs' | 'layoutToken'> {
   html: string;
+  canvasEditor?: CanvasEditor;
+  canvasOwner?: DocxSession | null;
   backgroundColor?: string;
   className?: string;
   style?: CSSProperties;
@@ -60,7 +63,7 @@ function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void>
 }
 
 /** React-owned pagination over the core engine; no upstream editor dependency. */
-export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pageGap = 20, cssPrefix = 'page-', fragmentParagraphs = true, layoutToken, citation, selectedAnchorId, backgroundColor = '#525659', className, style, ...callbacks }: PaginatedDocumentProps) {
+export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, showPageNumbers = true, pageGap = 20, cssPrefix = 'page-', fragmentParagraphs = true, layoutToken, citation, selectedAnchorId, backgroundColor = '#525659', className, style, ...callbacks }: PaginatedDocumentProps) {
   const host = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLElement | null>(null);
   const callbacksRef = useRef(callbacks);
@@ -100,6 +103,7 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
     body.current = documentBody;
     callbacksRef.current.onRootChange?.(documentBody);
     const onClick = (event: MouseEvent) => {
+      if (canvasEditor) return;
       const target = event.target instanceof Element ? event.target : null;
       // Inline comment/revision wrappers have their own anchors. Editing a passage
       // should select its paragraph, rather than the discussion attached to it.
@@ -120,6 +124,7 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
     };
     documentBody.addEventListener('click', onClick);
     const onSelection = () => {
+      if (canvasEditor) return;
       const selection = shadowSelection(documentBody);
       if (callbacksRef.current.onTextSelectionChange && selection && !selection.isCollapsed) {
         callbacksRef.current.onTextSelectionChange(readTextSelection(documentBody, documentVersion));
@@ -128,6 +133,7 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
     documentBody.addEventListener('mouseup', onSelection);
     documentBody.addEventListener('keyup', onSelection);
     let observer: IntersectionObserver | null = null;
+    let detachEditor: (() => void) | undefined;
     void run(async signal => {
       await waitForLayout(element, signal);
       documentBody.getBoundingClientRect(); // Start font requests before awaiting readiness.
@@ -147,6 +153,7 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
         layoutToken: documentVersion !== undefined && rendererFingerprint !== undefined ? { documentVersion, rendererFingerprint } : undefined,
       });
       const result = engine.paginate();
+      detachEditor = canvasEditor?.attach(documentBody, canvasOwner ?? null);
       callbacksRef.current.onPaginationComplete?.(result);
       if (typeof IntersectionObserver !== 'undefined') {
         const visible = new Map<Element, { page: number; ratio: number }>();
@@ -163,6 +170,8 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       return result;
     }).catch(error => { if (error?.name !== 'AbortError') callbacksRef.current.onError?.(error); });
     return () => {
+      canvasEditor?.commit();
+      detachEditor?.();
       cancel();
       observer?.disconnect();
       documentBody.removeEventListener('click', onClick);
@@ -172,7 +181,7 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       callbacksRef.current.onRootChange?.(null);
       shadow.replaceChildren();
     };
-  }, [html, scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, run, cancel]);
+  }, [html, canvasEditor, canvasOwner, scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, run, cancel]);
 
   useEffect(() => {
     if (!body.current) return;

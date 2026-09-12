@@ -15,7 +15,7 @@ export function editableText(formatting: FormattingInspection | null) {
 }
 
 /** One changed span, expanded to a neighbouring character for pure insertions. */
-export function textChange(before: string, after: string) {
+export function textChange(before: string, after: string, expandInsertion = true) {
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
   if (start === before.length && start === after.length) return null;
@@ -24,7 +24,7 @@ export function textChange(before: string, after: string) {
   let newEnd = after.length;
   while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
   if (oldEnd < before.length && /[\uDC00-\uDFFF]/.test(before[oldEnd])) { oldEnd++; newEnd++; }
-  if (oldEnd === start && before.length) {
+  if (expandInsertion && oldEnd === start && before.length) {
     if (start > 0) { start--; if (/[\uDC00-\uDFFF]/.test(before[start])) start--; }
     else { oldEnd += before.codePointAt(0)! > 0xffff ? 2 : 1; newEnd += oldEnd; }
   }
@@ -72,20 +72,25 @@ export function textChanges(before: string, after: string) {
 }
 
 /** Preserve surrounding runs, links and paragraph formatting instead of rewriting a block. */
-export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | ReturnType<DocxSession['executeBatch']> | null {
+export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string): Parameters<DocxSession['executeBatch']>[0] {
   const live = session.getAnchorInfo(anchorId);
   if (!live || editableText(session.getFormatting(anchorId)) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
   const changes = textChanges(before, after);
-  if (!changes.length) return null;
+  if (!changes.length) return [];
   if (!before.length) {
     // replaceText accepts Markdown. Escape literal typing into an empty paragraph.
     const literal = after.replace(/([\\`*_{}[\]()#+.!<>|~-])/g, '\\$1');
-    return session.replaceText(anchorId, literal, { expectedText: live.visibleText });
+    return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: live.visibleText }) }];
   }
-  return session.executeBatch(changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
+  return changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const match = session.grep(escapePattern(change.removed), { scope: ProjectionScopes.All })
       .find(match => match.enclosingAnchor.id === anchorId && match.span.start === change.start && match.span.length === change.removed.length);
     if (!match) throw new Error('This text cannot be mapped to an editable run. The document has not been changed.');
     return session.replaceMatch(match, change.inserted);
-  } })));
+  } }));
+}
+
+export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | ReturnType<DocxSession['executeBatch']> | null {
+  const steps = paragraphTextSteps(session, anchorId, before, after);
+  return steps.length ? session.executeBatch(steps) : null;
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, useId, useSyncExternalStore } from 'react';
 import { PaginatedDocument } from './components/PaginatedDocument';
 import type { PaginationResult, RevisionListEntry as Revision, DocumentMetadata, DocxSession } from 'docxodus/core';
 import { CommentRenderMode, PaginationMode, AnnotationLabelMode } from 'docxodus/core';
@@ -18,6 +18,8 @@ import type {
 import { DEFAULT_SETTINGS } from './types';
 import { RevisionPanel } from './components/RevisionPanel';
 import { Icon } from './components/Icon';
+const noSubscribe = () => () => {};
+const notEditing = () => false;
 
 const OpenDocumentIcon = () => (
   <svg
@@ -86,6 +88,7 @@ export function DocumentViewer({
   file: controlledFile,
   document: controlledDocument,
   session: sessionController,
+  canvasEditor,
   revisions: controlledRevisions,
   conversionOptions,
   rendererFingerprint,
@@ -138,25 +141,28 @@ export function DocumentViewer({
   const [internalFile, setInternalFile] = useState<File | null>(null);
   const [internalHtml, setInternalHtml] = useState<string | null>(null);
   const [renderedLayoutToken, setRenderedLayoutToken] = useState<DocumentViewerProps['layoutToken']>();
+  const [renderedOwner, setRenderedOwner] = useState<DocxSession | null>(null);
   const [internalSettings, setInternalSettings] = useState<ViewerSettings>(mergedDefaults);
 
   // Determine which values to use (controlled vs uncontrolled)
   const sessionState = useSessionState(sessionController);
+  const editingSuspended = useSyncExternalStore(canvasEditor?.subscribe ?? noSubscribe,
+    canvasEditor ? () => canvasEditor.getSnapshot().suspended : notEditing, notEditing);
   const onErrorRef = useRef(onError);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
-  const [sessionDocument, setSessionDocument] = useState<{ bytes: Uint8Array; version: number; anchors: string[] } | null>(null);
+  const [sessionDocument, setSessionDocument] = useState<{ bytes: Uint8Array; version: number; anchors: string[]; owner: DocxSession } | null>(null);
   useEffect(() => {
     let current = true;
     Promise.resolve().then(() => {
-      if (!current) return;
+      if (!current || editingSuspended) return;
       const snapshot = sessionController?.getSnapshot();
       setSessionDocument(snapshot?.session && sessionController ? {
-        bytes: sessionController.save(), version: snapshot.version,
+        bytes: sessionController.save(), version: snapshot.version, owner: snapshot.session,
         anchors: sessionController.read(session => Object.keys(session.project().anchorIndex)),
       } : null);
     }).catch(cause => { if (current) onErrorRef.current?.(cause instanceof Error ? cause : new Error(String(cause))); });
     return () => { current = false; };
-  }, [sessionController, sessionState.session, sessionState.version]);
+  }, [sessionController, sessionState.session, sessionState.version, editingSuspended]);
   const file = sessionController ? sessionDocument?.bytes ?? null : controlledDocument !== undefined ? controlledDocument : controlledFile !== undefined ? controlledFile : internalFile;
   const html = controlledHtml !== undefined ? controlledHtml : internalHtml;
   const settings = useMemo(
@@ -171,6 +177,7 @@ export function DocumentViewer({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const conversionGeneration = useRef(0);
+  const conversionAbort = useRef<AbortController | null>(null);
 
   // Local UI state
   const [isConverting, setIsConverting] = useState(false);
@@ -242,6 +249,8 @@ export function DocumentViewer({
   const convert = useCallback(async (fileToConvert: DocumentSource) => {
     if (!isReady) return;
     const generation = ++conversionGeneration.current;
+    conversionAbort.current?.abort();
+    const abort = new AbortController(); conversionAbort.current = abort;
     const current = () => generation === conversionGeneration.current;
     setIsConverting(true);
     setError(null);
@@ -255,9 +264,11 @@ export function DocumentViewer({
     }).catch(() => { /* Metadata is optional. */ });
     try {
       let result = await runtime.convertToHtml(fileToConvert, getConvertOptions());
+      if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
       if (!current()) return;
+      if (canvasEditor && sessionDocument && (sessionDocument.owner !== sessionController?.getSnapshot().session || sessionDocument.version !== sessionController.getSnapshot().version)) return;
       if (sessionDocument?.bytes === fileToConvert) result = reconcileSourceAnchors(result, sessionDocument.anchors);
-      if (controlledHtml === undefined) { setInternalHtml(result); setRenderedLayoutToken(layoutToken); }
+      if (controlledHtml === undefined) { setInternalHtml(result); setRenderedLayoutToken(layoutToken); setRenderedOwner(sessionDocument?.owner ?? null); }
       onConversionComplete?.(result);
       if (showRevisionsTab && !controlledRevisions && !sessionController) {
         setIsExtractingRevisions(true);
@@ -275,11 +286,11 @@ export function DocumentViewer({
       onError?.(failure);
     } finally { if (current()) setIsConverting(false); }
   }, [isReady, runtime, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete,
-    showRevisionsTab, controlledRevisions, sessionController, sessionDocument, onRevisionsExtracted, onError, layoutToken]);
+    showRevisionsTab, controlledRevisions, sessionController, sessionDocument, onRevisionsExtracted, onError, layoutToken, canvasEditor]);
 
   const convertRef = useRef(convert);
   const conversionOptionsKey = JSON.stringify(conversionOptions ?? {});
-  const invalidateConversion = useCallback(() => { conversionGeneration.current++; }, []);
+  const invalidateConversion = useCallback(() => { conversionGeneration.current++; conversionAbort.current?.abort(); }, []);
   useEffect(() => { convertRef.current = convert; });
   useEffect(() => {
     if (isReady && file && controlledHtml === undefined) void convertRef.current(file);
@@ -823,7 +834,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {!initError && (isLoading || isConverting) && (
+        {!initError && (isLoading || isConverting) && !(canvasEditor && html) && (
           documentMetadata && isConverting ? (
             // Show page placeholders while converting - matches actual page dimensions for stable layout
             <div
@@ -904,7 +915,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {viewMode === 'document' && html && !isConverting && (
+        {viewMode === 'document' && html && (!isConverting || canvasEditor) && (
           <div
             ref={paginatedContainerRef}
             className="rdv-pages"
@@ -916,6 +927,8 @@ export function DocumentViewer({
           >
             <PaginatedDocument
               html={html}
+              canvasEditor={canvasEditor}
+              canvasOwner={renderedOwner}
               scale={settings.paginationScale}
               showPageNumbers={settings.showPageNumbers}
               fragmentParagraphs={settings.fragmentParagraphs}

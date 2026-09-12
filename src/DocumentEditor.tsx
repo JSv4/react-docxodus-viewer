@@ -29,7 +29,7 @@ export interface DocumentEditorProps {
   defaultTextEditorOpen?: boolean;
   toolbarGroups?: EditorToolbarGroup[];
   toolbarChildren?: ReactNode;
-  viewerProps?: Omit<DocumentViewerProps, 'file' | 'document' | 'session' | 'html' | 'onAnchorSelect' | 'selectedAnchorId' | 'onTextSelectionChange' | 'allowRevisionResolution'>;
+  viewerProps?: Omit<DocumentViewerProps, 'file' | 'document' | 'session' | 'html' | 'canvasEditor' | 'onAnchorSelect' | 'selectedAnchorId' | 'onTextSelectionChange' | 'allowRevisionResolution'>;
   /** Fires for committed native edits, not every keystroke in a paragraph draft. */
   onChange?: (change: DocumentEditorChange) => void;
   onReady?: (controller: DocxSessionController) => void;
@@ -40,7 +40,7 @@ export interface DocumentEditorProps {
   style?: CSSProperties;
 }
 
-/** Embeddable document canvas, formatting controls, and paragraph authoring. */
+/** Embeddable document canvas with direct typing and native formatting controls. */
 export const DocumentEditor = forwardRef<DocumentEditorHandle, DocumentEditorProps>(function DocumentEditor({
   document, session, sessionSettings, wasmBasePath, filename, readOnly = false,
   showHeader = true, showFormattingToolbar = true, defaultTextEditorOpen = false,
@@ -60,7 +60,7 @@ export const DocumentEditor = forwardRef<DocumentEditorHandle, DocumentEditorPro
   const id = useId();
   const previous = useRef<{ session: object | null; version: number } | null>(null);
   const name = filename ?? (typeof File !== 'undefined' && document instanceof File ? document.name : 'Untitled document.docx');
-  const commit = () => textEditor.current?.commit() ?? true;
+  const commit = () => editor.canvasEditor.commit() && (textEditor.current?.commit() ?? true);
   const showText = () => { setTextOpen(true); requestAnimationFrame(() => textEditor.current?.focus()); };
   useImperativeHandle(ref, () => ({ controller, getDocument: () => {
     if (!commit()) throw new Error('Resolve the paragraph draft before saving the document.');
@@ -111,9 +111,9 @@ export const DocumentEditor = forwardRef<DocumentEditorHandle, DocumentEditorPro
   }}>
     {showHeader && <header className="rdv-editor-header"><div><Icon name="document" size={18} /><strong>{name.replace(/\.docx$/i, '')}</strong><span>{readOnly ? 'Read only' : 'Editor'}</span></div><button type="button" className="rdv-editor-primary" aria-label="Save document" disabled={!editor.ready || saving} onClick={() => void save()}><Icon name="download" size={15} />{saving ? 'Saving…' : onSave ? 'Save' : 'Download DOCX'}</button></header>}
     {!readOnly && showFormattingToolbar && <EditorToolbar editor={editor} groups={toolbarGroups} beforeAction={commit} onEditText={showText}>{toolbarChildren}</EditorToolbar>}
-    {failure && <div className="rdv-editor-error" role="alert"><span>{failure.message}</span><button type="button" aria-label="Dismiss editor error" onClick={() => { setError(null); editor.clearError(); }}><Icon name="close" size={14} /></button></div>}
-    <div className="rdv-editor-canvas" onDoubleClick={() => { if (!readOnly && editor.canEdit) showText(); }}><DocumentViewer {...viewerProps} session={controller} wasmBasePath={wasmBasePath ?? viewerProps?.wasmBasePath} rendererFingerprint={viewerProps?.rendererFingerprint ?? `rdv-editor-${id}`} showUploadButton={false} fitMode={viewerProps?.fitMode ?? 'page-width'} selectedAnchorId={readOnly ? undefined : editor.selection?.anchorId} onAnchorSelect={readOnly ? undefined : selectAnchor} onTextSelectionChange={readOnly ? undefined : selectText} allowRevisionResolution={false} onError={cause => { reportError(cause); viewerProps?.onError?.(cause); }} defaultSettings={{ commentMode: 'disabled', annotationMode: 'disabled', showDeletedContent: false, ...viewerProps?.defaultSettings }} /></div>
+    {failure && <div className="rdv-editor-error" role="alert"><span>{failure.message}</span>{editor.canvasState.conflict && <button type="button" onClick={() => { editor.canvasEditor.discard(); editor.clearError(); }}>Reload document text</button>}<button type="button" aria-label="Dismiss editor error" onClick={() => { setError(null); editor.clearError(); }}><Icon name="close" size={14} /></button></div>}
+    <div className="rdv-editor-canvas"><DocumentViewer {...viewerProps} session={controller} canvasEditor={readOnly ? undefined : editor.canvasEditor} wasmBasePath={wasmBasePath ?? viewerProps?.wasmBasePath} rendererFingerprint={viewerProps?.rendererFingerprint ?? `rdv-editor-${id}`} showUploadButton={false} fitMode={viewerProps?.fitMode ?? 'page-width'} selectedAnchorId={readOnly ? undefined : editor.selection?.anchorId} onAnchorSelect={readOnly ? undefined : selectAnchor} onTextSelectionChange={readOnly ? undefined : selectText} allowRevisionResolution={false} onError={cause => { reportError(cause); viewerProps?.onError?.(cause); }} defaultSettings={{ commentMode: 'disabled', annotationMode: 'disabled', showDeletedContent: false, ...viewerProps?.defaultSettings }} /></div>
     {textOpen && !readOnly && <ParagraphEditor ref={textEditor} editor={editor} onClose={() => setTextOpen(false)} />}
-    <footer className="rdv-editor-status" aria-live="polite"><span>{editor.state.isLoading ? 'Opening document…' : readOnly ? 'Viewing document' : editor.selection?.span?.length ? `${editor.selection.span.length} characters selected` : editor.selection ? 'Paragraph selected' : 'Choose a paragraph to get started'}</span><span>{editor.busy ? 'Inserting image…' : readOnly ? '' : editor.notice || 'Double-click a paragraph to edit its text'}</span></footer>
+    <footer className="rdv-editor-status" aria-live="polite"><span>{editor.state.isLoading ? 'Opening document…' : readOnly ? 'Viewing document' : editor.selection?.span?.length ? `${editor.selection.span.length} characters selected` : editor.canvasState.pending ? 'Editing document…' : 'Click on the page to type'}</span><span>{editor.busy ? 'Inserting image…' : readOnly ? '' : editor.notice || 'Your changes stay in the document'}</span></footer>
   </div>;
 });
