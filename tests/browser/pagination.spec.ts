@@ -51,3 +51,25 @@ test('fragmented pagination registers exact citations and invalidates them after
   await page.getByRole('button', { name: 'Next Page' }).click();
   await expect(page.getByRole('spinbutton')).not.toHaveValue('1');
 });
+
+test('a viewer opened in a hidden container waits for measurable pagination', async ({ page }) => {
+  await page.goto('/api-test.html');
+  await page.waitForFunction(() => !!window.mountViewers);
+  await page.evaluate(async () => {
+    const controller = new window.rdv.DocxSessionController();
+    const session = await controller.open('blank', {}, '/wasm/');
+    const anchor = Object.keys(session.project().anchorIndex)[0];
+    session.replaceText(anchor, 'A document opened in the background.');
+    window.layoutTest = { controller, anchor, errors: [] };
+    window.mountViewers([{ session: controller, useWorker: false, wasmBasePath: '/wasm/', rendererFingerprint: 'hidden-viewer',
+      onPageMap: map => { window.layoutTest.map = map; }, onError: error => window.layoutTest.errors.push(error.message),
+      style: { display: 'none', height: 500 }, fitMode: 'page-width' }]);
+  });
+  await expect(page.locator('.rdv-paginated-document[aria-busy="true"]')).toHaveCount(1);
+  await page.locator('.rdv-viewer').evaluate(element => { (element as HTMLElement).style.display = 'flex'; });
+  await expect(page.locator('#pagination-container').getByText('A document opened in the background.', { exact: true })).toBeVisible();
+  await page.waitForFunction(() => !!window.layoutTest.map);
+  expect(await page.evaluate(() => window.layoutTest.errors)).toEqual([]);
+  expect(await page.evaluate(() => window.layoutTest.map!.pages.length)).toBe(1);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

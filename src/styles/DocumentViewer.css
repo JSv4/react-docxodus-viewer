@@ -650,8 +650,8 @@
   flex-direction: column;
   flex: 1;
   min-height: 0; /* Important for flex children to respect overflow */
-  background: var(--rdv-revision-bg);
-  color: var(--rdv-revision-ink);
+  background: var(--rdv-revision-bg, #f4f4f2);
+  color: var(--rdv-revision-ink, #1f2421);
 }
 
 .rdv-revision-header {
@@ -660,8 +660,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background: var(--rdv-revision-header-bg);
-  border-bottom: 1px solid var(--rdv-revision-header-border);
+  background: var(--rdv-revision-header-bg, #ffffff);
+  border-bottom: 1px solid var(--rdv-revision-header-border, #e7e5e1);
   flex-shrink: 0;
 }
 
@@ -682,34 +682,34 @@
 }
 
 .rdv-revision-stat--total {
-  color: var(--rdv-revision-ink-muted);
+  color: var(--rdv-revision-ink-muted, #62675f);
   background: rgba(17, 16, 15, 0.05);
 }
 
 .rdv-revision-stat--insertion {
-  color: var(--rdv-revision-insertion);
-  background: var(--rdv-revision-insertion-bg);
+  color: var(--rdv-revision-insertion, #1a8f4c);
+  background: var(--rdv-revision-insertion-bg, rgba(26, 143, 76, 0.12));
 }
 
 .rdv-revision-stat--deletion {
-  color: var(--rdv-revision-deletion);
-  background: var(--rdv-revision-deletion-bg);
+  color: var(--rdv-revision-deletion, #d23b3b);
+  background: var(--rdv-revision-deletion-bg, rgba(210, 59, 59, 0.12));
 }
 
 .rdv-revision-stat--move {
-  color: var(--rdv-revision-move);
-  background: var(--rdv-revision-move-bg);
+  color: var(--rdv-revision-move, #2f6fd0);
+  background: var(--rdv-revision-move-bg, rgba(47, 111, 208, 0.12));
 }
 
 .rdv-revision-stat--format {
-  color: var(--rdv-revision-format);
-  background: var(--rdv-revision-format-bg);
+  color: var(--rdv-revision-format, #8b46c9);
+  background: var(--rdv-revision-format-bg, rgba(139, 70, 201, 0.12));
 }
 
 .rdv-revision-filter {
-  background: var(--rdv-revision-card-bg);
-  border: 1px solid var(--rdv-revision-card-border);
-  color: var(--rdv-revision-ink);
+  background: var(--rdv-revision-card-bg, #ffffff);
+  border: 1px solid var(--rdv-revision-card-border, #e7e5e1);
+  color: var(--rdv-revision-ink, #1f2421);
   padding: 0.4rem 0.75rem;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -718,13 +718,13 @@
 }
 
 .rdv-revision-filter:hover {
-  border-color: var(--rdv-revision-rail);
+  border-color: var(--rdv-revision-rail, #c4c7c0);
 }
 
 .rdv-revision-filter:focus-visible {
   outline: none;
-  border-color: var(--rdv-revision-accent);
-  box-shadow: 0 0 0 3px var(--rdv-revision-focus-ring);
+  border-color: var(--rdv-revision-accent, #2f6fd0);
+  box-shadow: 0 0 0 3px var(--rdv-revision-focus-ring, rgba(47, 111, 208, 0.35));
 }
 
 .rdv-revision-list {
@@ -739,33 +739,33 @@
 }
 
 .rdv-revision-item {
-  background: var(--rdv-revision-card-bg);
-  border: 1px solid var(--rdv-revision-card-border);
-  border-left: 3px solid var(--rdv-revision-rail);
+  background: var(--rdv-revision-card-bg, #ffffff);
+  border: 1px solid var(--rdv-revision-card-border, #e7e5e1);
+  border-left: 3px solid var(--rdv-revision-rail, #c4c7c0);
   border-radius: 10px;
   padding: 0.75rem 0.875rem;
-  box-shadow: var(--rdv-revision-card-shadow);
+  box-shadow: var(--rdv-revision-card-shadow, 0 1px 2px rgba(17, 16, 15, 0.05));
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .rdv-revision-item:hover {
-  box-shadow: var(--rdv-revision-card-shadow-hover);
+  box-shadow: var(--rdv-revision-card-shadow-hover, 0 6px 18px rgba(17, 16, 15, 0.09));
 }
 
 .rdv-revision-item.rdv-revision--insertion {
-  border-left-color: var(--rdv-revision-insertion);
+  border-left-color: var(--rdv-revision-insertion, #1a8f4c);
 }
 
 .rdv-revision-item.rdv-revision--deletion {
-  border-left-color: var(--rdv-revision-deletion);
+  border-left-color: var(--rdv-revision-deletion, #d23b3b);
 }
 
 .rdv-revision-item.rdv-revision--move {
-  border-left-color: var(--rdv-revision-move);
+  border-left-color: var(--rdv-revision-move, #2f6fd0);
 }
 
 .rdv-revision-item.rdv-revision--format {
-  border-left-color: var(--rdv-revision-format);
+  border-left-color: var(--rdv-revision-format, #8b46c9);
 }
 
 .rdv-revision-item__header {
@@ -784,39 +784,39 @@
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: rgba(17, 16, 15, 0.06);
-  color: var(--rdv-revision-ink-muted);
+  color: var(--rdv-revision-ink-muted, #62675f);
 }
 
 .rdv-revision--insertion .rdv-revision-type {
-  background: var(--rdv-revision-insertion-bg);
-  color: var(--rdv-revision-insertion);
+  background: var(--rdv-revision-insertion-bg, rgba(26, 143, 76, 0.12));
+  color: var(--rdv-revision-insertion, #1a8f4c);
 }
 
 .rdv-revision--deletion .rdv-revision-type {
-  background: var(--rdv-revision-deletion-bg);
-  color: var(--rdv-revision-deletion);
+  background: var(--rdv-revision-deletion-bg, rgba(210, 59, 59, 0.12));
+  color: var(--rdv-revision-deletion, #d23b3b);
 }
 
 .rdv-revision--move .rdv-revision-type {
-  background: var(--rdv-revision-move-bg);
-  color: var(--rdv-revision-move);
+  background: var(--rdv-revision-move-bg, rgba(47, 111, 208, 0.12));
+  color: var(--rdv-revision-move, #2f6fd0);
 }
 
 .rdv-revision--format .rdv-revision-type {
-  background: var(--rdv-revision-format-bg);
-  color: var(--rdv-revision-format);
+  background: var(--rdv-revision-format-bg, rgba(139, 70, 201, 0.12));
+  color: var(--rdv-revision-format, #8b46c9);
 }
 
 .rdv-revision-author {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--rdv-revision-ink);
+  color: var(--rdv-revision-ink, #1f2421);
 }
 
 .rdv-revision-date {
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: var(--rdv-revision-ink-subtle);
+  color: var(--rdv-revision-ink-subtle, #9aa097);
   margin-left: auto;
 }
 
@@ -828,21 +828,21 @@
 
 .rdv-revision-text {
   font-size: 0.9rem;
-  color: var(--rdv-revision-ink);
+  color: var(--rdv-revision-ink, #1f2421);
   line-height: 1.55;
   word-break: break-word;
 }
 
 .rdv-revision--deletion .rdv-revision-text {
   text-decoration: line-through;
-  text-decoration-color: var(--rdv-revision-deletion);
-  color: var(--rdv-revision-ink-subtle);
+  text-decoration-color: var(--rdv-revision-deletion, #d23b3b);
+  color: var(--rdv-revision-ink-subtle, #9aa097);
 }
 
 .rdv-revision-expand {
   background: none;
   border: none;
-  color: var(--rdv-revision-accent);
+  color: var(--rdv-revision-accent, #2f6fd0);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -858,7 +858,7 @@
 
 .rdv-revision-expand:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--rdv-revision-focus-ring);
+  box-shadow: 0 0 0 3px var(--rdv-revision-focus-ring, rgba(47, 111, 208, 0.35));
 }
 
 .rdv-revision-item__format-details {
@@ -867,7 +867,7 @@
   gap: 0.375rem;
   margin-top: 0.625rem;
   padding-top: 0.625rem;
-  border-top: 1px dashed var(--rdv-revision-card-border);
+  border-top: 1px dashed var(--rdv-revision-card-border, #e7e5e1);
 }
 
 .rdv-format-change {
@@ -878,7 +878,7 @@
 }
 
 .rdv-format-change__property {
-  color: var(--rdv-revision-ink-muted);
+  color: var(--rdv-revision-ink-muted, #62675f);
   font-weight: 600;
   min-width: 80px;
 }
@@ -891,21 +891,21 @@
 }
 
 .rdv-format-change__old {
-  color: var(--rdv-revision-deletion);
-  background: var(--rdv-revision-deletion-bg);
+  color: var(--rdv-revision-deletion, #d23b3b);
+  background: var(--rdv-revision-deletion-bg, rgba(210, 59, 59, 0.12));
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
   text-decoration: line-through;
 }
 
 .rdv-format-change__arrow {
-  color: var(--rdv-revision-ink-subtle);
+  color: var(--rdv-revision-ink-subtle, #9aa097);
   font-size: 0.75rem;
 }
 
 .rdv-format-change__new {
-  color: var(--rdv-revision-insertion);
-  background: var(--rdv-revision-insertion-bg);
+  color: var(--rdv-revision-insertion, #1a8f4c);
+  background: var(--rdv-revision-insertion-bg, rgba(26, 143, 76, 0.12));
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
 }
@@ -913,14 +913,14 @@
 .rdv-format-change__added,
 .rdv-format-change__removed {
   font-size: 0.7rem;
-  color: var(--rdv-revision-ink-subtle);
+  color: var(--rdv-revision-ink-subtle, #9aa097);
   font-style: italic;
 }
 
 .rdv-revision-move-id {
   font-size: 0.7rem;
-  color: var(--rdv-revision-move);
-  background: var(--rdv-revision-move-bg);
+  color: var(--rdv-revision-move, #2f6fd0);
+  background: var(--rdv-revision-move-bg, rgba(47, 111, 208, 0.12));
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -933,7 +933,7 @@
   justify-content: center;
   height: 100%;
   min-height: 300px;
-  color: var(--rdv-revision-ink-muted);
+  color: var(--rdv-revision-ink-muted, #62675f);
   text-align: center;
   padding: 2rem;
 }
@@ -947,7 +947,7 @@
 .rdv-revision-empty p {
   margin: 0.5rem 0;
   font-size: 1rem;
-  color: var(--rdv-revision-ink-muted);
+  color: var(--rdv-revision-ink-muted, #62675f);
 }
 
 /* ============================================

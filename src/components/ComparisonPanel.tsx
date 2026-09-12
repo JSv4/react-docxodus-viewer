@@ -7,6 +7,7 @@ import { downloadDocument } from '../hooks/useDocumentExport';
 import { DocumentViewer } from '../DocumentViewer';
 import { RevisionPanel } from './RevisionPanel';
 import { SemanticChangesPanel } from './SemanticChangesPanel';
+import { Icon } from './Icon';
 
 export interface ComparisonPanelProps { wasmBasePath?: string; settings?: DocxDiffConsolidateSettings }
 const docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -45,15 +46,15 @@ export function ComparisonPanel({ wasmBasePath, settings = {} }: ComparisonPanel
   return <section className="rdv-feature-panel" aria-label="Compare documents">
     <h2>Compare documents</h2>
     <div className="rdv-form-grid">
-      <label>Baseline document<input type="file" accept=".docx" onChange={event => { comparison.clear(); setSelected(null); setBaseline(event.target.files?.[0] ?? null); }} /></label>
-      <label>Revised documents<input type="file" accept=".docx" multiple onChange={event => { comparison.clear(); setSelected(null); setCandidates(Array.from(event.target.files ?? [])); }} /></label>
+      <label className="rdv-file-drop"><Icon name="document" size={27} /><span>BASELINE DOCUMENT</span><strong>{baseline?.name ?? 'Choose the original'}</strong><small>Click to select a Word document</small><input aria-label="Baseline document" type="file" accept=".docx" onChange={event => { comparison.clear(); setSelected(null); setBaseline(event.target.files?.[0] ?? null); }} /></label>
+      <label className="rdv-file-drop"><Icon name="compare" size={27} /><span>REVISED DOCUMENTS</span><strong>{candidates.length ? candidates.map(file => file.name).join(', ') : 'Bring in the next version'}</strong><small>Choose one draft or multiple reviewers</small><input aria-label="Revised documents" type="file" accept=".docx" multiple onChange={event => { comparison.clear(); setSelected(null); setCandidates(Array.from(event.target.files ?? [])); }} /></label>
       <label>Comparison mode<select value={mode} onChange={event => setMode(event.target.value as typeof mode)}><option value="compare">Compare first revised document</option><option value="batch">Compare each to baseline</option><option value="consolidate">Consolidate all reviewers</option></select></label>
       {mode === 'consolidate' && <label>Conflicting edits<select value={policy} onChange={event => setPolicy(Number(event.target.value))}><option value={ConflictResolution.BaseWins}>Keep baseline at conflicts</option><option value={ConflictResolution.FirstReviewerWins}>Prefer first reviewer</option><option value={ConflictResolution.StackAll}>Keep every variant</option></select></label>}
     </div>
     <label className="rdv-checkbox"><input type="checkbox" checked={preserve} onChange={event => setPreserve(event.target.checked)} />Preserve existing tracked revisions</label>
     {mode !== 'consolidate' && <fieldset><legend>Comparison products</legend>{ALL_COMPARISON_PRODUCTS.map(product => <label className="rdv-checkbox" key={product}><input type="checkbox" checked={products.includes(product)} onChange={event => setProducts(previous => event.target.checked ? [...previous, product] : previous.filter(value => value !== product))} />{product}</label>)}</fieldset>}
     <details><summary>Advanced comparison options</summary><label>DocxDiffSettings JSON<textarea value={advanced} onChange={event => setAdvanced(event.target.value)} spellCheck={false} /></label><p>All 12.4.1 comparison settings are supported, including move detection, formatting policy, granularity, headers and footers, and cross-paragraph differences.</p></details>
-    <button type="button" disabled={!baseline || !candidates.length || (mode !== 'consolidate' && !products.length) || comparison.isComparing} onClick={start}>{comparison.isComparing ? 'Comparing…' : 'Run comparison'}</button>
+    <button className="rdv-primary-action" type="button" disabled={!baseline || !candidates.length || (mode !== 'consolidate' && !products.length) || comparison.isComparing} onClick={start}>{comparison.isComparing ? 'Comparing…' : 'Run comparison'}<Icon name="arrow" size={15} /></button>
     {(error || comparison.error) && <p role="alert">{error ?? comparison.error?.message}</p>}
     {comparison.batchResults && <ul>{comparison.batchResults.map((result, index) => <li key={index}>{result.error ? <span>{result.name}: {result.error}</span> : <button type="button" onClick={() => setSelected(result)}>Review {result.name}</button>}</li>)}</ul>}
     {comparison.consolidation && <section aria-label="Conflicts"><h3>Conflicts ({comparison.consolidation.conflicts.length})</h3>{comparison.consolidation.conflicts.map(conflict => <article key={conflict.id}><strong>Conflict {conflict.id}</strong><ul>{conflict.competitors.map((variant, i) => <li key={i}>{variant.author}: {variant.resultText}</li>)}</ul></article>)}</section>}

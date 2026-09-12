@@ -3,6 +3,7 @@ import type { DocxStoredVersion, DocxVersionMetadata } from 'docxodus/core';
 import type { DocumentHistory } from '../hooks/useDocumentHistory';
 import { documentBytes } from '../session';
 import { downloadDocument } from '../hooks/useDocumentExport';
+import { Icon } from './Icon';
 
 export interface HistoryPanelProps {
   history: DocumentHistory;
@@ -13,6 +14,7 @@ export interface HistoryPanelProps {
   onRestore?: (document: Uint8Array, version: DocxStoredVersion) => void | Promise<void>;
 }
 const docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+function displayTime(value: string) { const time = new Date(value); return Number.isNaN(time.getTime()) ? value : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(time); }
 
 export function HistoryPanel({ history, getDocument, author = 'Reviewer', onPreview, onRestore }: HistoryPanelProps) {
   const [label, setLabel] = useState('');
@@ -39,22 +41,22 @@ export function HistoryPanel({ history, getDocument, author = 'Reviewer', onPrev
     if (kind === 'restore' && onRestore) await onRestore(await history.preview(acknowledged.version.id), acknowledged.version);
   });
   const disabled = history.isLoading || history.isBusy;
-  return <section className="rdv-feature-panel" aria-label="Document history"><h3>Document history</h3>
+  return <section className="rdv-feature-panel" aria-label="Document history"><div className="rdv-panel-heading"><span>EVERY DRAFT HAS A STORY</span><h3>Document history</h3><p>Save a moment. Try another direction. Come back whenever you need to.</p></div>
     {history.isLoading && <p role="status">Opening history…</p>}
     {(error || history.error) && <p role="alert">{error ?? history.error?.message}</p>}
     {history.pendingRequest && <div role="status"><p>A {history.pendingRequest.kind} request awaits acknowledgement. Retry preserves its original document and metadata.</p><button type="button" disabled={disabled} onClick={retry}>Retry pending checkpoint</button></div>}
     {history.needsRefresh && <p>History changed elsewhere. Refresh before the next checkpoint.</p>}
-    <label>Checkpoint label<input value={label} onChange={event => setLabel(event.target.value)} /></label>
+    <label>Checkpoint label<input value={label} placeholder="Give this version a name…" onChange={event => setLabel(event.target.value)} /></label>
     <div className="rdv-review-actions">
-      {getDocument && history.canWrite && <button type="button" disabled={disabled || !!history.pendingRequest || history.needsRefresh} onClick={() => run(async () => { await history.save(await getDocument(), metadata()); })}>Save checkpoint</button>}
+      {getDocument && history.canWrite && <button className="rdv-primary-action" type="button" disabled={disabled || !!history.pendingRequest || history.needsRefresh} onClick={() => run(async () => { await history.save(await getDocument(), metadata()); })}><Icon name="plus" size={14} />Save checkpoint</button>}
       <button type="button" disabled={disabled || !!history.pendingRequest} onClick={() => run(history.refresh)}>Refresh history</button>
       <button type="button" disabled={disabled || !history.view} onClick={() => run(async () => downloadDocument(await history.exportArchive(), 'document.docxhistory', 'application/octet-stream'))}>Download history archive</button>
     </div>
     {history.canWrite && <label>Import history archive<input type="file" accept=".docxhistory,.zip" disabled={disabled || !!history.pendingRequest} onChange={event => { const file = event.target.files?.[0]; if (file) void run(async () => { setDetails(await history.importArchive(await documentBytes(file))); }); event.target.value = ''; }} /></label>}
-    {!history.isLoading && !history.versions.length && <p>No checkpoints yet.</p>}
+    {!history.isLoading && !history.versions.length && <div className="rdv-panel-empty"><Icon name="history" size={28} /><p>Your history starts here.</p><small>Save your first checkpoint before the next edit.</small></div>}
     <ol className="rdv-history-list">{history.versions.map(version => <li key={version.id.digest.value}>
       <label className="rdv-checkbox"><input type="radio" name={`history-version-${group}`} checked={selected?.id.digest.value === version.id.digest.value} onChange={() => setSelected(version)} /><strong>{version.record.metadata.label || `Version ${version.record.sequence}`}</strong></label>
-      <p>{version.record.metadata.author} · {version.record.metadata.createdAt}{version.record.restoredFrom && ' · Restored checkpoint'}</p>
+      <p className="rdv-version-meta">{version.record.metadata.author} · <time dateTime={version.record.metadata.createdAt} title={version.record.metadata.createdAt}>{displayTime(version.record.metadata.createdAt)}</time>{version.record.restoredFrom && <span className="rdv-status-pill">Restored checkpoint</span>}</p>
       <div className="rdv-review-actions">
         {onPreview && <button type="button" disabled={disabled} onClick={() => run(async () => onPreview(await history.preview(version.id), version))}>Preview checkpoint</button>}
         <button type="button" disabled={disabled} onClick={() => run(async () => downloadDocument(await history.preview(version.id), `version-${version.record.sequence}.docx`, docxMime))}>Download checkpoint</button>

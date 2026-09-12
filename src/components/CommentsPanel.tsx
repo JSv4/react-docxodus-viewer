@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { EditResult } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
 import { useDocumentComments } from '../hooks/useSessionFeatures';
+import { Icon } from './Icon';
 
 export interface CommentsPanelProps {
   session: DocxSessionController;
@@ -35,12 +36,12 @@ export function CommentsPanel({ session, anchorId, revisionId, author = 'Reviewe
     if (operation && apply(operation)) { setText(''); setReplyTo(null); setEditing(null); }
   };
   return <section className="rdv-feature-panel" aria-label="Comments">
-    <h3>Comments</h3>
+    <div className="rdv-panel-heading"><span>KEEP THE CONVERSATION CLOSE</span><h3>Comments</h3><p>Thoughts, questions, and decisions. Right where they belong.</p></div>
     {(error || comments.error) && <p role="alert">{error ?? comments.error?.message}</p>}
-    {comments.comments.length === 0 && <p>No comments in this document.</p>}
+    {comments.comments.length === 0 && <div className="rdv-panel-empty"><Icon name="comment" size={28} /><p>No comments yet.</p><small>Select a paragraph to start the conversation.</small></div>}
     <ol className="rdv-comment-list">
       {comments.comments.map(comment => <li key={comment.anchorId} className={comment.parentAnchorId ? 'rdv-comment-reply' : ''}>
-        <div><strong>{comment.author}</strong>{comment.resolved && <span> · Resolved</span>}</div>
+        <div className="rdv-comment-heading"><span className="rdv-avatar">{(comment.author || 'R').slice(0, 1).toUpperCase()}</span><strong>{comment.author}</strong>{comment.resolved && <span className="rdv-status-pill">Resolved</span>}</div>
         <p>{comment.text}</p>
         <div className="rdv-review-actions">
           {onSelect && <button type="button" onClick={() => onSelect(comment.anchorId)}>Show comment</button>}
@@ -54,7 +55,7 @@ export function CommentsPanel({ session, anchorId, revisionId, author = 'Reviewe
     <form onSubmit={event => { event.preventDefault(); submit(); }}>
       <label>{editing ? 'Edit comment' : replyTo ? 'Reply' : 'New comment'}<textarea value={text} onChange={event => setText(event.target.value)} /></label>
       {!anchorId && !revisionId && !replyTo && !editing && <p>Select a document block or revision to add a comment.</p>}
-      <button type="submit" disabled={!text.trim() || (!anchorId && !revisionId && !replyTo && !editing)}>{editing ? 'Save comment' : replyTo ? 'Post reply' : 'Add comment'}</button>
+      <button className="rdv-primary-action" type="submit" disabled={!text.trim() || (!anchorId && !revisionId && !replyTo && !editing)}>{editing ? 'Save comment' : replyTo ? 'Post reply' : 'Add comment'}<Icon name="arrow" size={15} /></button>
       {(replyTo || editing) && <button type="button" onClick={() => { setReplyTo(null); setEditing(null); setText(''); }}>Cancel</button>}
     </form>
   </section>;

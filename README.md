@@ -95,6 +95,7 @@ option remains available for applications that supply their own controls. See
 | `showUploadButton`, `showSettingsButton`, `showRevisionsTab` | true | Built-in controls |
 | `allowRevisionResolution` | true | Accept/reject actions with a live session |
 | `rendererFingerprint`, `layoutToken`, `citation` | — | Exact measured layout identity and citation navigation |
+| `selectedAnchorId` | — | Highlight the selected block without changing document formatting |
 | `onAnchorSelect`, `onPageMap`, `onPaginationComplete` | — | Selection and layout callbacks |
 | `onFileChange`, `onConversionStart`, `onConversionComplete`, `onError` | — | Document lifecycle callbacks |
 | `onPageChange`, `onRevisionsExtracted`, `onRevisionSelect`, `onSettingsChange` | — | Review and control callbacks |
@@ -156,6 +157,12 @@ library itself.
 
 ## Development
 
+The demo is a document studio with a built-in sample, paragraph quick actions,
+text search and heading navigation, tracked and semantic review, checkpoint previews,
+and a focus mode. Press Ctrl/⌘ K for commands, Ctrl/⌘ F to search the document,
+and Ctrl/⌘ S to download the current DOCX. Checkpoints use a separate local history
+for each opened file. Downloads retain the document name.
+
 ```sh
 npm install
 npm run dev              # sync verified assets, then start Vite
@@ -166,6 +173,8 @@ npm run test:pdf         # Node boundary + PDF when the host supports its sandbo
 ```
 
 Set `DOCXODUS_REQUIRE_PDF=1` to make an unavailable PDF environment fail that test.
+Set `RDV_TEST_PORT` to run browser checks on a different local port. Use
+`RDV_TEST_PREVIEW=1` after building to exercise the production demo.
 The API audit compares every published export against the installed 12.4.1
 TypeScript declarations and checks identity of the built runtime exports.
 

@@ -206,7 +206,7 @@ rejected projections remain available through `review.call` or direct imports.
 ```tsx
 <DocumentViewer session={controller} rendererFingerprint={layoutFingerprint}
   citation={selectedCitation} onPageMap={map => saveMeasuredMap(map)}
-  onAnchorSelect={setSelectedAnchor} />
+  selectedAnchorId={selectedAnchor} onAnchorSelect={setSelectedAnchor} />
 
 const citation = controller.run(s => s.getPageCitation(selectedAnchor, {
   documentVersion: s.getVersion(), rendererFingerprint: layoutFingerprint,
@@ -220,9 +220,16 @@ until the matching new map arrives. The host fingerprint must identify its layou
 inputs (fonts, CSS, rendering settings and renderer build). Change it when those
 inputs change. Zoom coordinates remain page-relative points.
 
+`onAnchorSelect` selects the containing paragraph when inline comment or revision
+markup is clicked. Pass that anchor back as `selectedAnchorId` to draw a selection
+outline; it does not modify the DOCX. Customize its color with
+`--rdv-selection-color`. The editor panel reads the complete anchor text, including
+content longer than the projection preview, and refreshes it after apply/undo/redo.
+Hidden viewers wait until they have a measurable layout before paginating.
+
 When using host-generated HTML, pass `layoutToken` matching the exact document
 snapshot used to generate it. The pure `PaginatedDocument` component supports
-`fragmentParagraphs`, `layoutToken`, `citation`, `onPageVisible` and
+`fragmentParagraphs`, `layoutToken`, `citation`, `selectedAnchorId`, `onPageVisible` and
 `onPaginationComplete` without an editor. Its `onRootChange` callback exposes the
 isolated document DOM for host navigation.
 

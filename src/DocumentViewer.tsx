@@ -16,6 +16,7 @@ import type {
 } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { RevisionPanel } from './components/RevisionPanel';
+import { Icon } from './components/Icon';
 
 const OpenDocumentIcon = () => (
   <svg
@@ -93,6 +94,7 @@ export function DocumentViewer({
   onPaginationComplete,
   onRevisionSelect,
   onAnchorSelect,
+  selectedAnchorId,
   allowRevisionResolution = true,
   html: controlledHtml,
   onFileChange,
@@ -380,6 +382,8 @@ export function DocumentViewer({
     const pageHeightPt = section?.pageHeightPt ?? 792;
 
     const applyFit = () => {
+      // Hidden tabs have no measurable layout; preserve their current zoom.
+      if (!container.clientWidth || !container.clientHeight) return;
       const scale = computeFitScale(
         fitMode,
         container.clientWidth,
@@ -699,12 +703,13 @@ export function DocumentViewer({
               title="Previous Page"
               aria-label="Previous Page"
             >
-              ◀
+              <Icon name="chevronLeft" size={15} />
             </button>
             <div className="rdv-page-input-group">
               <input
                 type="number"
                 className="rdv-page-input"
+                aria-label="Page number"
                 value={currentPage}
                 min={1}
                 max={totalPages}
@@ -722,7 +727,7 @@ export function DocumentViewer({
               title="Next Page"
               aria-label="Next Page"
             >
-              ▶
+              <Icon name="chevron" size={15} />
             </button>
 
             <div className="rdv-toolbar-separator" />
@@ -786,7 +791,7 @@ export function DocumentViewer({
               title="Settings"
               aria-label="Settings"
             >
-              ⚙
+              <Icon name="settings" size={16} />
             </button>
           </>
         )}
@@ -818,7 +823,7 @@ export function DocumentViewer({
                 ...(settings.stableHeight && { minHeight: toCssLength(settings.stableHeight) }),
               } as React.CSSProperties}
             >
-              <div className="rdv-page-placeholders" style={{ backgroundColor: '#525659' }}>
+              <div className="rdv-page-placeholders" style={{ backgroundColor: 'var(--rdv-background, #525659)' }}>
                 {Array.from({ length: documentMetadata.estimatedPageCount || 1 }).map((_, index) => {
                   // Get section for this page (approximate - use first section if not enough)
                   const section = documentMetadata.sections[
@@ -911,8 +916,9 @@ export function DocumentViewer({
               onRootChange={root => { documentRootRef.current = root; }}
               onError={onError}
               onAnchorSelect={onAnchorSelect}
+              selectedAnchorId={selectedAnchorId}
               pageGap={pageGap}
-              backgroundColor="#525659"
+              backgroundColor="var(--rdv-background, #525659)"
               className="rdv-paginated-document"
               onPaginationComplete={(result: PaginationResult) => {
                 setTotalPages(result.totalPages);

@@ -14,6 +14,7 @@ export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' 
   onPageVisible?: (page: number) => void;
   onError?: (error: Error) => void;
   onAnchorSelect?: (anchorId: string) => void;
+  selectedAnchorId?: string;
   /** The document's isolated DOM, for anchor/page navigation. */
   onRootChange?: (root: HTMLElement | null) => void;
 }
@@ -27,8 +28,36 @@ function adaptRootSelectors(rules: CSSRuleList) {
   }
 }
 
+/** A viewer may stay mounted inside a hidden tab while conversion finishes. */
+function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let observer: ResizeObserver | undefined;
+    let frame: number | undefined;
+    const cleanup = () => {
+      observer?.disconnect();
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      signal.removeEventListener('abort', abort);
+    };
+    const abort = () => { cleanup(); reject(new DOMException('Pagination cancelled', 'AbortError')); };
+    const check = () => {
+      if (element.getBoundingClientRect().width <= 0) return false;
+      cleanup(); resolve(); return true;
+    };
+    if (signal.aborted) { abort(); return; }
+    if (check()) return;
+    signal.addEventListener('abort', abort, { once: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(check);
+      observer.observe(element);
+    } else {
+      const poll = () => { if (!check()) frame = requestAnimationFrame(poll); };
+      frame = requestAnimationFrame(poll);
+    }
+  });
+}
+
 /** React-owned pagination over the core engine; no upstream editor dependency. */
-export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pageGap = 20, cssPrefix = 'page-', fragmentParagraphs = true, layoutToken, citation, backgroundColor = '#525659', className, style, ...callbacks }: PaginatedDocumentProps) {
+export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pageGap = 20, cssPrefix = 'page-', fragmentParagraphs = true, layoutToken, citation, selectedAnchorId, backgroundColor = '#525659', className, style, ...callbacks }: PaginatedDocumentProps) {
   const host = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLElement | null>(null);
   const callbacksRef = useRef(callbacks);
@@ -59,6 +88,9 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       }
     }
     shadow.replaceChildren(wrapper);
+    const selectionStyles = document.createElement('style');
+    selectionStyles.textContent = '[data-rdv-selected="true"] { outline: 1.5px solid var(--rdv-selection-color, #93aa79); outline-offset: 5px; border-radius: 1px; }';
+    wrapper.append(selectionStyles);
     for (const stylesheet of wrapper.querySelectorAll('style')) {
       if (stylesheet.sheet) adaptRootSelectors(stylesheet.sheet.cssRules);
     }
@@ -66,7 +98,10 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
     callbacksRef.current.onRootChange?.(documentBody);
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : null;
-      const anchor = target?.closest('[data-source-anchor-id]')?.getAttribute('data-source-anchor-id');
+      // Inline comment/revision wrappers have their own anchors. Editing a passage
+      // should select its paragraph, rather than the discussion attached to it.
+      const block = target?.closest('p[data-source-anchor-id], h1[data-source-anchor-id], h2[data-source-anchor-id], h3[data-source-anchor-id], h4[data-source-anchor-id], h5[data-source-anchor-id], h6[data-source-anchor-id], li[data-source-anchor-id]');
+      const anchor = (block ?? target?.closest('[data-source-anchor-id]'))?.getAttribute('data-source-anchor-id');
       if (anchor) callbacksRef.current.onAnchorSelect?.(anchor);
       const link = target?.closest('a[href^="#"]');
       if (link) {
@@ -78,13 +113,19 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
     documentBody.addEventListener('click', onClick);
     let observer: IntersectionObserver | null = null;
     void run(async signal => {
+      await waitForLayout(element, signal);
       documentBody.getBoundingClientRect(); // Start font requests before awaiting readiness.
       await document.fonts?.ready;
       await Promise.all(Array.from(documentBody.querySelectorAll('img')).map(img => img.decode?.().catch(() => {})));
       if (signal.aborted) throw new DOMException('Pagination cancelled', 'AbortError');
+      await waitForLayout(element, signal);
+      if (signal.aborted) throw new DOMException('Pagination cancelled', 'AbortError');
       const staging = documentBody.querySelector<HTMLElement>('#pagination-staging') ?? documentBody.querySelector<HTMLElement>(`.${cssPrefix}staging`);
       const container = documentBody.querySelector<HTMLElement>('#pagination-container') ?? documentBody.querySelector<HTMLElement>(`.${cssPrefix}container`);
       if (!staging || !container) throw new Error('Generate HTML with PaginationMode.Paginated to display page boxes.');
+      // The converter supplies its own default canvas color inside the ShadowRoot.
+      // Apply the host's theme to the canvas without changing the document pages.
+      container.style.backgroundColor = backgroundColor;
       const engine = new PaginationEngine(staging, container, {
         scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
         layoutToken: documentVersion !== undefined && rendererFingerprint !== undefined ? { documentVersion, rendererFingerprint } : undefined,
@@ -113,13 +154,24 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       callbacksRef.current.onRootChange?.(null);
       shadow.replaceChildren();
     };
-  }, [html, scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, run, cancel]);
+  }, [html, scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, run, cancel]);
 
   useEffect(() => {
     if (!body.current) return;
     if (task.data && citation) navigateToPageCitation(body.current, citation, { highlight: true });
     else clearPageCitationHighlight(body.current);
   }, [task.data, citation]);
+
+  useEffect(() => {
+    const root = body.current;
+    if (!root) return;
+    root.querySelectorAll('[data-rdv-selected]').forEach(node => node.removeAttribute('data-rdv-selected'));
+    if (selectedAnchorId && task.data) {
+      for (const node of root.querySelectorAll<HTMLElement>('#pagination-container [data-source-anchor-id]')) {
+        if (node.dataset.sourceAnchorId === selectedAnchorId) node.dataset.rdvSelected = 'true';
+      }
+    }
+  }, [selectedAnchorId, task.data]);
 
   return <div className={className} style={{ backgroundColor, ...style }} aria-busy={task.isRunning}>
     {task.error && task.error.name !== 'AbortError' && <p role="alert">{task.error.message}</p>}

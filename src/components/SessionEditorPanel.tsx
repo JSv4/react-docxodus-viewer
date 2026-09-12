@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { TrackedChangeMode } from 'docxodus/core';
 import type { DocxSession, EditResult } from 'docxodus/core';
 import { documentBytes } from '../session';
 import type { DocxSessionController } from '../session';
 import { useSessionQuery, useSessionState } from '../hooks/useDocxSession';
 import { useDocumentImages, useContentControls, useDocumentProjection } from '../hooks/useSessionFeatures';
+import { Icon } from './Icon';
 
 export interface SessionEditorPanelProps { session: DocxSessionController; anchorId?: string; onAnchorSelect?: (anchorId: string) => void }
 const styles = (session: DocxSession) => session.listStyles();
@@ -17,7 +18,7 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
   const controls = useContentControls(controller);
   const styleList = useSessionQuery(controller, styles);
   const [picked, setPicked] = useState('');
-  const [text, setText] = useState('');
+  const [draft, setDraft] = useState<{ anchor: string; value: string } | null>(null);
   const [find, setFind] = useState('');
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +26,18 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
   const anchors = Object.entries(projection.projection?.anchorIndex ?? {}).map(([id, value]) => ({ ...value, id }));
   const proposed = anchorId ?? picked;
   const anchor = anchors.some(value => value.id === proposed) ? proposed : anchors.find(value => value.kind === 'p')?.id ?? '';
-  const apply = (operation: (session: DocxSession) => unknown) => {
+  const selectInfo = useCallback((session: DocxSession) => anchor ? session.getAnchorInfo(anchor) : null, [anchor]);
+  const info = useSessionQuery(controller, selectInfo);
+  const text = draft?.anchor === anchor ? draft.value : info.data?.visibleText ?? '';
+  const setText = (value: string) => setDraft({ anchor, value });
+  const apply = (operation: (session: DocxSession) => unknown, refreshContent = false) => {
     try {
       const value = controller.run(operation);
       const outcomes = Array.isArray(value) ? value : [value];
       const failure = outcomes.find((entry): entry is EditResult => entry && typeof entry === 'object' && 'success' in entry && !entry.success);
       if (failure) throw new Error(failure.error?.message ?? 'The operation could not be completed.');
       setError(null); setResult(value);
+      if (refreshContent) setDraft(null);
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   };
   const upload = async (file: File, operation: (session: DocxSession, bytes: Uint8Array) => EditResult) => {
@@ -42,13 +48,13 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
       apply(session => operation(session, bytes));
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   };
-  return <section className="rdv-feature-panel" aria-label="Edit document"><h3>Edit document</h3>
+  return <section className="rdv-feature-panel rdv-editor-panel" aria-label="Edit document"><div className="rdv-panel-heading"><span>MAKE IT YOURS</span><h3>Edit document</h3><p>Select a paragraph on the page, then shape the next version here.</p></div>
     {!state.session ? <p>Open a document to edit its blocks.</p> : <>
-      <label>Selected block<select value={anchor} onChange={event => { setPicked(event.target.value); onAnchorSelect?.(event.target.value); }}>{anchors.map(value => <option key={value.id} value={value.id}>{value.kind} · {value.textPreview || value.scope}</option>)}</select></label>
-      <div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.undo())}>Undo</button><button type="button" onClick={() => apply(session => session.redo())}>Redo</button></div>
-      <label>Track edits<select value={state.trackedChanges} onChange={event => apply(session => session.setTrackedChanges(Number(event.target.value)))}><option value={TrackedChangeMode.Accept}>Off</option><option value={TrackedChangeMode.RenderInline}>Track changes</option><option value={TrackedChangeMode.StripDeletions}>Strip deletions</option></select></label>
-      <label>Markdown content<textarea value={text} onChange={event => setText(event.target.value)} /></label>
-      <div className="rdv-review-actions"><button type="button" disabled={!anchor} onClick={() => apply(session => session.replaceText(anchor, text))}>Replace selected block</button><button type="button" disabled={!anchor} onClick={() => apply(session => session.insertParagraph(anchor, 'after', text))}>Insert paragraph after</button><button type="button" disabled={!anchor} onClick={() => apply(session => session.deleteBlock(anchor))}>Delete selected block</button></div>
+      <label className="rdv-block-picker">Selected block<select value={anchor} onChange={event => { setPicked(event.target.value); onAnchorSelect?.(event.target.value); }}>{anchors.map(value => <option key={value.id} value={value.id}>{value.kind} · {value.textPreview || value.scope}</option>)}</select></label>
+      <div className="rdv-editor-toolbar"><div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.undo(), true)}><Icon name="undo" size={14} />Undo</button><button type="button" onClick={() => apply(session => session.redo(), true)}><Icon name="redo" size={14} />Redo</button></div><label>Track edits<select value={state.trackedChanges} onChange={event => apply(session => session.setTrackedChanges(Number(event.target.value)))}><option value={TrackedChangeMode.Accept}>Off</option><option value={TrackedChangeMode.RenderInline}>Track changes</option><option value={TrackedChangeMode.StripDeletions}>Strip deletions</option></select></label></div>
+      <label className="rdv-content-editor">Paragraph content<textarea aria-label="Markdown content" value={text} placeholder="Write your next version…" onChange={event => setText(event.target.value)} /></label>
+      <p className="rdv-field-hint">Markdown formatting is supported.</p>
+      <div className="rdv-edit-actions"><button className="rdv-primary-action" type="button" aria-label="Replace selected block" disabled={!anchor} onClick={() => apply(session => session.replaceText(anchor, text), true)}>Apply to paragraph<Icon name="arrow" size={15} /></button><button type="button" aria-label="Insert paragraph after" disabled={!anchor} onClick={() => apply(session => session.insertParagraph(anchor, 'after', text))}><Icon name="plus" size={14} />Insert after</button><button className="rdv-delete-block" type="button" disabled={!anchor} onClick={() => apply(session => session.deleteBlock(anchor), true)}>Delete selected block</button></div>
       <details><summary>Search, replace and templates</summary><label>Find text or pattern<input value={find} onChange={event => setFind(event.target.value)} /></label><div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.findAllByText(find))}>Find all</button><button type="button" onClick={() => apply(session => session.grep(find))}>Find pattern</button><button type="button" onClick={() => apply(session => session.grepCrossBlock(find))}>Find across blocks</button><button type="button" onClick={() => apply(session => session.replaceTextRange(anchor, find, text))}>Replace matches in block</button><button type="button" onClick={() => apply(session => session.findPlaceholders())}>Find placeholders</button><button type="button" onClick={() => apply(session => session.fillPlaceholders(placeholder => placeholder.hint === find ? text : null))}>Fill matching placeholders</button></div></details>
       <details><summary>Formatting and lists</summary><div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.applyFormat(anchor, null, { bold: true }))}>Bold block</button><button type="button" onClick={() => apply(session => session.applyFormat(anchor, null, { italic: true }))}>Italic block</button><button type="button" onClick={() => apply(session => session.applyListFormat(anchor, 'bullet'))}>Bulleted list</button><button type="button" onClick={() => apply(session => session.applyListFormat(anchor, 'decimal'))}>Numbered list</button><button type="button" onClick={() => apply(session => session.removeListMembership(anchor))}>Remove list</button><button type="button" onClick={() => apply(session => session.getFormatting(anchor))}>Inspect formatting</button></div><label>Paragraph style<select defaultValue="" onChange={event => event.target.value && apply(session => session.setParagraphStyle(anchor, event.target.value))}><option value="">Choose a style</option>{styleList.data?.map(style => <option value={style.id} key={style.id}>{style.name}</option>)}</select></label></details>
       <details><summary>Tables</summary><p>Select a table cell for row and column operations.</p><div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.insertTable(anchor, 'after', 2, 2))}>Insert 2 × 2 table</button><button type="button" onClick={() => apply(session => session.insertTableRow(anchor, 'after'))}>Insert row</button><button type="button" onClick={() => apply(session => session.insertTableColumn(anchor, 'after'))}>Insert column</button><button type="button" onClick={() => apply(session => session.deleteTableRow(anchor))}>Delete row</button><button type="button" onClick={() => apply(session => session.deleteTableColumn(anchor))}>Delete column</button><button type="button" onClick={() => apply(session => session.replaceCellContent(anchor, text))}>Replace cell</button><button type="button" onClick={() => apply(session => session.mergeCells(anchor, 1, 2))}>Merge two cells</button><button type="button" onClick={() => apply(session => session.unmergeCells(anchor))}>Unmerge cell</button></div></details>
@@ -58,6 +64,7 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
       <details><summary>Preview and verification</summary><div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.previewBatch([{ tool: 'replaceText', action: 'Preview replacement', mutation: shadow => shadow.replaceText(anchor, text) }], 'atomic', { html: 'full' }))}>Preview replacement</button><button type="button" onClick={() => apply(session => session.getSemanticChanges())}>Semantic changes</button><button type="button" onClick={() => apply(session => session.getEditSummary())}>Edit summary</button><button type="button" onClick={() => apply(session => session.verifyDeliverable())}>Verify session</button></div></details>
     </>}
     {error && <p role="alert">{error}</p>}
-    {result != null && <details open><summary>Operation result</summary><pre>{JSON.stringify(result, null, 2)}</pre></details>}
+    {result != null && !error && <div className="rdv-operation-notice" role="status"><Icon name="check" size={14} />Operation completed</div>}
+    {result != null && <details className="rdv-operation-details"><summary>Operation details</summary><pre>{JSON.stringify(result, null, 2)}</pre></details>}
   </section>;
 }

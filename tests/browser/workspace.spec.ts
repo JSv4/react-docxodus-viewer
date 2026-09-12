@@ -36,7 +36,7 @@ test('React workspace edits, paginates, comments, saves and restores a checkpoin
   await page.getByRole('button', { name: 'export', exact: true }).click();
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download standalone HTML' }).click();
-  expect((await downloading).suggestedFilename()).toBe('document.html');
+  expect((await downloading).suggestedFilename()).toBe('Untitled document.html');
   await expect(page.getByText('Render report and page map')).toBeVisible();
   expect(errors).toEqual([]);
 });

@@ -136,6 +136,8 @@ export interface DocumentViewerProps {
   onRevisionSelect?: (revision: import('docxodus/core').RevisionListEntry) => void;
   /** Canonical block selected in the rendered document. */
   onAnchorSelect?: (anchorId: string) => void;
+  /** Highlight a selected canonical block without changing its document formatting. */
+  selectedAnchorId?: string;
   /** Enable native accept/reject actions when session is supplied. */
   allowRevisionResolution?: boolean;
   /** Pre-converted HTML content (skip conversion) */
