@@ -76,6 +76,9 @@ Selecting text applies character formatting to that range, including selections
 across paragraphs and page fragments. With only a caret, font controls change
 what you type next. Paragraph controls affect the current paragraph. Generated
 list labels and comment/note markers stay outside native character offsets.
+Existing Word tabs, line breaks, and nonbreaking hyphens also retain their source
+structure while editing surrounding text. See the [NVCA stress test](editor-stress-test.md)
+for a reproducible test against a substantial document with footnotes and fields.
 
 Typing appears immediately, then commits to the native DOCX after a short pause.
 The page stays mounted during conversion and restores the caret and scroll position
