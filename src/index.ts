@@ -16,6 +16,7 @@ export { ParagraphEditor } from './components/ParagraphEditor';
 export type { ParagraphEditorProps, ParagraphEditorHandle } from './components/ParagraphEditor';
 export { useDocumentEditor } from './hooks/useDocumentEditor';
 export type { DocumentEditorState, UseDocumentEditorOptions, EditorSelection } from './hooks/useDocumentEditor';
+export type { CanvasEditor, CanvasEditorSnapshot } from './editing/CanvasEditor';
 
 // Types
 export type {

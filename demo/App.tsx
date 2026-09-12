@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnnotationsPanel, CommentsPanel, DocxodusProvider, DocumentViewer, ExportPanel, HistoryPanel, SessionEditorPanel, VerificationPanel, downloadDocument, useDocxSession, useDocumentHistory, useSessionQuery } from '../src';
+import { AnnotationsPanel, CommentsPanel, DocxodusProvider, DocumentViewer, EditorToolbar, ExportPanel, HistoryPanel, SessionEditorPanel, VerificationPanel, downloadDocument, useDocxSession, useDocumentEditor, useDocumentHistory, useSessionQuery } from '../src';
 import type { DocxSession, PageCitation } from '../src';
 import { Icon } from '../src/components/Icon';
 import type { IconName } from '../src/components/Icon';
@@ -28,7 +28,7 @@ const tabs: { id: Panel; label: string; icon: IconName; hint: string }[] = [
 function Workspace() {
   const [tab, setTab] = useState('document');
   const [panel, setPanel] = useState<Panel>('edit');
-  const [anchor, setAnchor] = useState<string>();
+  const [requestedAnchor, setAnchor] = useState<string>();
   const [quickActions, setQuickActions] = useState(true);
   const [citation, setCitation] = useState<PageCitation>();
   const [preview, setPreview] = useState<Uint8Array | null>(null);
@@ -47,6 +47,9 @@ function Workspace() {
   const openSequence = useRef(0);
   const session = useDocxSession();
   const { controller, open: openSession } = session;
+  const editor = useDocumentEditor(controller, { onError: cause => setError(cause.message) });
+  const { canvasEditor, select } = editor;
+  const anchor = editor.selection?.anchorId ?? requestedAnchor;
   const bytes = useSessionQuery(controller, snapshotBytes).data;
   const counts = useSessionQuery(controller, documentCounts).data;
   const history = useDocumentHistory({ documentId, indexedDbName: 'react-docxodus-viewer-studio' });
@@ -55,6 +58,8 @@ function Workspace() {
 
   const showPanel = useCallback((next: Panel) => { setPanel(next); setFocused(false); setTab('document'); }, []);
   const showAnchor = useCallback((id: string) => {
+    if (!canvasEditor.commit()) return;
+    select(id);
     setAnchor(id); setQuickActions(true);
     try {
       const current = controller.getSnapshot();
@@ -64,11 +69,12 @@ function Workspace() {
         else setError('This location is not available in the current page layout. Wait for pagination to finish and try again.');
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
-  }, [controller]);
+  }, [controller, canvasEditor, select]);
   const open = useCallback(async (source: File | Uint8Array | 'blank', name?: string, restore = false) => {
     const sequence = ++openSequence.current;
     try {
       setError(null);
+      if (!canvasEditor.commit()) return;
       await openSession(source);
       if (sequence !== openSequence.current) return;
       if (!restore) {
@@ -78,8 +84,8 @@ function Workspace() {
       }
       setAnchor(undefined); setCitation(undefined); setPage(1); setPages(0); setTab('document');
     } catch (cause) { if (sequence === openSequence.current) setError(cause instanceof Error ? cause.message : String(cause)); }
-  }, [openSession]);
-  const download = useCallback(() => { if (controller.getSnapshot().session) downloadDocument(controller.save(), filename, docxMime); }, [controller, filename]);
+  }, [openSession, canvasEditor]);
+  const download = useCallback(() => { if (controller.getSnapshot().session && canvasEditor.commit()) downloadDocument(controller.save(), filename, docxMime); }, [controller, filename, canvasEditor]);
   const openFile = useCallback(() => input.current?.click(), []);
   const create = useCallback(() => { void open('blank'); }, [open]);
   const find = useCallback(() => { setTab('document'); setNavigating(true); setFocused(false); }, []);
@@ -142,10 +148,10 @@ function Workspace() {
         {!ready && !busy ? <section className="welcome"><div className="welcome-copy"><p className="eyebrow">A NEW PERSPECTIVE ON DOCUMENTS</p><h2>Your document.<br />A clearer view.</h2><p className="welcome-description">A place to shape ideas, follow every change, and move a document forward.</p><div className="welcome-actions"><button className="primary-button" onClick={openFile}><Icon name="open" />Choose a DOCX file<Icon name="arrow" size={17} /></button><button className="quiet-button" onClick={create}>Start a blank document</button></div><p className="drop-hint">Or drop a Word document anywhere.</p><div className="welcome-privacy"><Icon name="lock" size={16} /><span>Your documents are processed in your browser.</span></div></div>
           <button className="sample-preview" onClick={() => void loadSample()} aria-label="Explore a sample document"><span className="sample-paper"><span className="sample-kicker">STUDIO NOTES <span>NO. 001</span></span><span className="sample-title">Good work<br />takes shape.</span><span className="sample-rule" /><span className="sample-paragraph">A launch brief. A new perspective.<br />A few changes worth a closer look.</span><span className="sample-lines"><i /><i /><i /></span><span className="sample-redline"><del>Another draft.</del><ins>A shared direction.</ins></span><span className="sample-paper-footer">THE LAUNCH BRIEF <span>01</span></span></span><span className="sample-note"><span className="sample-avatar">M</span><span><strong>One thought…</strong><small>Let's make the next step clear.</small></span></span><span className="sample-cta">Explore a sample document <Icon name="arrow" size={17} /></span></button>
           <div className="welcome-capabilities">{[['review', 'A better review', 'Track the words, structure and details.'], ['history', 'Room to explore', 'Checkpoint a draft. Try a change. Go back.'], ['shield', 'A confident handoff', 'Inspect the document before you export.']].map(([icon, title, detail]) => <div key={title}><Icon name={icon as IconName} size={20} /><strong>{title}</strong><p>{detail}</p></div>)}</div>
-        </section> : <><div className="document-actionbar"><div className="actionbar-left"><button className={`quiet-button ${navigating ? 'is-active' : ''}`} aria-label="Find in document" aria-pressed={navigating} disabled={!ready} onClick={() => { setNavigating(value => !value); setFocused(false); }}><Icon name="search" size={16} /><span>Find</span></button><span className="header-divider" /><span className="document-state" role="status"><i className={busy ? 'is-busy' : ''} />{busy ? 'Opening your document…' : session.version > 0 ? 'Edited in this session' : 'Local document'}</span></div><div className="actionbar-right"><span className="selection-hint">{anchor ? 'Paragraph selected · ready to edit' : 'Click any paragraph to work with it'}</span><button className={`quiet-button ${focused ? 'is-active' : ''}`} aria-label="Focus mode" aria-pressed={focused} onClick={() => { setFocused(value => !value); setNavigating(false); }}><Icon name="focus" size={16} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button></div></div>
+        </section> : <><div className="document-actionbar"><div className="actionbar-left"><button className={`quiet-button ${navigating ? 'is-active' : ''}`} aria-label="Find in document" aria-pressed={navigating} disabled={!ready} onClick={() => { setNavigating(value => !value); setFocused(false); }}><Icon name="search" size={16} /><span>Find</span></button><span className="header-divider" /><span className="document-state" role="status"><i className={busy ? 'is-busy' : ''} />{busy ? 'Opening your document…' : session.version > 0 ? 'Edited in this session' : 'Local document'}</span></div><div className="actionbar-right"><span className="selection-hint">{editor.canvasState.pending ? 'Editing on the page…' : 'Click on the page to type'}</span><button className={`quiet-button ${focused ? 'is-active' : ''}`} aria-label="Focus mode" aria-pressed={focused} onClick={() => { setFocused(value => !value); setNavigating(false); }}><Icon name="focus" size={16} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button></div></div>
           <div className={`workspace-layout ${navigating ? 'with-navigator' : ''}`}>
             {navigating && !focused && <DocumentNavigator session={controller} onSelect={showAnchor} onClose={() => setNavigating(false)} />}
-            <div className="workspace-document"><DocumentViewer session={controller} rendererFingerprint={FINGERPRINT} citation={citation} selectedAnchorId={focused ? undefined : anchor} onAnchorSelect={id => { setAnchor(id); setQuickActions(true); }} onError={cause => setError(cause.message)} onPageChange={(next, total) => { setPage(next); setPages(total); }} onPaginationComplete={result => setPages(result.totalPages)} showUploadButton={false} showRevisionsTab={false} fitMode="page-width" defaultSettings={{ renderTrackedChanges: true, commentMode: 'inline', annotationMode: 'above' }} />
+            <div className="workspace-document">{panel === 'edit' && !focused && <EditorToolbar editor={editor} groups={['font', 'paragraph', 'insert']} />}<DocumentViewer session={controller} canvasEditor={canvasEditor} rendererFingerprint={FINGERPRINT} citation={citation} selectedAnchorId={focused ? undefined : anchor} onAnchorSelect={id => { setAnchor(id); setQuickActions(true); }} onError={cause => setError(cause.message)} onPageChange={(next, total) => { setPage(next); setPages(total); }} onPaginationComplete={result => setPages(result.totalPages)} showUploadButton={false} showRevisionsTab={false} fitMode="page-width" defaultSettings={{ renderTrackedChanges: true, commentMode: 'inline', annotationMode: 'above' }} />
               {anchor && quickActions && !focused && <div className="selection-actions" role="toolbar" aria-label="Selected paragraph"><span className="selection-dot" /><button onClick={() => showPanel('edit')}><Icon name="edit" size={14} />Edit paragraph</button><button onClick={() => showPanel('comments')}><Icon name="comment" size={14} />Comment</button><button onClick={() => showPanel('annotations')}><Icon name="label" size={14} />Label</button><button className="selection-dismiss" aria-label="Dismiss quick actions" onClick={() => setQuickActions(false)}><Icon name="close" size={13} /></button></div>}
             </div>
             <aside className="workspace-sidebar" hidden={focused}><nav className="inspector-tabs" aria-label="Document tools">{tabs.map(item => <button type="button" key={item.id} aria-label={item.id} aria-pressed={panel === item.id} onClick={() => showPanel(item.id)}><Icon name={item.icon} size={16} /><span>{item.label}</span>{item.id === 'review' && !!counts?.revisions && <b>{counts.revisions}</b>}{item.id === 'comments' && !!counts?.comments && <b>{counts.comments}</b>}</button>)}</nav>

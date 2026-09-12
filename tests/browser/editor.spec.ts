@@ -220,3 +220,21 @@ test('pending drafts survive external changes and save only after a safe commit'
   await expect(text).toHaveValue('An external text change.');
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
+
+test('returning from a text-pane draft to the canvas commits the correct paragraph', async ({ page }) => {
+  await openEditor(page, 'First paragraph.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(session => {
+    const result = session.splitParagraph(window.editorTest.anchor, 'First paragraph.'.length);
+    session.replaceText(result.created[0].id, 'Second paragraph.');
+  }));
+  const second = page.getByRole('textbox', { name: 'Document paragraph', exact: true }).filter({ hasText: 'Second paragraph.' });
+  await expect(second).toBeVisible();
+  await page.getByRole('textbox', { name: 'Paragraph text', exact: true }).fill('First paragraph. From the pane.');
+  await second.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' From the canvas.');
+  await page.keyboard.press('Control+s');
+  const text = await page.evaluate(() => window.editorTest.controllers[0].read(session => Object.keys(session.project().anchorIndex).filter(id => id.startsWith('p:body:')).map(id => session.getFormatting(id)!.runs.map(run => run.text).join(''))));
+  expect(text).toEqual(['First paragraph. From the pane.', 'Second paragraph. From the canvas.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});

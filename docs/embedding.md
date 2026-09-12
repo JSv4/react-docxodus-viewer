@@ -66,22 +66,36 @@ pass `null` for an empty editor. Each block owns and disposes its native session
 Supply `session={controller}` to use a host-owned session instead. That controller
 takes precedence over `document` and remains open when the block unmounts.
 
-Click a paragraph to format the entire paragraph, or select text on the page to
-format that range. **Edit text** or a double-click opens a paragraph text pane.
-Type or paste plain text, then use **Apply text** or Ctrl/⌘ Enter. Text updates
-preserve unchanged runs between edits and commit as one native undo step. Inserted
-text inherits formatting from the replaced run. Generated list labels are kept
-out of the text pane and native character offsets.
+**Click on the page and type.** Headings, paragraphs, list text, and table cells
+are editable directly. Enter splits a paragraph at the caret; Backspace and Delete
+join adjacent paragraphs at their boundaries. Paste inserts plain text, including
+multiple paragraphs. Arrow keys move between paragraphs, and Ctrl/⌘ A selects
+the document text. Double-click selects a word normally.
 
-This is a paginated editor with paragraph text authoring, not a contenteditable
-Word canvas. Range formatting is limited to one paragraph, including its page
-fragments. Selections involving unmappable generated content fail without editing;
-use the paragraph text pane to select the actual editable characters. A caret with
-no selected characters applies formatting to the whole paragraph.
+Selecting text applies character formatting to that range, including selections
+across paragraphs and page fragments. With only a caret, font controls change
+what you type next. Paragraph controls affect the current paragraph. Generated
+list labels and comment/note markers stay outside native character offsets.
+
+Typing appears immediately, then commits to the native DOCX after a short pause.
+The page stays mounted during conversion and restores the caret and scroll position
+after reflow. IME composition waits until confirmation before committing. Text
+updates preserve unchanged runs, links, and formatting. Typing bursts and
+structural operations use native undo steps.
+
+**Edit text** opens an optional paragraph pane for plain-text authoring. Use
+**Apply text** or Ctrl/⌘ Enter to commit that pane; returning to the canvas also
+commits its pending draft. The pane is not required for on-page typing.
+
+The canvas is not a full Word replacement: it edits text that maps exactly to
+native paragraph runs. Complex generated content and paragraphs with inline
+objects that change text coordinates remain viewable with the advanced text and
+session controls available. Cross-cell structural deletion is rejected. Enter
+and Shift+Enter currently create paragraph breaks.
 
 | Controls | Included behavior |
 | --- | --- |
-| History | Undo, redo, paragraph text editing |
+| History | Undo, redo, optional paragraph text pane |
 | Font | Paragraph styles, family, size, bold, italic, underline, strike, superscript/subscript, color, highlight, clear character formatting |
 | Paragraph | Alignment, bullets, numbering, indentation, line spacing |
 | Insert | Links on selected text, tables, images, new paragraphs, page breaks |
@@ -89,9 +103,9 @@ no selected characters applies formatting to the whole paragraph.
 | Viewer | Pages, zoom, rendering settings |
 
 Ctrl/⌘ B, I, U, Z, Shift-Z, Y, and S work while focus is inside the editor.
-Uncommitted textarea drafts retain normal text undo. Formatting, save, and paragraph
-selection commit a pending draft first. If the paragraph changes elsewhere, the
-draft remains available to copy or reload instead of overwriting the external edit.
+Uncommitted textarea drafts retain normal text undo. Formatting and save commit
+pending typing first. If the paragraph changes elsewhere, the draft remains on
+the page to copy or reload instead of overwriting the external edit.
 
 ### Host integration
 
@@ -103,9 +117,11 @@ back as `document` would open a replacement and reset its history.
 
 Without `onSave`, the header downloads a DOCX. With it, your application controls
 storage and receives errors through `onError`. A ref exposes `controller`,
-`getDocument()`, `commit()`, and `focusText()`. The ref's `getDocument()` applies a
-pending draft first and throws if it cannot commit. Call `commit()` before your
-application unmounts the editor or switches documents; `false` means a draft needs
+`getDocument()`, `commit()`, `focusCanvas()`, and `focusText()`. `focusCanvas()` returns
+to the document caret; `focusText()` opens the optional pane. The ref's `getDocument()` applies a
+pending draft first and throws if it cannot commit. Unmounting flushes canvas
+typing while the native session is still open. Call `commit()` before switching
+documents or layouts so you can handle a conflict; `false` means a draft needs
 attention.
 
 Use `readOnly` to keep the canvas and download action while hiding editing controls.
@@ -122,45 +138,48 @@ viewer bindings. `EditorToolbar` and `ParagraphEditor` use that shared state and
 can live anywhere inside your component tree.
 
 ```tsx
-import { useRef } from 'react';
 import { DocumentViewer } from 'react-docxodus-viewer/viewer';
-import { EditorToolbar, ParagraphEditor, useDocxSession, useDocumentEditor,
-  type ParagraphEditorHandle } from 'react-docxodus-viewer/editor';
+import { EditorToolbar, useDocxSession, useDocumentEditor }
+  from 'react-docxodus-viewer/editor';
 import 'react-docxodus-viewer/styles.css';
 
 function EditingBlock({ file }: { file: File }) {
   const document = useDocxSession(file, { wasmBasePath: '/docxodus/wasm/' });
   const editor = useDocumentEditor(document.controller);
-  const text = useRef<ParagraphEditorHandle>(null);
-  const commit = () => text.current?.commit() ?? true;
 
   return <section>
-    <EditorToolbar editor={editor} beforeAction={commit}
-      groups={['history', 'font', 'paragraph']} />
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
-      <DocumentViewer {...editor.viewerProps}
-        onAnchorSelect={id => { if (commit()) editor.selectAnchor(id); }}
-        onTextSelectionChange={selection => { if (commit()) editor.selectText(selection); }}
-        wasmBasePath="/docxodus/wasm/" theme="studio" showUploadButton={false}
-        fitMode="page-width" rendererFingerprint="my-editor"
-        defaultSettings={{ commentMode: 'disabled', annotationMode: 'disabled', showDeletedContent: false }}
-        style={{ height: 650, maxHeight: 'none' }} />
-      <ParagraphEditor ref={text} editor={editor} />
-    </div>
+    <EditorToolbar editor={editor} groups={['history', 'font', 'paragraph']} />
+    <DocumentViewer {...editor.viewerProps}
+      wasmBasePath="/docxodus/wasm/" theme="studio" showUploadButton={false}
+      fitMode="page-width" rendererFingerprint="my-editor"
+      defaultSettings={{ showDeletedContent: false }}
+      style={{ height: 650, maxHeight: 'none' }} />
     {editor.error && <p role="alert">{editor.error.message}</p>}
-    <button onClick={() => { if (commit()) saveToYourApplication(document.controller.save()); }}>
-      Save document
-    </button>
+    {editor.canvasState.conflict && <button onClick={() => editor.canvasEditor.discard()}>
+      Reload document text
+    </button>}
+    <button onClick={() => {
+      if (editor.canvasEditor.commit()) saveToYourApplication(document.controller.save());
+    }}>Save document</button>
   </section>;
 }
 ```
 
-The host coordinates pending drafts through `beforeAction` and the selection
-callbacks, as shown above. Without a `ParagraphEditor`, spread `editor.viewerProps`
-directly onto the viewer. `editor.select(anchorId, span)` selects native UTF-16
-character offsets; `null` selects the whole paragraph. Common commands include
-`format`, `paragraph`, `setStyle`, `setList`, `addLink`, `insertTable`, `insertImage`,
-`insertParagraph`, `replaceText`, `undo`, and `redo`.
+Spread `editor.viewerProps` to connect direct typing, selection, formatting, and
+native document updates. `DocumentViewer` alone remains a viewer.
+`editor.canvasEditor.commit()` flushes typing before a host saves or replaces the
+document. `canvasState` exposes pending typing, composition, and conflict status.
+`editor.canvasEditor.focus()` returns focus to the last document caret.
+
+An optional `<ParagraphEditor editor={editor} ref={textRef} />` can live in a
+sidebar or below the page. It coordinates selection with the canvas. Pass
+`beforeAction={() => textRef.current?.commit() ?? true}` to the toolbar and commit
+both the canvas and pane before host save/navigation actions.
+
+`editor.select(anchorId, span)` selects native UTF-16 character offsets; `null`
+selects the whole paragraph. Common commands include `format`, `paragraph`,
+`setStyle`, `setList`, `addLink`, `insertTable`, `insertImage`, `insertParagraph`,
+`replaceText`, `undo`, and `redo`.
 
 Use separate controllers for independent documents, or share a controller across
 multiple viewers and controls. No global editor selection or undo state is used.

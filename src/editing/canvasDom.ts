@@ -2,7 +2,8 @@ import { paragraphSelector, shadowSelection } from './selection';
 
 export interface CanvasPoint { anchorId: string; offset: number }
 export interface CanvasRange { start: CanvasPoint; end: CanvasPoint; backward: boolean }
-const ignored = '[data-list-marker="true"], [data-rdv-empty], del, [data-revision-type="deleted"]';
+export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-ref, a[class$="-backref"], a.comment-marker';
+const ignored = `${generatedContent}, [data-rdv-empty], del, [data-revision-type="deleted"]`;
 
 export function canvasParagraphs(root: HTMLElement, anchorId?: string) {
   return Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})`))

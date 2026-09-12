@@ -16,7 +16,7 @@ export default function ModuleExamples() {
   const editor = useDocumentEditor(document.controller);
   const paragraph = useRef<ParagraphEditorHandle>(null);
   const block = useRef<DocumentEditorHandle>(null);
-  const commit = () => (block.current?.commit() ?? true) && (paragraph.current?.commit() ?? true);
+  const commit = () => (block.current?.commit() ?? true) && editor.canvasEditor.commit() && (paragraph.current?.commit() ?? true);
   const input = useRef<HTMLInputElement>(null);
   const { open } = document;
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { PaginationEngine, clearPageCitationHighlight, navigateToPageCitation } from 'docxodus/core';
 import type { DocxSession, PageCitation, PaginationOptions, PaginationResult } from 'docxodus/core';
@@ -66,6 +66,8 @@ function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void>
 export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, showPageNumbers = true, pageGap = 20, cssPrefix = 'page-', fragmentParagraphs = true, layoutToken, citation, selectedAnchorId, backgroundColor = '#525659', className, style, ...callbacks }: PaginatedDocumentProps) {
   const host = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLElement | null>(null);
+  const activeLayout = useRef<{ wrapper: HTMLElement; dispose: () => void } | null>(null);
+  useLayoutEffect(() => () => { activeLayout.current?.dispose(); activeLayout.current = null; }, []);
   const callbacksRef = useRef(callbacks);
   useEffect(() => { callbacksRef.current = callbacks; });
   const task = useAsyncOperation<PaginationResult>();
@@ -93,17 +95,19 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
         if (/^on/i.test(attribute.name) || (/^(href|src|xlink:href)$/i.test(attribute.name) && /^\s*javascript:/i.test(attribute.value))) node.removeAttribute(attribute.name);
       }
     }
-    shadow.replaceChildren(wrapper);
+    // Measure the incoming pages while the current editing surface retains focus.
+    // The actual DOM handoff happens synchronously after fonts/images are ready.
+    if (activeLayout.current) Object.assign(wrapper.style, { opacity: '0', position: 'absolute', top: '0', left: '0', width: '100%', pointerEvents: 'none' });
+    wrapper.inert = true;
+    shadow.append(wrapper);
     const selectionStyles = document.createElement('style');
     selectionStyles.textContent = '[data-rdv-selected="true"] { outline: 1.5px solid var(--rdv-selection-color, #93aa79); outline-offset: 5px; border-radius: 1px; }';
     wrapper.append(selectionStyles);
     for (const stylesheet of wrapper.querySelectorAll('style')) {
       if (stylesheet.sheet) adaptRootSelectors(stylesheet.sheet.cssRules);
     }
-    body.current = documentBody;
-    callbacksRef.current.onRootChange?.(documentBody);
     const onClick = (event: MouseEvent) => {
-      if (canvasEditor) return;
+      if (canvasEditor && event.target instanceof Element && event.target.closest('[data-rdv-editable="true"]')) return;
       const target = event.target instanceof Element ? event.target : null;
       // Inline comment/revision wrappers have their own anchors. Editing a passage
       // should select its paragraph, rather than the discussion attached to it.
@@ -134,6 +138,15 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
     documentBody.addEventListener('keyup', onSelection);
     let observer: IntersectionObserver | null = null;
     let detachEditor: (() => void) | undefined;
+    const dispose = () => {
+      detachEditor?.();
+      observer?.disconnect();
+      documentBody.removeEventListener('click', onClick);
+      documentBody.removeEventListener('mouseup', onSelection);
+      documentBody.removeEventListener('keyup', onSelection);
+      if (body.current === documentBody) { body.current = null; callbacksRef.current.onRootChange?.(null); }
+      wrapper.remove();
+    };
     void run(async signal => {
       await waitForLayout(element, signal);
       documentBody.getBoundingClientRect(); // Start font requests before awaiting readiness.
@@ -142,6 +155,10 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
       if (signal.aborted) throw new DOMException('Pagination cancelled', 'AbortError');
       await waitForLayout(element, signal);
       if (signal.aborted) throw new DOMException('Pagination cancelled', 'AbortError');
+      if (canvasEditor) {
+        await canvasEditor.whenIdle(signal);
+        if (signal.aborted || !canvasEditor.acceptsLayout(canvasOwner ?? null, documentVersion)) throw new DOMException('Editing superseded this layout', 'AbortError');
+      }
       const staging = documentBody.querySelector<HTMLElement>('#pagination-staging') ?? documentBody.querySelector<HTMLElement>(`.${cssPrefix}staging`);
       const container = documentBody.querySelector<HTMLElement>('#pagination-container') ?? documentBody.querySelector<HTMLElement>(`.${cssPrefix}container`);
       if (!staging || !container) throw new Error('Generate HTML with PaginationMode.Paginated to display page boxes.');
@@ -153,7 +170,13 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
         layoutToken: documentVersion !== undefined && rendererFingerprint !== undefined ? { documentVersion, rendererFingerprint } : undefined,
       });
       const result = engine.paginate();
+      activeLayout.current?.dispose();
+      Object.assign(wrapper.style, { opacity: '', position: '', top: '', left: '', width: '', pointerEvents: '' });
+      wrapper.inert = false;
+      body.current = documentBody;
+      callbacksRef.current.onRootChange?.(documentBody);
       detachEditor = canvasEditor?.attach(documentBody, canvasOwner ?? null);
+      activeLayout.current = { wrapper, dispose };
       callbacksRef.current.onPaginationComplete?.(result);
       if (typeof IntersectionObserver !== 'undefined') {
         const visible = new Map<Element, { page: number; ratio: number }>();
@@ -170,16 +193,8 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
       return result;
     }).catch(error => { if (error?.name !== 'AbortError') callbacksRef.current.onError?.(error); });
     return () => {
-      canvasEditor?.commit();
-      detachEditor?.();
       cancel();
-      observer?.disconnect();
-      documentBody.removeEventListener('click', onClick);
-      documentBody.removeEventListener('mouseup', onSelection);
-      documentBody.removeEventListener('keyup', onSelection);
-      body.current = null;
-      callbacksRef.current.onRootChange?.(null);
-      shadow.replaceChildren();
+      if (activeLayout.current?.wrapper !== wrapper) dispose();
     };
   }, [html, canvasEditor, canvasOwner, scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, run, cancel]);
 

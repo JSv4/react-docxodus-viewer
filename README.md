@@ -43,7 +43,7 @@ import 'react-docxodus-viewer/styles.css';
   wasmBasePath="/docxodus/wasm/" style={{ height: 760 }} />;
 ```
 
-The editor includes native formatting, paragraph text authoring, lists, links,
+Click directly on the document page to type. The editor includes native formatting, lists, links,
 tables, images, tracked edits, undo/redo, and DOCX saving. Compose `EditorToolbar`,
 `ParagraphEditor`, and `useDocumentEditor` with your own layout, or use
 `react-docxodus-viewer/viewer` for a standalone viewer. See [embedding modules](docs/embedding.md)
@@ -85,7 +85,7 @@ export default function App() {
 | Area | React surface |
 | --- | --- |
 | Paginated viewing, zoom, fit, placeholders, canonical anchors, PageMaps and citations | `DocumentViewer`, `PaginatedDocument` |
-| Embeddable editor, common Word formatting controls and paragraph text authoring | `DocumentEditor`, `EditorToolbar`, `ParagraphEditor`, `useDocumentEditor` |
+| Editable document canvas, common Word formatting controls and an optional text pane | `DocumentEditor`, `EditorToolbar`, `ParagraphEditor`, `useDocumentEditor` |
 | Complete programmatic editing, search, templates, structures, tables, lists, styles, page setup, fields, notes, images, content controls, bookmarks and links | `useDocxSession`, `useSessionCommands`, `useSessionQuery`, `SessionEditorPanel` |
 | Native tracked revisions, grouped moves, structural revisions and selective/bulk accept/reject | `RevisionPanel`, live `DocumentViewer` |
 | Comments, replies, resolution and native annotations | `CommentsPanel`, `AnnotationsPanel`, `useDocumentComments`, `useSessionAnnotations` |
@@ -121,6 +121,7 @@ option remains available for applications that supply their own controls. See
 | `onPageChange`, `onRevisionsExtracted`, `onRevisionSelect`, `onSettingsChange` | — | Review and control callbacks |
 | `wasmBasePath`, `useWorker`, `warmup` | auto, true, false | Runtime location, conversion worker and optional warmup |
 | `theme` | `classic` | `classic` or the light `studio` palette for viewer controls |
+| `canvasEditor` | — | Direct typing binding from `useDocumentEditor().viewerProps` |
 | `onTextSelectionChange` | — | Single-paragraph UTF-16 selection, including page fragments |
 | `className`, `style`, `placeholder` | — | Container customization |
 

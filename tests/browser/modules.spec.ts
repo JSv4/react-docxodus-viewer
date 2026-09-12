@@ -57,3 +57,26 @@ test('viewer and editing controls fit a narrow host with dark OS preferences', a
   await noOverflow();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
+
+test('typing on the page persists through viewer and composed module switches', async ({ page }) => {
+  await page.goto('/?example=modules');
+  const paragraph = page.getByRole('textbox', { name: 'Document paragraph', exact: true }).filter({ hasText: original });
+  await paragraph.click();
+  await paragraph.evaluate(element => {
+    const range = document.createRange(); range.selectNodeContents(element); range.collapse(false);
+    const selection = (element.getRootNode() as ShadowRoot & { getSelection(): Selection }).getSelection();
+    selection.removeAllRanges(); selection.addRange(range);
+  });
+  await page.keyboard.type(' Written on the page.');
+  await page.getByRole('button', { name: 'Just the viewer', exact: true }).click();
+  await expect(page.locator('#pagination-container').getByText(`${original} Written on the page.`, { exact: true })).toBeVisible();
+  await expect(page.locator('[contenteditable="true"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Compose your own', exact: true }).click();
+  const composed = page.getByRole('textbox', { name: 'Document paragraph', exact: true }).filter({ hasText: 'Written on the page.' });
+  await composed.click();
+  await page.keyboard.press('Home');
+  await page.keyboard.type('Composed: ');
+  await page.getByRole('button', { name: 'The editor block', exact: true }).click();
+  await expect(page.locator('#pagination-container').getByText(/Composed:/)).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

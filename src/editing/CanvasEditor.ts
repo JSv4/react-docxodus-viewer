@@ -2,7 +2,7 @@ import type { DocxSession, EditResult, FormatOp } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
 import { editableText, paragraphTextSteps, textChange } from './text';
 import { shadowSelection } from './selection';
-import { canvasParagraphs, canvasText, caretAtPoint, domPoint, normalizedText, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
+import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
 
 export interface CanvasEditorSnapshot { suspended: boolean; pending: boolean; composing: boolean; conflict: boolean; format: FormatOp | null }
@@ -32,6 +32,8 @@ export class CanvasEditor {
   private callbacks: CanvasCallbacks | null = null;
   private state = empty;
   private listeners = new Set<() => void>();
+  private selectionGuards = new Set<() => boolean>();
+  private baselines = new Map<string, string>();
   private root: HTMLElement | null = null;
   private renderedOwner: DocxSession | null = null;
   private range: CanvasRange | null = null;
@@ -45,7 +47,14 @@ export class CanvasEditor {
 
   constructor(controller: DocxSessionController) { this.controller = controller; }
   getSnapshot = () => this.state;
+  acceptsLayout = (owner: DocxSession | null, version?: number) => {
+    const current = this.controller.getSnapshot();
+    return current.session === owner && (version === undefined || current.version === version);
+  };
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  /** Coordinate optional paragraph drafts before returning to on-page editing. */
+  guardSelection = (guard: () => boolean) => { this.selectionGuards.add(guard); return () => { this.selectionGuards.delete(guard); }; };
+  private canSelect() { return [...this.selectionGuards].every(guard => guard()); }
   private publish(update: Partial<CanvasEditorSnapshot>) {
     this.state = { ...this.state, ...update };
     for (const listener of this.listeners) listener();
@@ -81,10 +90,25 @@ export class CanvasEditor {
   }
   private notifySelection() {
     if (this.draft || !this.range) return;
-    if (this.range.start.anchorId === this.range.end.anchorId) {
-      this.callbacks?.onSelect(this.range.start.anchorId, { start: this.range.start.offset, length: this.range.end.offset - this.range.start.offset });
-    }
+    if (!this.canSelect()) return;
+    const first = this.selectedSpans()[0];
+    if (first) this.callbacks?.onSelect(first.anchorId, first.span);
   }
+  /** Native spans for the current selection, including selections across paragraphs. */
+  selectedSpans = () => {
+    if (!this.root || !this.range || this.renderedOwner !== this.controller.getSnapshot().session) return [];
+    const { start, end } = this.range;
+    const ids = [...new Set(canvasParagraphs(this.root).map(block => block.dataset.sourceAnchorId!))];
+    const identity = (id: string) => id.slice(id.indexOf(':'));
+    const first = ids.findIndex(id => identity(id) === identity(start.anchorId)), last = ids.findIndex(id => identity(id) === identity(end.anchorId));
+    if (first < 0 || last < first) return [];
+    return ids.slice(first, last + 1).map(id => {
+      const anchorId = this.canonical(id) ?? id;
+      const from = anchorId === start.anchorId ? start.offset : 0;
+      const to = anchorId === end.anchorId ? end.offset : this.text(anchorId).length;
+      return { anchorId, span: { start: from, length: Math.max(0, to - from) } };
+    });
+  };
   private prepareParagraphs() {
     if (!this.root || !this.controller.getSnapshot().session) return;
     const paragraphs = canvasParagraphs(this.root);
@@ -98,7 +122,7 @@ export class CanvasEditor {
         for (const block of fragments) {
           block.dataset.sourceAnchorId = canonical;
           block.querySelectorAll('br:not([data-rdv-empty])').forEach(br => br.setAttribute('data-rdv-break', 'true'));
-          block.querySelectorAll('[data-list-marker="true"], [data-docx-tab], del, img').forEach(node => node.setAttribute('contenteditable', 'false'));
+          block.querySelectorAll(`${generatedContent}, [data-docx-tab], del, img`).forEach(node => node.setAttribute('contenteditable', 'false'));
           if (!text && !canvasText(block).trim()) {
             const marker = block.querySelector('[data-list-marker="true"]');
             block.replaceChildren(...(marker ? [marker] : []), Object.assign(document.createElement('br'), { ariaHidden: 'true' }));
@@ -106,6 +130,7 @@ export class CanvasEditor {
           }
         }
         const supported = normalizedText(fragments.map(canvasText).join('')) === normalizedText(text);
+        if (supported) this.baselines.set(canonical, text);
         for (const block of fragments) {
           const editable = supported && this.renderedOwner === this.controller.getSnapshot().session && !this.callbacks?.readOnly;
           block.contentEditable = editable ? 'true' : 'false';
@@ -120,14 +145,15 @@ export class CanvasEditor {
     this.clearTimer();
     if (!this.state.composing) this.timer = setTimeout(() => { this.timer = null; this.commit(); }, 350);
   }
-  private beginDraft(anchorId: string) {
+  private beginDraft(anchorId: string, afterInput = false) {
     if (this.draft?.anchorId === anchorId) return true;
     if (!this.commit()) return false;
     const owner = this.controller.getSnapshot().session;
     if (!owner || owner !== this.renderedOwner || this.callbacks?.readOnly) return false;
     const before = this.text(anchorId);
     const shown = this.root && canvasParagraphs(this.root, anchorId).map(canvasText).join('');
-    if (shown === null || normalizedText(shown) !== normalizedText(before)) return this.fail('The paragraph changed. Wait for the page to refresh before typing.');
+    if (shown === null || (afterInput ? this.baselines.get(anchorId) !== before : normalizedText(shown) !== normalizedText(before))) return this.fail('The paragraph changed. Wait for the page to refresh before typing.', afterInput);
+    this.baselines.set(anchorId, before);
     this.draft = { owner, anchorId, before, format: this.state.format };
     this.publish({ pending: true, suspended: true });
     return true;
@@ -155,6 +181,7 @@ export class CanvasEditor {
         ])));
       }
       this.draft = null;
+      this.baselines.set(draft.anchorId, this.text(draft.anchorId));
       this.publish({ pending: false, suspended: false, conflict: false });
       this.notifySelection();
       return true;
@@ -176,18 +203,30 @@ export class CanvasEditor {
 
   beforeCommand = () => { this.capture(); return this.commit(); };
   afterCommand = () => {
-    if (!this.root || !this.range || this.state.composing || !this.restoreFocus) return;
-    const anchor = this.canonical(this.range.start.anchorId);
-    if (anchor) {
-      this.range = { ...this.range, start: { anchorId: anchor, offset: Math.min(this.range.start.offset, this.text(anchor).length) }, end: { anchorId: anchor, offset: Math.min(this.range.end.offset, this.text(anchor).length) } };
-      this.patch(anchor);
-      this.restore(); this.notifySelection();
-    }
+    if (!this.root || !this.range || this.state.composing) return;
+    this.restoreFocus = true;
+    const update = (point: CanvasPoint) => { const anchorId = this.canonical(point.anchorId); return anchorId ? { ...point, anchorId, offset: Math.min(point.offset, this.text(anchorId).length) } : point; };
+    this.range = { ...this.range, start: update(this.range.start), end: update(this.range.end) };
+    for (const { anchorId } of this.selectedSpans()) this.patch(anchorId);
+    this.restore(); this.notifySelection();
   };
-  focus = () => { this.restoreFocus = true; this.restore(); };
+  focus = () => {
+    if (!this.range && this.root) {
+      const anchorId = canvasParagraphs(this.root).find(block => block.dataset.rdvEditable === 'true')?.dataset.sourceAnchorId;
+      if (anchorId) this.range = collapsed({ anchorId, offset: 0 });
+    }
+    this.restoreFocus = true; this.restore(); this.notifySelection();
+  };
+  selectCreated = (anchorId: string, after: string) => {
+    this.fallback = this.range?.start ?? null;
+    this.range = collapsed({ anchorId, offset: 0 });
+    this.patch(anchorId, after);
+    this.focus();
+  };
   setTypingFormat = (format: FormatOp) => {
     if (this.callbacks?.readOnly || !this.beforeCommand()) return false;
     this.publish({ format: { ...this.state.format, ...format } });
+    this.focus();
     return true;
   };
   private restore() {
@@ -249,7 +288,8 @@ export class CanvasEditor {
     const first = blocks.indexOf(start.anchorId), last = blocks.indexOf(end.anchorId);
     if (first < 0 || last <= first) throw new Error('Select text in document order.');
     const firstElement = canvasParagraphs(this.root!, start.anchorId)[0], lastElement = canvasParagraphs(this.root!, end.anchorId)[0];
-    if (firstElement.closest('td, th') !== lastElement.closest('td, th')) throw new Error('Edit table cells individually.');
+    const cell = firstElement.closest('td, th');
+    if (cell !== lastElement.closest('td, th') || blocks.slice(first, last + 1).some(id => canvasParagraphs(this.root!, id)[0].closest('td, th') !== cell)) throw new Error('Edit table cells individually.');
     const results = this.replace(session, end.anchorId, 0, end.offset, '');
     results.push(...this.replace(session, start.anchorId, start.offset, editableText(session.getFormatting(start.anchorId)).length, ''));
     const removed = blocks.slice(first + 1, last + 1);
@@ -309,10 +349,37 @@ export class CanvasEditor {
     this.capture(); this.scheduleCommit();
   }
 
+  private navigate(event: KeyboardEvent) {
+    if (!this.root || !this.range || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || !samePoint(this.range.start, this.range.end)) return;
+    const blocks = canvasParagraphs(this.root).filter(block => block.dataset.rdvEditable === 'true');
+    const active = (this.root.getRootNode() as ShadowRoot).activeElement as HTMLElement;
+    const index = blocks.indexOf(active);
+    if (index < 0) return;
+    const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+    const next = blocks[index + direction];
+    if (!next) return;
+    const offset = this.range.start.offset - blocks.slice(0, index).filter(block => block.dataset.sourceAnchorId === active.dataset.sourceAnchorId).reduce((length, block) => length + canvasText(block).length, 0);
+    const vertical = event.key === 'ArrowUp' || event.key === 'ArrowDown';
+    let point: CanvasPoint | null = null;
+    if (vertical) {
+      const selection = shadowSelection(this.root);
+      const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
+      const box = active.getBoundingClientRect(), target = next.getBoundingClientRect();
+      if (!rect?.height || (direction < 0 ? rect.top - box.top > rect.height : box.bottom - rect.bottom > rect.height)) return;
+      point = caretAtPoint(this.root, Math.max(target.left + 1, Math.min(rect.left, target.right - 1)), direction < 0 ? target.bottom - 2 : target.top + 2);
+    } else if (direction < 0 ? offset !== 0 : offset !== canvasText(active).length) return;
+    event.preventDefault();
+    const nextId = next.dataset.sourceAnchorId!;
+    const fragments = canvasParagraphs(this.root, nextId), nextIndex = fragments.indexOf(next);
+    const start = fragments.slice(0, nextIndex).reduce((length, block) => length + canvasText(block).length, 0);
+    this.range = collapsed(point ?? { anchorId: nextId, offset: start + (direction < 0 ? canvasText(next).length : 0) });
+    this.restoreFocus = true; this.restore(); this.notifySelection();
+  }
+
   attach(root: HTMLElement, owner: DocxSession | null) {
     this.detach?.();
     this.root = root;
-    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.restoreFocus = false; this.publish({ ...empty }); }
+    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
     this.renderedOwner = owner;
     this.prepareParagraphs();
     const style = document.createElement('style');
@@ -329,7 +396,7 @@ export class CanvasEditor {
       if (this.range && this.state.format && !this.draft && (!samePoint(next.start, this.range.start) || !samePoint(next.end, this.range.end))) this.publish({ format: null });
       this.range = next; this.restoreFocus = true; this.notifySelection();
     };
-    const pointerDown = () => { if (!this.state.composing) this.commit(); };
+    const pointerDown = (event: PointerEvent) => { if (!this.state.composing && (!this.commit() || !this.canSelect())) { event.preventDefault(); event.stopPropagation(); } };
     const click = (event: MouseEvent) => {
       if (this.callbacks?.readOnly) return;
       const target = event.target as Element;
@@ -343,6 +410,7 @@ export class CanvasEditor {
     };
     const beforeInput = (event: InputEvent) => {
       if (this.callbacks?.readOnly) { event.preventDefault(); return; }
+      if (!this.canSelect()) { event.preventDefault(); return; }
       this.capture();
       const range = this.range;
       if (!range) { event.preventDefault(); return; }
@@ -358,7 +426,7 @@ export class CanvasEditor {
       if (event.inputType === 'insertText' && event.data && this.state.format) { event.preventDefault(); this.insertStyledText(event.data); return; }
       if (!this.beginDraft(range.start.anchorId)) event.preventDefault();
     };
-    const input = () => { this.capture(); if (!this.draft && this.range) this.beginDraft(this.range.start.anchorId); this.scheduleCommit(); };
+    const input = () => { this.capture(); if (!this.draft && this.range) this.beginDraft(this.range.start.anchorId, true); this.scheduleCommit(); };
     const compositionStart = () => { this.capture(); if (this.range) this.beginDraft(this.range.start.anchorId); this.clearTimer(); this.publish({ composing: true, suspended: true }); };
     const compositionEnd = () => { this.publish({ composing: false }); this.capture(); this.scheduleCommit(); };
     const paste = (event: ClipboardEvent) => { if (!this.callbacks?.readOnly) { event.preventDefault(); this.insertText(event.clipboardData?.getData('text/plain') ?? ''); } };
@@ -372,13 +440,22 @@ export class CanvasEditor {
       if (this.callbacks?.readOnly || event.isComposing) return;
       const key = event.key.toLowerCase();
       if ((event.ctrlKey || event.metaKey) && !event.altKey) {
-        if (['b', 'i', 'u', 'z', 'y'].includes(key)) {
+        if (key === 'a') {
+          event.preventDefault(); event.stopPropagation();
+          if (!this.commit()) return;
+          const blocks = canvasParagraphs(root).filter(block => block.dataset.rdvEditable === 'true');
+          const first = blocks[0]?.dataset.sourceAnchorId, last = blocks.at(-1)?.dataset.sourceAnchorId;
+          if (first && last) { this.range = { start: { anchorId: first, offset: 0 }, end: { anchorId: last, offset: this.text(last).length }, backward: false }; this.restoreFocus = true; this.restore(); this.notifySelection(); }
+        } else if (['b', 'i', 'u', 'z', 'y'].includes(key)) {
           event.preventDefault(); event.stopPropagation();
           if (!this.commit()) return;
           if (key === 'z' || key === 'y') this.callbacks?.onHistory(key === 'y' || event.shiftKey ? 'redo' : 'undo');
           else this.callbacks?.onFormat(key === 'b' ? 'bold' : key === 'i' ? 'italic' : 'underline');
         } else if (key === 's') this.commit();
-      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(event.key)) this.commit();
+      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(event.key)) {
+        this.capture();
+        if (this.commit() && event.key.startsWith('Arrow')) this.navigate(event);
+      }
     };
     const focusOut = () => { queueMicrotask(() => { if (this.root === root && !this.ownsFocus()) { this.restoreFocus = false; this.commit(); } }); };
     root.addEventListener('pointerdown', pointerDown);

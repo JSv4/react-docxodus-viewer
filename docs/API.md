@@ -7,7 +7,7 @@ The integration preserves native method signatures, overloaded methods, structur
 results and unsupported-operation diagnostics.
 
 For standalone `DocumentViewer` and `DocumentEditor` blocks, formatting toolbars,
-paragraph authoring, and custom layouts, see [embedding modules](embedding.md).
+direct page typing, optional paragraph authoring, and custom layouts, see [embedding modules](embedding.md).
 
 ## Runtime and operation hooks
 

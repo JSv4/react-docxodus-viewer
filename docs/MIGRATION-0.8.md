@@ -53,7 +53,9 @@ expansion while filters change and disables unsupported/ambiguous resolution.
 | Durable history | Not integrated | Custom/memory/IndexedDB storage, checkpoints/restore/retry, timelines, operations, proposals and archives |
 
 The upstream web editor and ribbon are not part of this integration. The React
-form-based panels are optional compositions over the same complete engine API.
+canvas editor, formatting toolbar, and optional panels compose the same complete
+engine API. `DocumentEditor` supports direct typing; a standalone `DocumentViewer`
+retains viewer behavior. See [embedding modules](embedding.md).
 Applications can implement their own controls without losing upstream operations.
 
 ## Behavioral details

@@ -100,3 +100,127 @@ test('blank documents accept literal typing and viewer blocks remain read only',
   expect(await nativeText(page)).toEqual(['My *literal* [document].']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
+
+test('plain-text paste creates paragraphs and cell typing stays in its cell', async ({ page }) => {
+  await open(page, 'Start here.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => navigator.clipboard.writeText(' Pasted.\nSecond <literal> paragraph.'));
+  await page.keyboard.press('Control+v');
+  await expect.poll(() => nativeText(page)).toEqual(['Start here. Pasted.', 'Second <literal> paragraph.']);
+  await page.getByRole('button', { name: 'Insert table', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Insert table', exact: true }).getByRole('button', { name: 'Insert', exact: true }).click();
+  const cells = page.locator('#pagination-container td');
+  await expect(cells).toHaveCount(4);
+  await cells.first().getByRole('textbox', { name: 'Document paragraph' }).click();
+  await page.keyboard.type('Cell one');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Cell two');
+  await page.keyboard.press('Control+s');
+  await expect(cells.nth(0)).toContainText('Cell one');
+  await expect(cells.nth(1)).toContainText('Cell two');
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('IME composition remains on the page until confirmed', async ({ page }) => {
+  await open(page, 'Say: ');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.imeSetComposition', { text: '日本', selectionStart: 2, selectionEnd: 2 });
+  await page.waitForTimeout(700);
+  expect(await nativeText(page)).toEqual(['Say: ']);
+  await cdp.send('Input.imeSetComposition', { text: '日本語', selectionStart: 3, selectionEnd: 3 });
+  await cdp.send('Input.insertText', { text: '日本語' });
+  await expect.poll(() => nativeText(page)).toEqual(['Say: 日本語']);
+  await page.waitForTimeout(1000);
+  await page.keyboard.type('!');
+  await page.keyboard.press('Control+s');
+  expect(await nativeText(page)).toEqual(['Say: 日本語!']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('conflicting external text edits preserve typing for recovery', async ({ page }) => {
+  await open(page, 'Original.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' My draft.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => s.replaceText(window.editorTest.anchor, 'Changed elsewhere.')));
+  await expect(page.getByRole('alert')).toContainText('changed elsewhere');
+  await expect(paragraphs(page).first()).toContainText('Original. My draft.');
+  expect(await nativeText(page)).toEqual(['Changed elsewhere.']);
+  await page.getByRole('button', { name: 'Reload document text', exact: true }).click();
+  await expect(paragraphs(page).first()).toContainText('Changed elsewhere.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Continuing.');
+  await expect.poll(() => nativeText(page)).toEqual(['Changed elsewhere. Continuing.']);
+});
+
+test('unmount flushes pending typing and leaves a host-owned session open', async ({ page }) => {
+  await open(page, 'Keep me.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Including this.');
+  await page.evaluate(() => window.mountEditors([]));
+  await expect(paragraphs(page)).toHaveCount(0);
+  expect(await nativeText(page)).toEqual(['Keep me. Including this.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('keyboard navigation and select-all work across paragraphs', async ({ page }) => {
+  await open(page, 'First.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Second.');
+  await page.waitForTimeout(1300);
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.type(' End of first.');
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Control+b');
+  const before = await nativeText(page);
+  expect(before).toEqual(['First. End of first.', 'Second.']);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => Object.keys(s.project().anchorIndex).filter(id => id.startsWith('p:body:')).every(id => s.getFormatting(id)!.runs.every(run => run.effective.bold))))).toBe(true);
+  // The structural replacement and following typing burst are separate undo steps.
+  await page.keyboard.type('One paragraph now.');
+  await expect.poll(() => nativeText(page)).toEqual(['One paragraph now.']);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual(['O']);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual(before);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('font controls return the caret to the page and preserve prior text', async ({ page }) => {
+  await open(page, 'Keep this font.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.getByRole('combobox', { name: 'Font family', exact: true }).selectOption('Georgia');
+  await page.getByRole('combobox', { name: 'Font size', exact: true }).selectOption('18');
+  await page.keyboard.type(' New font.');
+  await page.keyboard.press('Control+s');
+  const runs = await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs));
+  expect(runs.filter(run => run.effective.fontFamily === 'Georgia' && run.effective.fontSizePts === 18).map(run => run.text).join('')).toBe(' New font.');
+  expect(runs[0].text).toBe('Keep this font.');
+  expect(runs[0].effective.fontFamily).toBe('Calibri');
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('typing across page fragments preserves the rest of a long paragraph', async ({ page }) => {
+  const text = 'A long repeated phrase with alpha and omega. '.repeat(180);
+  await open(page, text);
+  const fragments = paragraphs(page);
+  await expect.poll(() => fragments.count()).toBeGreaterThan(1);
+  await fragments.nth(1).click();
+  await page.keyboard.type('EDITED HERE', { delay: 30 });
+  await expect.poll(async () => (await nativeText(page))[0].length).toBe(text.length + 11);
+  await page.waitForTimeout(1400);
+  await page.keyboard.type(' AGAIN');
+  await page.keyboard.press('Control+s');
+  const result = (await nativeText(page))[0];
+  expect(result.replace('EDITED HERE AGAIN', '')).toBe(text);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});

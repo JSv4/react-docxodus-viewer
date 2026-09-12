@@ -14,7 +14,7 @@ import type { DocxSessionController, DocumentSource } from './session';
 import type { DocumentTextSelection, DocumentViewerProps } from './types';
 
 export interface DocumentEditorChange { version: number; controller: DocxSessionController; getDocument: () => Uint8Array }
-export interface DocumentEditorHandle { controller: DocxSessionController; getDocument: () => Uint8Array; focusText: () => void; commit: () => boolean }
+export interface DocumentEditorHandle { controller: DocxSessionController; getDocument: () => Uint8Array; focusCanvas: () => void; focusText: () => void; commit: () => boolean }
 export interface DocumentEditorProps {
   /** Replacement source. Omit to start a blank document, or pass null to start empty. */
   document?: DocumentSource | null;
@@ -65,7 +65,7 @@ export const DocumentEditor = forwardRef<DocumentEditorHandle, DocumentEditorPro
   useImperativeHandle(ref, () => ({ controller, getDocument: () => {
     if (!commit()) throw new Error('Resolve the paragraph draft before saving the document.');
     return controller.save();
-  }, focusText: showText, commit }));
+  }, focusCanvas: editor.canvasEditor.focus, focusText: showText, commit }));
   useEffect(() => {
     const current = { session: editor.state.session, version: editor.state.version };
     const before = previous.current; previous.current = current;

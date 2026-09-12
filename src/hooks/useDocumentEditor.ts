@@ -115,7 +115,10 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       const result = controller.run(session => operation(session, target));
       assertResult(result);
       const created = selectCreated && (result as EditResult).created?.find(anchor => ['p', 'h', 'li'].includes(anchor.kind));
-      if (created) select(created.id);
+      if (created) {
+        select(created.id);
+        if (target?.source === 'canvas') canvasEditor.selectCreated(created.id, target.anchorId);
+      }
       else if (target) {
         // Style/list changes can change an anchor's kind while retaining its identity.
         const identity = target.anchorId.split(':').slice(1).join(':');
@@ -126,22 +129,26 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
           select(anchor, span, target.source);
         } else { selectionRef.current = null; setPicked(null); }
       }
-      if (target?.source === 'canvas') canvasEditor.afterCommand();
+      if (!created && target?.source === 'canvas') canvasEditor.afterCommand();
       setError(null); setNotice(result === false ? 'No further history in that direction.' : 'Change applied');
       return true;
     } catch (cause) { return fail(cause); }
   }, [controller, fail, select, canvasEditor]);
-  const format = (op: FormatOp) => selectionRef.current?.source === 'canvas' && !selectionRef.current.span?.length
+  const format = (op: FormatOp) => selectionRef.current?.source === 'canvas' && !selectionRef.current.span?.length && canvasEditor.selectedSpans().length === 1
     ? canvasEditor.setTypingFormat(op)
-    : run((session, target) => session.applyFormat(target!.anchorId, target!.span?.length ? target!.span : null, op));
+    : run((session, target) => target!.source === 'canvas' ? session.executeBatch(canvasEditor.selectedSpans().filter(({ span }) => span.length).map(({ anchorId, span }) => ({ tool: 'EditorToolbar', action: 'format selection', mutation: () => session.applyFormat(anchorId, span, op) }))) : session.applyFormat(target!.anchorId, target!.span?.length ? target!.span : null, op));
   const toggleFormat = (key: 'bold' | 'italic' | 'underline' | 'strike') => {
     if (!canvasEditor.beforeCommand()) return false;
     const target = selectionRef.current;
-    if (target?.source === 'canvas' && !target.span?.length) {
+    if (target?.source === 'canvas' && !target.span?.length && canvasEditor.selectedSpans().length === 1) {
       const pending = canvasEditor.getSnapshot().format?.[key];
       const runs = controller.read(session => session.getFormatting(target.anchorId)?.runs ?? []);
       const run = runs.find(run => run.span.start < target.span!.start && run.span.start + run.span.length >= target.span!.start) ?? runs[0];
       return format({ [key]: !(pending ?? run?.effective[key]) });
+    }
+    if (target?.source === 'canvas') {
+      const runs = controller.read(session => canvasEditor.selectedSpans().flatMap(({ anchorId, span }) => session.getFormatting(anchorId)?.runs.filter(run => run.span.start < span.start + span.length && run.span.start + run.span.length > span.start) ?? []));
+      return format({ [key]: !runs.length || !runs.every(run => run.effective[key]) });
     }
     return run((session, target) => {
       const span = target!.span?.length ? target!.span : null;
