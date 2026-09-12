@@ -6,6 +6,7 @@ import { join, resolve } from 'path'
 // Plugin to serve WASM files from public directory during dev
 function wasmPublicPlugin(): Plugin {
   const publicDir = join(process.cwd(), 'public')
+  const staticExportAssets = new Set(['/export-browser.bundle.js', '/docxodus.worker.js', '/pagination.bundle.js', '/export-assets.json', '/export-resource-limits-v1.json', '/render-report-v2.schema.json'])
 
   return {
     name: 'wasm-public-plugin',
@@ -19,10 +20,11 @@ function wasmPublicPlugin(): Plugin {
           url = url.substring(0, queryIndex)
         }
 
-        if (url.startsWith('/wasm/')) {
+        if (url.startsWith('/wasm/') || staticExportAssets.has(url)) {
           const filePath = join(publicDir, url)
 
           if (existsSync(filePath)) {
+            if (!resolve(filePath).startsWith(resolve(publicDir) + '/')) { next(); return }
             const content = readFileSync(filePath)
 
             if (url.endsWith('.js')) {
@@ -69,20 +71,19 @@ const libConfig = defineConfig({
   publicDir: false, // Don't copy public assets to lib dist
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: Object.fromEntries(['index', 'engine', 'worker', 'export-browser', 'server'].map(name => [name, resolve(__dirname, `src/${name}.ts`)])),
       name: 'ReactDocxodusViewer',
-      fileName: (format) => `react-docxodus-viewer.${format}.js`,
-      formats: ['es', 'cjs'],
+      fileName: (format, name) => `${name === 'index' ? 'react-docxodus-viewer' : name}.${format}.js`,
+      formats: ['es'],
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime', 'docxodus', 'docxodus/react'],
+      external: id => /^(react(?:-dom)?|docxodus)(\/|$)/.test(id) || id === '@docxodus/export',
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
           'react/jsx-runtime': 'jsxRuntime',
           docxodus: 'docxodus',
-          'docxodus/react': 'docxodusReact',
         },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'style.css') {

@@ -68,4 +68,31 @@
   --rdv-modal-input-focus: #3b82f6;
   --rdv-modal-btn-bg: #3b82f6;
   --rdv-modal-btn-bg-hover: #2563eb;
+
+  /* Tracked-changes (revisions) panel — a light "editorial redline" review
+     surface, intentionally themed apart from the dark viewer chrome so the
+     changes read like a document-review sidebar. Override to re-skin. */
+  --rdv-revision-bg: #f4f4f2;                /* warm-paper canvas behind cards */
+  --rdv-revision-header-bg: #ffffff;
+  --rdv-revision-header-border: #e7e5e1;
+  --rdv-revision-card-bg: #ffffff;
+  --rdv-revision-card-border: #e7e5e1;
+  --rdv-revision-card-shadow: 0 1px 2px rgba(17, 16, 15, 0.05);
+  --rdv-revision-card-shadow-hover: 0 6px 18px rgba(17, 16, 15, 0.09);
+  --rdv-revision-ink: #1f2421;               /* primary text */
+  --rdv-revision-ink-muted: #62675f;
+  --rdv-revision-ink-subtle: #9aa097;
+  --rdv-revision-rail: #c4c7c0;              /* default change rail */
+  --rdv-revision-accent: #2f6fd0;            /* links / expand toggle */
+  --rdv-revision-focus-ring: rgba(47, 111, 208, 0.35);
+
+  /* Change-type accents: ink color + soft tint background */
+  --rdv-revision-insertion: #1a8f4c;
+  --rdv-revision-insertion-bg: rgba(26, 143, 76, 0.12);
+  --rdv-revision-deletion: #d23b3b;
+  --rdv-revision-deletion-bg: rgba(210, 59, 59, 0.12);
+  --rdv-revision-move: #2f6fd0;
+  --rdv-revision-move-bg: rgba(47, 111, 208, 0.12);
+  --rdv-revision-format: #8b46c9;
+  --rdv-revision-format-bg: rgba(139, 70, 201, 0.12);
 }

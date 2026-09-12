@@ -1,0 +1,20 @@
+.rdv-feature-panel { color: var(--rdv-text-primary, #24303f); background: var(--rdv-bg-primary, #fff); padding: 1rem; line-height: 1.5; min-width: 0; font: 14px/1.5 system-ui, sans-serif; }
+.rdv-feature-panel h2, .rdv-feature-panel h3 { margin: 0 0 1rem; }
+.rdv-feature-panel label { display: grid; gap: .35rem; margin: .6rem 0; }
+.rdv-feature-panel input, .rdv-feature-panel select, .rdv-feature-panel textarea { box-sizing: border-box; max-width: 100%; min-width: 0; border: 1px solid #cbd2db; border-radius: 5px; padding: .5rem; color: inherit; background: var(--rdv-bg-primary, #fff); font: inherit; }
+.rdv-feature-panel textarea { width: 100%; min-height: 90px; resize: vertical; }
+.rdv-feature-panel button { font: inherit; color: #2156a2; background: #f4f7fb; border: 1px solid #c4d2e4; border-radius: 5px; padding: .4rem .7rem; cursor: pointer; }
+.rdv-feature-panel button:hover:enabled { background: #e8eff8; }
+.rdv-feature-panel button:disabled { opacity: .5; cursor: default; }
+.rdv-feature-panel :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.rdv-feature-panel .rdv-checkbox { display: flex; align-items: center; gap: .5rem; }
+.rdv-feature-panel details { border-top: 1px solid #e1e6ed; padding: .75rem 0; margin-top: .75rem; }
+.rdv-feature-panel summary { cursor: pointer; font-weight: 600; }
+.rdv-feature-panel pre { overflow: auto; max-height: 340px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: #f4f6f8; padding: .6rem; }
+.rdv-feature-panel [role="alert"] { color: #a12828; background: #fff0f0; padding: .7rem; border-radius: 5px; }
+.rdv-review-actions { display: flex; gap: .45rem; flex-wrap: wrap; margin: .6rem 0; }
+.rdv-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.rdv-comment-list, .rdv-change-list, .rdv-history-list { list-style: none; padding: 0; }
+.rdv-comment-list > li, .rdv-change-list > li, .rdv-history-list > li { border-bottom: 1px solid #e1e6ed; padding: .75rem 0; }
+.rdv-comment-list .rdv-comment-reply { margin-left: 1.5rem; }
+.rdv-before-after { display: grid; grid-template-columns: 1fr auto 1fr; gap: .5rem; align-items: center; }

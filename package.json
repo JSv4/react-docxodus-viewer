@@ -1,21 +1,44 @@
 {
   "name": "react-docxodus-viewer",
-  "version": "0.7.0",
-  "description": "A React component for viewing DOCX documents in the browser, powered by Docxodus",
+  "version": "0.8.0",
+  "description": "React DOCX viewing, review, comparison, editing sessions, history and export powered by Docxodus 12.4.1",
   "type": "module",
-  "main": "./dist/react-docxodus-viewer.cjs.js",
+  "main": "./dist/react-docxodus-viewer.es.js",
   "module": "./dist/react-docxodus-viewer.es.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/react-docxodus-viewer.es.js",
-      "require": "./dist/react-docxodus-viewer.cjs.js"
+      "import": "./dist/react-docxodus-viewer.es.js"
     },
-    "./styles.css": "./dist/react-docxodus-viewer.css"
+    "./styles.css": "./dist/react-docxodus-viewer.css",
+    "./engine": {
+      "types": "./dist/types/engine.d.ts",
+      "import": "./dist/engine.es.js"
+    },
+    "./worker": {
+      "types": "./dist/types/worker.d.ts",
+      "import": "./dist/worker.es.js"
+    },
+    "./export-browser": {
+      "types": "./dist/types/export-browser.d.ts",
+      "import": "./dist/export-browser.es.js"
+    },
+    "./server": {
+      "types": "./dist/types/server.d.ts",
+      "import": "./dist/server.es.js"
+    },
+    "./assets": {
+      "types": "./scripts/copy-runtime.d.mts",
+      "import": "./scripts/copy-runtime.mjs"
+    }
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts/copy-runtime.mjs",
+    "scripts/copy-runtime.d.mts",
+    "scripts/copy-runtime-cli.mjs",
+    "docs"
   ],
   "sideEffects": [
     "*.css"
@@ -24,13 +47,20 @@
     "dev": "vite",
     "build": "npm run build:lib && npm run build:demo",
     "build:lib": "BUILD_LIB=true vite build && tsc -p tsconfig.lib.json",
-    "build:demo": "tsc -b && vite build",
+    "build:demo": "npm run sync:wasm && tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
-    "prepublishOnly": "npm run build:lib"
+    "prepublishOnly": "npm run build:lib",
+    "sync:wasm": "node scripts/sync-wasm.mjs",
+    "predev": "npm run sync:wasm",
+    "test:browser": "playwright test",
+    "check:api": "node scripts/check-api.mjs",
+    "test:pdf": "node --test tests/node/export.test.mjs",
+    "check": "npm run lint && npm test && npm run build && npm run check:api",
+    "test:package": "npm run build:lib && node scripts/check-package.mjs"
   },
   "repository": {
     "type": "git",
@@ -52,11 +82,14 @@
   "author": "",
   "license": "MIT",
   "peerDependencies": {
-    "docxodus": ">=7.0",
-    "react": ">=18"
+    "docxodus": "12.4.1",
+    "react": ">=18",
+    "@docxodus/export": "12.4.1"
   },
   "devDependencies": {
+    "@docxodus/export": "12.4.1",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.57.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -65,7 +98,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.0.14",
-    "docxodus": "^7.0.1",
+    "docxodus": "12.4.1",
     "eslint": "^10.4.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -77,5 +110,13 @@
     "typescript-eslint": "^8.46.4",
     "vite": "^8.0.16",
     "vitest": "^4.0.14"
+  },
+  "peerDependenciesMeta": {
+    "@docxodus/export": {
+      "optional": true
+    }
+  },
+  "bin": {
+    "rdv-copy-runtime": "./scripts/copy-runtime-cli.mjs"
   }
 }

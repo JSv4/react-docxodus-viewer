@@ -8,9 +8,10 @@
 ## WASM Files
 
 When updating docxodus:
-1. `npm install docxodus@latest`
-2. `rm -rf public/wasm && cp -r node_modules/docxodus/dist/wasm public/wasm`
-3. `npm run build`
+1. Install the explicitly targeted engine version; this integration pins `docxodus@12.4.1` and optional `@docxodus/export@12.4.1`.
+2. Update matching pins and run `npm run sync:wasm`. Never patch the digest-verified runtime files.
+3. Run `npm run check`, `npm run test:browser`, and the eligible-host PDF test.
+4. Keep the complete API audit passing; React UI imports `docxodus/core`, not the upstream editor or `docxodus/react`.
 
 ## Development
 

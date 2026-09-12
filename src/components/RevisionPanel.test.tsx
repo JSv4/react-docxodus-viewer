@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RevisionPanel } from './RevisionPanel'
-import type { Revision } from 'docxodus/react'
+import type { DocxDiffRevision as Revision, RevisionListEntry } from 'docxodus/core'
 
 const mockRevisions: Revision[] = [
   {
@@ -28,6 +28,34 @@ const mockRevisions: Revision[] = [
 ]
 
 describe('RevisionPanel', () => {
+  const native = (updates: Partial<RevisionListEntry> = {}): RevisionListEntry => ({
+    id: 'rev2-native-1', type: 'move', family: 'move', constituentIds: ['1', '2'],
+    constituentKeys: ['moveFrom:1', 'moveTo:2'], author: 'Reviewer', text: 'A moved clause',
+    partUri: '/word/document.xml', scope: 'body', affectedAnchors: [], resolutionStatus: 'supported',
+    ...updates,
+  });
+
+  it('renders a native move once and resolves it by its atomic revision id', async () => {
+    const onAccept = vi.fn();
+    render(<RevisionPanel revisions={[native()]} onAccept={onAccept} />);
+    expect(screen.getByText('Moved')).toBeInTheDocument();
+    expect(screen.queryByText('Moved from')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Accept' }));
+    expect(onAccept).toHaveBeenCalledWith('rev2-native-1');
+  });
+
+  it('retains structural diagnostics and disables unsafe resolution', async () => {
+    const onAccept = vi.fn();
+    render(<RevisionPanel revisions={[native({ type: 'structure', family: 'cell_merge', resolutionStatus: 'ambiguous', diagnostic: { code: 'ambiguous_pair', message: 'The cell merge has conflicting markers.' } })]} onAccept={onAccept} onAcceptAll={vi.fn()} />);
+    await userEvent.setup().selectOptions(screen.getByRole('combobox'), 'structural');
+    expect(screen.getByText('cell merge')).toBeInTheDocument();
+    expect(screen.getByText('The cell merge has conflicting markers.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Accept all' })).toBeDisabled();
+    expect(onAccept).not.toHaveBeenCalled();
+  });
+
   it('renders empty state when no revisions', () => {
     render(<RevisionPanel revisions={[]} />)
     expect(screen.getByText('No tracked changes found in this document.')).toBeInTheDocument()
@@ -131,5 +159,29 @@ describe('RevisionPanel', () => {
 
     expect(screen.getByText('Show less')).toBeInTheDocument()
     expect(screen.getByText(longText)).toBeInTheDocument()
+  })
+
+  it('keeps expansion tied to the revision when the filter changes', async () => {
+    const user = userEvent.setup()
+    const deletedText = 'D'.repeat(200)
+    const insertedText = 'I'.repeat(200)
+    const revisions: Revision[] = [
+      { author: 'A', date: '2024-01-15T10:30:00Z', revisionType: 'Deleted', text: deletedText },
+      { author: 'B', date: '2024-01-16T10:30:00Z', revisionType: 'Inserted', text: insertedText },
+    ]
+
+    render(<RevisionPanel revisions={revisions} />)
+
+    // Expand the inserted revision (second in the unfiltered list).
+    const expandButtons = screen.getAllByText('Show more')
+    await user.click(expandButtons[1])
+    expect(screen.getByText(insertedText)).toBeInTheDocument()
+
+    // Filtering to insertions shifts it to index 0 — expansion must follow the
+    // revision, not the list position (previously it snapped back to collapsed).
+    await user.selectOptions(screen.getByRole('combobox'), 'insertions')
+
+    expect(screen.getByText('Show less')).toBeInTheDocument()
+    expect(screen.getByText(insertedText)).toBeInTheDocument()
   })
 })

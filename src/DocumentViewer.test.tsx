@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DocumentViewer } from './DocumentViewer'
+
+async function renderReady(ui: React.ReactElement) {
+  let result!: ReturnType<typeof render>;
+  await act(async () => { result = render(ui); });
+  return result;
+}
 
 // Mock the worker module so we can drive warmup behavior deterministically.
 // Existing tests pass useWorker={false} and never touch these mocks.
@@ -22,62 +28,62 @@ vi.mock('docxodus/worker', () => ({
 // Use useWorker={false} in tests to avoid async worker initialization
 // which causes act() warnings
 
-describe('DocumentViewer', () => {
-  it('renders without crashing', () => {
-    render(<DocumentViewer useWorker={false} />)
+describe('DocumentViewer', async () => {
+  it('renders without crashing', async () => {
+    await renderReady(<DocumentViewer useWorker={false} />)
     expect(screen.getByLabelText('Open Document')).toBeInTheDocument()
   })
 
-  it('displays custom placeholder text', () => {
-    render(<DocumentViewer useWorker={false} placeholder="Drop a file here" />)
+  it('displays custom placeholder text', async () => {
+    await renderReady(<DocumentViewer useWorker={false} placeholder="Drop a file here" />)
     expect(screen.getByText('Drop a file here')).toBeInTheDocument()
   })
 
-  it('renders toolbar at top by default', () => {
-    const { container } = render(<DocumentViewer useWorker={false} />)
+  it('renders toolbar at top by default', async () => {
+    const { container } = await renderReady(<DocumentViewer useWorker={false} />)
     const viewer = container.querySelector('.rdv-viewer')
     const toolbar = container.querySelector('.rdv-toolbar')
     expect(viewer?.firstChild).toBe(toolbar)
   })
 
-  it('renders toolbar at bottom when specified', () => {
-    const { container } = render(<DocumentViewer useWorker={false} toolbar="bottom" />)
+  it('renders toolbar at bottom when specified', async () => {
+    const { container } = await renderReady(<DocumentViewer useWorker={false} toolbar="bottom" />)
     const viewer = container.querySelector('.rdv-viewer')
     const toolbar = container.querySelector('.rdv-toolbar')
     expect(viewer?.lastChild).toBe(toolbar)
   })
 
-  it('hides toolbar when toolbar="none"', () => {
-    const { container } = render(<DocumentViewer useWorker={false} toolbar="none" />)
+  it('hides toolbar when toolbar="none"', async () => {
+    const { container } = await renderReady(<DocumentViewer useWorker={false} toolbar="none" />)
     const toolbar = container.querySelector('.rdv-toolbar')
     expect(toolbar).not.toBeInTheDocument()
   })
 
-  it('shows settings button by default', () => {
-    render(<DocumentViewer useWorker={false} />)
+  it('shows settings button by default', async () => {
+    await renderReady(<DocumentViewer useWorker={false} />)
     expect(screen.getByTitle('Settings')).toBeInTheDocument()
   })
 
-  it('hides settings button when showSettingsButton={false}', () => {
-    render(<DocumentViewer useWorker={false} showSettingsButton={false} />)
+  it('hides settings button when showSettingsButton={false}', async () => {
+    await renderReady(<DocumentViewer useWorker={false} showSettingsButton={false} />)
     expect(screen.queryByTitle('Settings')).not.toBeInTheDocument()
   })
 
-  it('applies custom className', () => {
-    const { container } = render(<DocumentViewer useWorker={false} className="my-custom-class" />)
+  it('applies custom className', async () => {
+    const { container } = await renderReady(<DocumentViewer useWorker={false} className="my-custom-class" />)
     const viewer = container.querySelector('.rdv-viewer')
     expect(viewer).toHaveClass('my-custom-class')
   })
 
-  it('applies custom style', () => {
-    const { container } = render(<DocumentViewer useWorker={false} style={{ maxWidth: '800px' }} />)
+  it('applies custom style', async () => {
+    const { container } = await renderReady(<DocumentViewer useWorker={false} style={{ maxWidth: '800px' }} />)
     const viewer = container.querySelector('.rdv-viewer')
     expect(viewer).toHaveStyle({ maxWidth: '800px' })
   })
 
   it('opens settings modal when settings button is clicked', async () => {
     const user = userEvent.setup()
-    render(<DocumentViewer useWorker={false} />)
+    await renderReady(<DocumentViewer useWorker={false} />)
 
     await user.click(screen.getByTitle('Settings'))
 
@@ -86,7 +92,7 @@ describe('DocumentViewer', () => {
 
   it('closes settings modal when close button is clicked', async () => {
     const user = userEvent.setup()
-    render(<DocumentViewer useWorker={false} />)
+    await renderReady(<DocumentViewer useWorker={false} />)
 
     await user.click(screen.getByTitle('Settings'))
     expect(screen.getByText('Viewer Settings')).toBeInTheDocument()
@@ -97,22 +103,20 @@ describe('DocumentViewer', () => {
 
   it('calls onError callback when an error occurs', async () => {
     const onError = vi.fn()
-    render(<DocumentViewer useWorker={false} onError={onError} />)
+    await renderReady(<DocumentViewer useWorker={false} onError={onError} />)
     // Error callback would be tested with actual file conversion
     expect(onError).not.toHaveBeenCalled()
   })
 
-  it('accepts file input', () => {
-    const { container } = render(<DocumentViewer useWorker={false} />)
+  it('accepts file input', async () => {
+    const { container } = await renderReady(<DocumentViewer useWorker={false} />)
     const input = container.querySelector('input[type="file"]')
     expect(input).toBeInTheDocument()
     expect(input).toHaveAttribute('accept', '.docx')
   })
 
-  it('accepts fitMode prop without crashing', () => {
-    expect(() => {
-      render(<DocumentViewer useWorker={false} fitMode="page-width" />)
-    }).not.toThrow()
+  it('accepts fitMode prop without crashing', async () => {
+    await renderReady(<DocumentViewer useWorker={false} fitMode="page-width" />)
     expect(screen.getByLabelText('Open Document')).toBeInTheDocument()
   })
 
@@ -121,7 +125,7 @@ describe('DocumentViewer', () => {
     const onShare = vi.fn()
     const user = userEvent.setup()
 
-    render(
+    await renderReady(
       <DocumentViewer
         useWorker={false}
         toolbarActions={[
@@ -141,9 +145,9 @@ describe('DocumentViewer', () => {
     expect(onShare).not.toHaveBeenCalled()
   })
 
-  it('respects disabled state on toolbar actions', () => {
+  it('respects disabled state on toolbar actions', async () => {
     const onClick = vi.fn()
-    render(
+    await renderReady(
       <DocumentViewer
         useWorker={false}
         toolbarActions={[
@@ -154,9 +158,9 @@ describe('DocumentViewer', () => {
     expect(screen.getByLabelText('Disabled')).toBeDisabled()
   })
 
-  it('uses defaultZoom for initial zoom level', () => {
+  it('uses defaultZoom for initial zoom level', async () => {
     const onSettingsChange = vi.fn()
-    render(
+    await renderReady(
       <DocumentViewer useWorker={false} defaultZoom={1.25} onSettingsChange={onSettingsChange} />,
     )
     // defaultZoom doesn't trigger onSettingsChange — it's an initial value.
@@ -167,7 +171,7 @@ describe('DocumentViewer', () => {
 
   it('does not pre-warm in worker mode when warmup is not set', async () => {
     prepareSpy.mockClear()
-    render(<DocumentViewer warmup={false} />)
+    await renderReady(<DocumentViewer warmup={false} />)
     await waitFor(() => expect(screen.getByLabelText('Open Document')).toBeInTheDocument())
     // Give the worker init effect a chance to run, then confirm no warmup.
     await new Promise((r) => setTimeout(r, 0))
@@ -176,19 +180,19 @@ describe('DocumentViewer', () => {
 
   it('pre-warms the comparison path when warmup is set (worker mode)', async () => {
     prepareSpy.mockClear()
-    render(<DocumentViewer warmup />)
+    await renderReady(<DocumentViewer warmup />)
     await waitFor(() => expect(prepareSpy).toHaveBeenCalledOnce())
   })
 
-  it('warmup is a no-op in non-worker mode', () => {
+  it('warmup is a no-op in non-worker mode', async () => {
     prepareSpy.mockClear()
-    expect(() => render(<DocumentViewer useWorker={false} warmup />)).not.toThrow()
+    await renderReady(<DocumentViewer useWorker={false} warmup />)
     expect(prepareSpy).not.toHaveBeenCalled()
   })
 
-  it('defaultSettings.paginationScale wins over defaultZoom when both are set', () => {
+  it('defaultSettings.paginationScale wins over defaultZoom when both are set', async () => {
     const onSettingsChange = vi.fn()
-    render(
+    await renderReady(
       <DocumentViewer
         useWorker={false}
         defaultZoom={0.5}
