@@ -36,6 +36,7 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
   useEffect(() => { optionsRef.current = options; });
   const selection = picked?.owner === state.session ? picked?.selection ?? null : null;
   const selectionRef = useRef(selection);
+  const selectionOwner = useRef<DocxSession | null>(null);
   useEffect(() => { selectionRef.current = selection; });
   const fail = useCallback((cause: unknown) => {
     const failure = cause instanceof Error ? cause : new Error(String(cause));
@@ -51,6 +52,7 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       if (span && (span.start < 0 || span.length < 0 || span.start + span.length > text.length)) throw new Error('Select text inside this paragraph.');
       const next = { anchorId: info.id, span, text, version: snapshot.version };
       selectionRef.current = next;
+      selectionOwner.current = snapshot.session;
       setPicked({ owner: snapshot.session, selection: next }); setError(null); setNotice(''); return true;
     } catch (cause) { return fail(cause); }
   }, [controller, fail]);
@@ -95,7 +97,10 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       const target = selectionRef.current;
       if (needsSelection) {
         if (!target) throw new Error('Select a paragraph or some text first.');
-        if (target.version !== snapshot.version) throw new Error('The document changed. Select the text again before editing it.');
+        if (selectionOwner.current !== snapshot.session || (target.version !== snapshot.version &&
+          controller.read(session => editableText(session.getFormatting(target.anchorId))) !== target.text)) {
+          throw new Error('The document changed. Select the text again before editing it.');
+        }
       }
       const result = controller.run(session => operation(session, target));
       assertResult(result);
@@ -136,7 +141,13 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
     selectAnchor: (anchorId: string) => select(anchorId), select, selectText, formatValue,
     viewerProps: { session: controller, selectedAnchorId: selection?.anchorId, onAnchorSelect: (id: string) => select(id), onTextSelectionChange: selectText, allowRevisionResolution: !options.readOnly },
     format, paragraph,
-    toggleFormat: (key: 'bold' | 'italic' | 'underline' | 'strike') => format({ [key]: formatValue(key) !== true }),
+    toggleFormat: (key: 'bold' | 'italic' | 'underline' | 'strike') => run((session, target) => {
+      // beforeAction can commit a draft and change the selected range synchronously.
+      const span = target!.span?.length ? target!.span : null;
+      const runs = session.getFormatting(target!.anchorId)?.runs.filter(run => !span ||
+        (run.span.start < span.start + span.length && run.span.start + run.span.length > span.start)) ?? [];
+      return session.applyFormat(target!.anchorId, span, { [key]: !runs.length || !runs.every(run => run.effective[key]) });
+    }),
     setStyle: (styleId: string) => run((session, target) => session.setParagraphStyle(target!.anchorId, styleId)),
     setList: (kind: 'bullet' | 'decimal' | 'none') => run((session, target) => session.applyListFormat(target!.anchorId, kind)),
     indent: (direction: -1 | 1) => details.data?.list ? run((session, target) => session.setListLevel(target!.anchorId, direction)) : paragraph({ indentDelta: direction * 720 }),

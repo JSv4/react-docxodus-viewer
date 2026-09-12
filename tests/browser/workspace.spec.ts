@@ -42,6 +42,7 @@ test('React workspace edits, paginates, comments, saves and restores a checkpoin
 });
 
 test('standalone HTML export produces an offline artifact and report', async ({ page }) => {
+  test.skip(!!process.env.RDV_TEST_PREVIEW, 'The direct engine harness is only available in development; the demo export flow is tested above.');
   await page.goto('/api-test.html');
   await page.waitForFunction(() => !!window.rdv);
   const result = await page.evaluate(async () => {

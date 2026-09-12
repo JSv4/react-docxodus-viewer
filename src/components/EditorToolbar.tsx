@@ -58,7 +58,7 @@ export function EditorToolbar({ editor, groups = allGroups, beforeAction, onEdit
         {button('Subscript', <span>x<sub>2</sub></span>, () => editor.format({ vertAlign: value('vertAlign') === 'subscript' ? '' : 'subscript' }), value('vertAlign') === 'subscript')}
         <label className="rdv-color-tool" title="Text color"><span>A</span><input aria-label="Text color" type="color" disabled={disabled} value={typeof color === 'string' && /^[0-9a-f]{6}$/i.test(color) ? `#${color}` : '#35432c'} onChange={event => act(() => editor.format({ color: event.target.value.slice(1) }))} /></label>
         <select className="rdv-highlight-select" aria-label="Text highlight" title="Text highlight" disabled={disabled} value={value('highlight') ?? 'none'} onChange={event => act(() => editor.format({ highlight: event.target.value }))}><option value="none">Highlight</option>{value('highlight') === 'mixed' && <option value="mixed" disabled>Mixed</option>}{['yellow', 'green', 'cyan', 'magenta', 'blue', 'red', 'darkBlue', 'darkCyan', 'darkGreen', 'darkMagenta', 'darkRed', 'darkYellow', 'darkGray', 'lightGray', 'black', 'white'].map(color => <option value={color} key={color}>{color}</option>)}</select>
-        {button('Clear character formatting', <Icon name="clearFormat" size={17} />, () => editor.format({ bold: false, italic: false, underline: false, strike: false, color: 'auto', fontFamily: '', fontSizePts: 0, highlight: 'none', vertAlign: '', runStyle: '', caps: false, smallCaps: false }))}
+        {button('Clear character formatting', <Icon name="clearFormat" size={17} />, () => editor.format({ bold: false, italic: false, underline: false, strike: false, code: false, color: 'auto', fontFamily: '', fontSizePts: 0, highlight: 'none', vertAlign: '', runStyle: '', caps: false, smallCaps: false }))}
       </div>
     </>}
     {has('paragraph') && <div className="rdv-format-group" role="group" aria-label="Paragraph formatting">
@@ -73,7 +73,7 @@ export function EditorToolbar({ editor, groups = allGroups, beforeAction, onEdit
       <button type="button" aria-label="Insert link" title="Insert link" disabled={disabled || !editor.selection?.span?.length} onClick={() => setDialog('link')}><Icon name="link" size={17} /></button>
       <button type="button" aria-label="Insert table" title="Insert table" disabled={disabled} onClick={() => setDialog('table')}><Icon name="table" size={17} /></button>
       <button type="button" aria-label="Insert image" title="Insert image" disabled={disabled} onClick={() => { if (!beforeAction || beforeAction()) imageInput.current?.click(); }}><Icon name="image" size={17} /></button>
-      <input ref={imageInput} aria-label="Choose image" className="rdv-editor-file-input" type="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/tiff,image/svg+xml" onChange={event => { const file = event.target.files?.[0]; if (file) void editor.insertImage(file); event.target.value = ''; }} />
+      <input ref={imageInput} aria-label="Choose image" className="rdv-editor-file-input" type="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/tiff" onChange={event => { const file = event.target.files?.[0]; if (file) void editor.insertImage(file); event.target.value = ''; }} />
       {button('Insert paragraph after', <Icon name="plus" size={16} />, editor.insertParagraph)}
       {button('Page break before', <Icon name="pageBreak" size={17} />, () => editor.paragraph({ pageBreakBefore: !pformat?.pageBreakBefore }), !!pformat?.pageBreakBefore)}
     </div>}

@@ -6,6 +6,9 @@ The public declaration files are the authoritative parameter and return types.
 The integration preserves native method signatures, overloaded methods, structured
 results and unsupported-operation diagnostics.
 
+For standalone `DocumentViewer` and `DocumentEditor` blocks, formatting toolbars,
+paragraph authoring, and custom layouts, see [embedding modules](embedding.md).
+
 ## Runtime and operation hooks
 
 `DocxodusProvider` shares the conversion worker across descendants. Set

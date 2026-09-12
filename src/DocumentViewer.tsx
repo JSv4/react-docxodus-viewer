@@ -363,15 +363,14 @@ export function DocumentViewer({
   }, [settings, controlledSettings, onSettingsChange]);
 
   // Zoom controls
-  const handleZoomIn = () => updateSettings({
-    paginationScale: Math.min(settings.paginationScale + 0.1, 2.0)
-  });
-  const handleZoomOut = () => updateSettings({
-    paginationScale: Math.max(settings.paginationScale - 0.1, 0.3)
-  });
-  const handleZoomChange = (value: number) => updateSettings({
-    paginationScale: Math.max(0.3, Math.min(2.0, value))
-  });
+  const manualZoom = useRef(false);
+  useEffect(() => { manualZoom.current = false; }, [fitMode]);
+  const handleZoomChange = (value: number) => {
+    manualZoom.current = true;
+    updateSettings({ paginationScale: Math.max(0.3, Math.min(2.0, value)) });
+  };
+  const handleZoomIn = () => handleZoomChange(settings.paginationScale + 0.1);
+  const handleZoomOut = () => handleZoomChange(settings.paginationScale - 0.1);
 
   // Auto-fit: when fitMode is not 'manual', pick a scale that fits the page
   // into the viewer on initial render and whenever the viewer resizes.
@@ -391,6 +390,9 @@ export function DocumentViewer({
     const pageHeightPt = section?.pageHeightPt ?? 792;
 
     const applyFit = () => {
+      // An explicit zoom remains in effect through edits and layout changes.
+      // A new host fitMode re-enables automatic fitting.
+      if (manualZoom.current) return;
       // Hidden tabs have no measurable layout; preserve their current zoom.
       if (!container.clientWidth || !container.clientHeight) return;
       const scale = computeFitScale(

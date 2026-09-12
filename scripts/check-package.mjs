@@ -35,7 +35,12 @@ assert.equal(viewer.openDocxSession, engine.openDocxSession);
 assert.equal(viewing.DocumentViewer, viewer.DocumentViewer);
 assert.equal(editing.SessionEditorPanel, viewer.SessionEditorPanel);
 assert.equal(editing.useDocxSession, viewer.useDocxSession);
+assert.equal(editing.DocumentEditor, viewer.DocumentEditor);
+assert.equal(editing.EditorToolbar, viewer.EditorToolbar);
+assert.equal(editing.ParagraphEditor, viewer.ParagraphEditor);
+assert.equal(editing.useDocumentEditor, viewer.useDocumentEditor);
 assert(!('SessionEditorPanel' in viewing));
+assert(!('DocumentEditor' in viewing));
 assert.equal(typeof worker.createWorkerDocxodus, 'function');
 assert.equal(typeof browser.convertDocxToPaginatedHtml, 'function');
 assert.equal(typeof server.convertDocxToPdf, 'function');
@@ -47,16 +52,24 @@ process.stdout.write(run(process.execPath, [join(temp, 'consumer.mjs')], temp));
 await writeFile(join(temp, 'consumer.tsx'), `
 import { DocumentViewer, useDocxSession, useSessionCommands, useDocumentHistory, useDocxodusOperation, type DocxSession } from 'react-docxodus-viewer';
 import { DocumentViewer as EmbeddedViewer } from 'react-docxodus-viewer/viewer';
-import { SessionEditorPanel } from 'react-docxodus-viewer/editor';
+import { useRef } from 'react';
+import { DocumentEditor, EditorToolbar, ParagraphEditor, useDocumentEditor, SessionEditorPanel, type DocumentEditorHandle } from 'react-docxodus-viewer/editor';
 import { copyDocxodusRuntime } from 'react-docxodus-viewer/assets';
 import { convertDocxToPdf } from 'react-docxodus-viewer/server';
 export function Consumer() {
   const document = useDocxSession();
+  const editor = useDocumentEditor(document.controller);
+  const ref = useRef<DocumentEditorHandle>(null);
   const commands: Pick<DocxSession, 'executeBatch' | 'fillContentControlPicture' | 'getDiff'> = useSessionCommands(document.controller, ['executeBatch', 'fillContentControlPicture', 'getDiff']);
   const comparison = useDocxodusOperation('docxDiffCompareProducts');
   const history = useDocumentHistory({ documentId: 'consumer', indexedDbName: 'consumer' });
   void commands; void comparison; void history; void copyDocxodusRuntime; void convertDocxToPdf;
-  return <><DocumentViewer session={document.controller} /><EmbeddedViewer session={document.controller} /><SessionEditorPanel session={document.controller} /></>;
+  return <><DocumentViewer session={document.controller} /><EmbeddedViewer {...editor.viewerProps} theme="studio" />
+    <DocumentEditor ref={ref} session={document.controller} toolbarGroups={['font', 'paragraph']} onChange={({ version, getDocument }) => { void version; void getDocument; }}
+      onSave={async (bytes, name) => { void bytes; void name; }} />
+    <DocumentEditor document={new Uint8Array()} readOnly showHeader={false} />
+    <EditorToolbar editor={editor} beforeAction={() => ref.current?.commit() ?? true} /><ParagraphEditor editor={editor} />
+    <SessionEditorPanel session={document.controller} /></>;
 }
 `);
 run(process.execPath, [resolve(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--jsx', 'react-jsx', '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'bundler', '--types', 'react,node', 'consumer.tsx'], temp);

@@ -42,6 +42,11 @@
 .rdv-editor .rdv-toolbar-right { flex: 1; justify-content: center; gap: 4px; }
 .rdv-editor .rdv-toolbar-right > button:first-child { margin-left: auto; }
 .rdv-editor .rdv-toolbar-settings { margin-left: auto; }
+.rdv-editor .rdv-page-input-group { flex-shrink: 0; gap: 3px; padding: 0 5px; }
+.rdv-editor .rdv-page-input { width: 32px; font-size: 11px; }
+.rdv-editor .rdv-page-total { white-space: nowrap; font-size: 11px; }
+.rdv-viewer--studio .rdv-view-tabs { background: #e8edde; }
+.rdv-viewer--studio .rdv-view-tab--active { background: #fff; box-shadow: 0 1px 3px #3d4a2812; }
 .rdv-editor .rdv-pages { scrollbar-width: thin; scrollbar-color: #c1ccb5 transparent; }
 .rdv-editor-status { display: flex; justify-content: space-between; gap: 14px; padding: 7px 15px; background: #f7f9f2; border-top: 1px solid var(--rdv-editor-border); color: var(--rdv-editor-muted); font-size: 9px; flex-shrink: 0; }
 .rdv-editor-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; padding: 9px 15px; background: #fff0e8; color: #995d40; }

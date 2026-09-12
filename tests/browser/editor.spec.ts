@@ -23,7 +23,7 @@ async function openEditor(page: Page, text = 'alpha alpha omega.') {
       onError: error => window.editorTest.errors.push(error.message) }]);
   }, text);
   await expect(page.getByRole('textbox', { name: 'Paragraph text', exact: true })).toHaveValue(text);
-  await expect(page.locator('#pagination-container').getByText(text, { exact: true })).toBeVisible();
+  if (text.length < 1000) await expect(page.locator('#pagination-container').getByText(text, { exact: true })).toBeVisible();
 }
 
 async function selectPageText(page: Page, text: string, start: number, length: number) {
@@ -74,6 +74,7 @@ test('editor formats the exact repeated text, preserves runs during typing, and 
   expect(appended.some(run => run.effective.bold && run.text.includes('bravo'))).toBe(true);
   expect(appended.filter(run => run.effective.bold).map(run => run.text).join('')).toBe('bravo');
 
+  await page.getByRole('combobox', { name: 'Zoom level', exact: true }).selectOption('0.75');
   await page.getByRole('combobox', { name: 'Font family', exact: true }).selectOption('Georgia');
   await page.getByRole('combobox', { name: 'Font size', exact: true }).selectOption('14');
   await page.getByRole('button', { name: 'Align center', exact: true }).click();
@@ -108,6 +109,7 @@ test('editor formats the exact repeated text, preserves runs during typing, and 
   await text.fill('A new paragraph.');
   await page.getByRole('button', { name: 'Apply text', exact: true }).click();
   await expect(page.locator('#pagination-container').getByText('A new paragraph.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Zoom level', exact: true })).toHaveValue('0.75');
 });
 
 test('editor inserts links, tables and images through native commands and protects read-only sessions', async ({ page }) => {
@@ -124,6 +126,12 @@ test('editor inserts links, tables and images through native commands and protec
   await table.getByRole('spinbutton', { name: 'Columns' }).fill('3');
   await table.getByRole('button', { name: 'Insert', exact: true }).click();
   await expect(page.locator('#pagination-container table td')).toHaveCount(6);
+  await page.locator('#pagination-container table td').first().locator('p').click();
+  await expect(page.getByRole('textbox', { name: 'Paragraph text', exact: true })).toHaveValue('');
+  await page.getByRole('textbox', { name: 'Paragraph text', exact: true }).fill('Cell one');
+  await page.getByRole('button', { name: 'Apply text', exact: true }).click();
+  await expect(page.locator('#pagination-container table td').first()).toContainText('Cell one');
+  await page.locator('#pagination-container').getByText('alpha alpha omega.', { exact: true }).click();
   await page.getByLabel('Choose image', { exact: true }).setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64') });
   await expect(page.locator('#pagination-container img')).toHaveCount(1);
   await page.getByRole('button', { name: 'Track changes', exact: true }).click();
@@ -161,4 +169,54 @@ test('separate owned editor blocks keep document state independent and dispose o
   await page.evaluate(() => window.mountEditors([]));
   await expect(editors).toHaveCount(0);
   expect(await page.evaluate(() => window.editorTest.controllers.every(controller => !controller.getSnapshot().session))).toBe(true);
+});
+
+test('page selection maps repeated text across fragments to exact native offsets', async ({ page }) => {
+  await openEditor(page, 'A long repeated phrase with alpha and omega. '.repeat(180));
+  const fragments = page.locator('#pagination-container p[data-source-anchor-id]');
+  await expect.poll(() => fragments.count()).toBeGreaterThan(1);
+  const start = await fragments.first().evaluate(element => {
+    const next = element.getRootNode() as ShadowRoot & { getSelection: () => Selection };
+    const pieces = Array.from(next.querySelectorAll('#pagination-container p[data-source-anchor-id]'));
+    const point = (block: Element, offset: number): [Node, number] => {
+      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text;
+        if (offset <= node.length) return [node, offset];
+        offset -= node.length;
+      }
+      throw new Error('No selection point');
+    };
+    const start = pieces[0].textContent!.length - 6;
+    const range = document.createRange(); range.setStart(...point(pieces[0], start)); range.setEnd(...point(pieces[1], 6));
+    const selection = next.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    pieces[0].dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    return start;
+  });
+  await expect(page.locator('.rdv-editor-status')).toContainText('12 characters selected');
+  await page.getByRole('button', { name: 'Bold', exact: true }).click();
+  const bold = await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs.filter(run => run.effective.bold)));
+  expect(bold.reduce((count, run) => count + run.span.length, 0)).toBe(12);
+  expect(bold[0].span.start).toBe(start);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('pending drafts survive external changes and save only after a safe commit', async ({ page }) => {
+  await openEditor(page, 'The starting paragraph.');
+  const text = page.getByRole('textbox', { name: 'Paragraph text', exact: true });
+  await text.fill('The starting paragraph. My local draft.');
+  // A formatting-only external edit keeps character offsets valid.
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => s.applyFormat(window.editorTest.anchor, null, { italic: true })));
+  await page.getByRole('button', { name: 'Save document', exact: true }).click();
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getAnchorInfo(window.editorTest.anchor)!.visibleText))).toBe('The starting paragraph. My local draft.');
+  await text.fill('Keep this unsaved draft.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => s.replaceText(window.editorTest.anchor, 'An external text change.')));
+  await expect(text).toHaveValue('Keep this unsaved draft.');
+  await expect(page.getByRole('region', { name: 'Paragraph text editor' })).toContainText('The paragraph changed elsewhere');
+  await expect(page.getByRole('button', { name: 'Apply text', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Save document', exact: true }).click();
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getAnchorInfo(window.editorTest.anchor)!.visibleText))).toBe('An external text change.');
+  await page.getByRole('button', { name: 'Reload text', exact: true }).click();
+  await expect(text).toHaveValue('An external text change.');
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });

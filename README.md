@@ -31,6 +31,25 @@ export default function App() {
 }
 ```
 
+## Embeddable editor
+
+Keep the studio demo, or embed only the viewer/editor in your own product.
+
+```tsx
+import { DocumentEditor } from 'react-docxodus-viewer/editor';
+import 'react-docxodus-viewer/styles.css';
+
+<DocumentEditor document={docxBytes} filename="Proposal.docx"
+  wasmBasePath="/docxodus/wasm/" style={{ height: 760 }} />;
+```
+
+The editor includes native formatting, paragraph text authoring, lists, links,
+tables, images, tracked edits, undo/redo, and DOCX saving. Compose `EditorToolbar`,
+`ParagraphEditor`, and `useDocumentEditor` with your own layout, or use
+`react-docxodus-viewer/viewer` for a standalone viewer. See [embedding modules](docs/embedding.md)
+for saving callbacks, shared sessions, read-only mode, and the text-editing workflow.
+The demo's `?example=modules` route shows each composition.
+
 ## Live document sessions
 
 A session retains all 140 native synchronous methods, including atomic batches,
@@ -66,6 +85,7 @@ export default function App() {
 | Area | React surface |
 | --- | --- |
 | Paginated viewing, zoom, fit, placeholders, canonical anchors, PageMaps and citations | `DocumentViewer`, `PaginatedDocument` |
+| Embeddable editor, common Word formatting controls and paragraph text authoring | `DocumentEditor`, `EditorToolbar`, `ParagraphEditor`, `useDocumentEditor` |
 | Complete programmatic editing, search, templates, structures, tables, lists, styles, page setup, fields, notes, images, content controls, bookmarks and links | `useDocxSession`, `useSessionCommands`, `useSessionQuery`, `SessionEditorPanel` |
 | Native tracked revisions, grouped moves, structural revisions and selective/bulk accept/reject | `RevisionPanel`, live `DocumentViewer` |
 | Comments, replies, resolution and native annotations | `CommentsPanel`, `AnnotationsPanel`, `useDocumentComments`, `useSessionAnnotations` |
@@ -100,6 +120,8 @@ option remains available for applications that supply their own controls. See
 | `onFileChange`, `onConversionStart`, `onConversionComplete`, `onError` | — | Document lifecycle callbacks |
 | `onPageChange`, `onRevisionsExtracted`, `onRevisionSelect`, `onSettingsChange` | — | Review and control callbacks |
 | `wasmBasePath`, `useWorker`, `warmup` | auto, true, false | Runtime location, conversion worker and optional warmup |
+| `theme` | `classic` | `classic` or the light `studio` palette for viewer controls |
+| `onTextSelectionChange` | — | Single-paragraph UTF-16 selection, including page fragments |
 | `className`, `style`, `placeholder` | — | Container customization |
 
 Use `onFileChange={setFile}` to control the input. Omit `html` when the viewer
@@ -130,7 +152,7 @@ continue to style the viewer controls and panels.
 
 - `react-docxodus-viewer`: React UI/hooks, all core engine exports and worker APIs.
 - `/viewer`: standalone viewer, paginator, and optional runtime provider.
-- `/editor`: session ownership and composable editing controls.
+- `/editor`: complete editor block, formatting/text controls, and session hooks.
 - `/engine`: the complete `docxodus/core` API, without React UI.
 - `/worker`: the complete worker proxy API.
 - `/export-browser`: complete upstream browser export contracts/helpers. Keep the
@@ -138,7 +160,7 @@ continue to style the viewer controls and panels.
 - `/server`: complete `@docxodus/export` Node/PDF API. Install the optional companion
   with `npm install @docxodus/export@12.4.1`.
 - `/assets`: Node build helper `copyDocxodusRuntime(directory)`.
-- `/styles.css`: viewer and feature-panel styles.
+- `/styles.css`: viewer, editor, and feature-panel styles.
 
 ESM is the supported module format. CommonJS hosts can use asynchronous `import()`.
 The Node export companion is not imported by browser entry points.
@@ -176,7 +198,8 @@ npm run test:pdf         # Node boundary + PDF when the host supports its sandbo
 
 Set `DOCXODUS_REQUIRE_PDF=1` to make an unavailable PDF environment fail that test.
 Set `RDV_TEST_PORT` to run browser checks on a different local port. Use
-`RDV_TEST_PREVIEW=1` after building to exercise the production demo.
+`RDV_TEST_PREVIEW=1` after building to exercise the production demo. This runs the
+studio and module examples; source-only API harness tests remain development checks.
 The API audit compares every published export against the installed 12.4.1
 TypeScript declarations and checks identity of the built runtime exports.
 
