@@ -8,45 +8,22 @@ afterEach(() => {
 })
 
 // Mock docxodus since it requires WASM
-vi.mock('docxodus', () => ({
-  CommentRenderMode: {
-    Disabled: 0,
-    EndnoteStyle: 1,
-    Inline: 2,
-    Margin: 3,
-  },
-  PaginationMode: {
-    Paginated: 1,
-  },
-  AnnotationLabelMode: {
-    Above: 0,
-    Inline: 1,
-    Tooltip: 2,
-    None: 3,
-  },
-  RevisionType: {
-    Inserted: 'Inserted',
-    Deleted: 'Deleted',
-    Moved: 'Moved',
-    FormatChanged: 'FormatChanged',
-  },
-  isInsertion: (rev: { revisionType: string }) => rev.revisionType === 'Inserted',
-  isDeletion: (rev: { revisionType: string }) => rev.revisionType === 'Deleted',
-  isMove: (rev: { revisionType: string }) => rev.revisionType === 'Moved',
-  isFormatChange: (rev: { revisionType: string }) => rev.revisionType === 'FormatChanged',
-  getDocumentMetadata: vi.fn().mockResolvedValue({
-    sections: [{ pageWidthPt: 612, pageHeightPt: 792 }],
-    totalParagraphs: 10,
-    totalTables: 2,
-    hasFootnotes: false,
-    hasEndnotes: false,
-    hasTrackedChanges: false,
-    hasComments: false,
-    estimatedPageCount: 3,
-  }),
-}))
+vi.mock('docxodus/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('docxodus/core')>();
+  return {
+    ...actual,
+    initialize: vi.fn().mockResolvedValue(undefined),
+    convertDocxToHtml: vi.fn().mockResolvedValue('<div>Mock HTML</div>'),
+    getRevisions: vi.fn().mockResolvedValue([]),
+    getDocumentMetadata: vi.fn().mockResolvedValue({
+      sections: [{ pageWidthPt: 612, pageHeightPt: 792 }],
+      totalParagraphs: 10, totalTables: 2, hasFootnotes: false, hasEndnotes: false,
+      hasTrackedChanges: false, hasComments: false, estimatedPageCount: 3,
+    }),
+  };
+});
 
-vi.mock('docxodus/react', () => ({
+vi.mock('../components/PaginatedDocument', () => ({
   useDocxodus: () => ({
     isReady: true,
     isLoading: false,

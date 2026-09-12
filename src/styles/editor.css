@@ -1,0 +1,72 @@
+.rdv-editor { --rdv-editor-ink: #35432f; --rdv-editor-muted: #7b896f; --rdv-editor-border: #e0e6d7; --rdv-editor-accent: #37513a; --rdv-editor-canvas: #eaece5; --rdv-editor-surface: #fff; color-scheme: light; font: 12px/1.5 system-ui, sans-serif; color: var(--rdv-editor-ink); background: var(--rdv-editor-surface); border: 1px solid var(--rdv-editor-border); border-radius: 10px; display: flex; flex-direction: column; min-width: 0; height: 720px; overflow: hidden; box-shadow: 0 6px 28px #3d4a2810; }
+.rdv-editor *, .rdv-format-toolbar *, .rdv-paragraph-editor * { box-sizing: border-box; }
+.rdv-viewer.rdv-viewer--studio { color-scheme: light; --rdv-background: #eaece5; --rdv-toolbar-bg: #f5f7ef; --rdv-toolbar-border: #dfe5d5; --rdv-btn-bg: transparent; --rdv-btn-bg-hover: #e6ecdd; --rdv-btn-color: #5d7250; --rdv-input-bg: #e9eedf; --rdv-input-color: #405631; --rdv-input-muted: #7b906c; --rdv-separator-color: #dce5d2; --rdv-shadow: 0 6px 28px #3d4a2810; --rdv-border-radius: 10px; font: 12px/1.5 system-ui, sans-serif; border: 1px solid #e0e6d7; }
+.rdv-editor button, .rdv-format-toolbar button, .rdv-paragraph-editor button { font: inherit; cursor: pointer; }
+.rdv-editor button:disabled, .rdv-format-toolbar button:disabled, .rdv-format-toolbar select:disabled, .rdv-format-toolbar input:disabled, .rdv-paragraph-editor button:disabled { opacity: .4; cursor: default; }
+.rdv-editor :focus-visible, .rdv-format-toolbar :focus-visible, .rdv-paragraph-editor :focus-visible { outline: 2px solid #73945f; outline-offset: 2px; }
+.rdv-editor-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 17px; border-bottom: 1px solid var(--rdv-editor-border); flex-shrink: 0; }
+.rdv-editor-header > div { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rdv-editor-header strong { font-size: 12px; font-weight: 550; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.rdv-editor-header span { border: 1px solid var(--rdv-editor-border); border-radius: 4px; padding: 2px 6px; color: var(--rdv-editor-muted); font-size: 9px; white-space: nowrap; }
+.rdv-editor-primary { display: inline-flex; justify-content: center; align-items: center; gap: 7px; background: var(--rdv-editor-accent, #37513a); color: #fff; border: 1px solid transparent; border-radius: 5px; padding: 7px 11px; font: 500 11px/1.5 system-ui, sans-serif; white-space: nowrap; }
+.rdv-editor-primary:hover:enabled { background: #29412d; color: #fff; }
+.rdv-format-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 0; padding: 8px 10px; background: var(--rdv-editor-surface, #fdfefa); border-bottom: 1px solid var(--rdv-editor-border, #e0e6d7); color: var(--rdv-editor-ink, #35432f); flex-shrink: 0; font: 12px/1.5 system-ui, sans-serif; color-scheme: light; }
+.rdv-format-group { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; border-right: 1px solid var(--rdv-editor-border, #e0e6d7); padding: 0 7px; min-height: 33px; }
+.rdv-format-group:last-of-type { border-right: 0; }
+.rdv-format-group > span { display: contents; }
+.rdv-format-toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 29px; height: 29px; padding: 4px 6px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--rdv-editor-ink, #536947); font: 12px/1.2 system-ui, sans-serif; }
+.rdv-format-toolbar button:hover:enabled { background: #eef2e6; }
+.rdv-format-toolbar button[aria-pressed="true"] { background: #e4ecd8; color: #34532a; border-color: #d4e0c6; }
+.rdv-format-toolbar button[aria-pressed="mixed"] { background: repeating-linear-gradient(135deg, #edf1e6, #edf1e6 3px, #fff 3px, #fff 6px); border-color: #d4ddc8; }
+.rdv-format-toolbar select { height: 29px; max-width: 160px; min-width: 0; border: 1px solid #dfe6d6; border-radius: 4px; padding: 3px 6px; background: #fff; color: #5b6e4a; font: 11px/1.5 system-ui, sans-serif; }
+.rdv-format-toolbar .rdv-style-select { width: 138px; }
+.rdv-format-toolbar .rdv-font-select { width: 128px; }
+.rdv-format-toolbar .rdv-size-select { width: 57px; }
+.rdv-format-toolbar .rdv-highlight-select { width: 88px; }
+.rdv-format-toolbar .rdv-tool-text { font-size: 10px; padding: 4px 7px; }
+.rdv-tool-caption { font-size: 10px; }
+.rdv-glyph-bold { font-weight: 750; }
+.rdv-glyph-italic { font: italic 17px Georgia, serif; }
+.rdv-glyph-underline { text-decoration: underline; text-underline-offset: 3px; }
+.rdv-glyph-strike { text-decoration: line-through; }
+.rdv-color-tool { display: grid; place-items: center; position: relative; width: 29px; height: 29px; cursor: pointer; }
+.rdv-color-tool > span { font: 14px Georgia, serif; }
+.rdv-color-tool input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; opacity: .01; }
+.rdv-color-tool::after { content: ''; position: absolute; height: 3px; width: 15px; background: #577440; bottom: 1px; pointer-events: none; }
+.rdv-editor-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.rdv-editor-canvas { flex: 1; min-width: 0; min-height: 160px; display: flex; }
+.rdv-editor .rdv-viewer { --rdv-background: var(--rdv-editor-canvas); --rdv-toolbar-bg: #f4f5ef; --rdv-toolbar-border: #e0e4d8; --rdv-btn-bg: transparent; --rdv-btn-bg-hover: #e4e9dc; --rdv-btn-color: #64735b; --rdv-input-bg: #e9eedf; --rdv-input-color: #4c6040; --rdv-input-muted: #809371; --rdv-separator-color: #dbe2d1; --rdv-min-height: 0px; --rdv-max-height: none; --rdv-shadow: none; --rdv-border-radius: 0px; height: 100%; width: 100%; }
+.rdv-editor .rdv-toolbar { padding: 5px 14px; min-height: 40px; }
+.rdv-editor .rdv-toolbar-filename { display: none; }
+.rdv-editor .rdv-toolbar-left { display: none; }
+.rdv-editor .rdv-toolbar-right { flex: 1; justify-content: center; gap: 4px; }
+.rdv-editor .rdv-toolbar-right > button:first-child { margin-left: auto; }
+.rdv-editor .rdv-toolbar-settings { margin-left: auto; }
+.rdv-editor .rdv-page-input-group { flex-shrink: 0; gap: 3px; padding: 0 5px; }
+.rdv-editor .rdv-page-input { width: 32px; font-size: 11px; }
+.rdv-editor .rdv-page-total { white-space: nowrap; font-size: 11px; }
+.rdv-viewer--studio .rdv-view-tabs { background: #e8edde; }
+.rdv-viewer--studio .rdv-view-tab--active { background: #fff; box-shadow: 0 1px 3px #3d4a2812; }
+.rdv-editor .rdv-pages { scrollbar-width: thin; scrollbar-color: #c1ccb5 transparent; }
+.rdv-editor-status { display: flex; justify-content: space-between; gap: 14px; padding: 7px 15px; background: #f7f9f2; border-top: 1px solid var(--rdv-editor-border); color: var(--rdv-editor-muted); font-size: 9px; flex-shrink: 0; }
+.rdv-editor-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; padding: 9px 15px; background: #fff0e8; color: #995d40; }
+.rdv-editor-error button { display: grid; place-items: center; padding: 4px; background: transparent; border: 0; color: inherit; }
+.rdv-paragraph-editor { padding: 12px 16px; border-top: 1px solid var(--rdv-editor-border, #e0e6d7); color: var(--rdv-editor-ink, #35432f); background: var(--rdv-editor-surface, #fff); font: 12px/1.5 system-ui, sans-serif; flex-shrink: 0; }
+.rdv-paragraph-editor header, .rdv-paragraph-editor footer { display: flex; align-items: center; gap: 10px; }
+.rdv-paragraph-editor header { justify-content: space-between; margin-bottom: 9px; }
+.rdv-paragraph-editor strong { font-size: 11px; font-weight: 550; margin-right: 12px; }
+.rdv-paragraph-editor header span, .rdv-paragraph-editor footer span { font-size: 10px; color: #80956e; }
+.rdv-paragraph-editor button { padding: 5px 8px; border: 1px solid #dfe7d5; border-radius: 4px; background: #f5f8ef; color: #5f7b49; font-size: 10px; }
+.rdv-paragraph-editor .rdv-editor-primary { background: var(--rdv-editor-accent, #37513a); color: white; }
+.rdv-paragraph-editor textarea { width: 100%; height: 86px; min-height: 65px; max-height: 200px; resize: vertical; border: 1px solid #dce6d1; border-radius: 5px; padding: 10px 12px; background: #fdfefa; color: #405832; font: 12px/1.7 system-ui, sans-serif; }
+.rdv-paragraph-editor footer { margin-top: 8px; }
+.rdv-paragraph-editor footer span { margin-right: auto; }
+.rdv-editor-dialog { border: 1px solid #dce5d1; border-radius: 10px; padding: 24px; color: #415734; background: #fff; width: min(420px, calc(100vw - 28px)); font: 12px/1.6 system-ui, sans-serif; box-shadow: 0 20px 80px #26371b40; }
+.rdv-editor-dialog::backdrop { background: #23302555; backdrop-filter: blur(3px); }
+.rdv-editor-dialog h3 { margin: 0 0 20px; font: 23px Georgia, serif; }
+.rdv-editor-dialog label { display: grid; gap: 7px; margin: 10px 0; font-size: 11px; }
+.rdv-editor-dialog input { min-width: 0; width: 100%; padding: 9px; color: inherit; background: #fcfef8; border: 1px solid #dce5d1; border-radius: 5px; font: inherit; }
+.rdv-editor-dialog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rdv-editor-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.rdv-editor-dialog .rdv-editor-primary { background: #37513a; color: #fff; padding: 6px 14px; }
+@media (max-width: 600px) { .rdv-editor { height: 850px; } .rdv-format-toolbar { padding: 6px 4px; } .rdv-format-group { padding: 0 4px; } .rdv-editor-header { padding: 10px; } .rdv-editor-header span { display: none; } .rdv-editor-status > span:last-child { display: none; } .rdv-editor .rdv-toolbar-right { flex-wrap: nowrap; gap: 0; } .rdv-editor .rdv-toolbar-separator { margin: 0 2px; } .rdv-paragraph-editor header span { display: none; } .rdv-paragraph-editor footer { flex-wrap: wrap; } .rdv-paragraph-editor footer > span { width: 100%; } }

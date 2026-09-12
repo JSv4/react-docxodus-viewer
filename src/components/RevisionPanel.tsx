@@ -1,19 +1,34 @@
 import { useState, useMemo } from 'react';
-import type { Revision } from 'docxodus/react';
-import { isInsertion, isDeletion, isMove, isFormatChange } from 'docxodus';
+import type { RevisionListEntry, DocxDiffRevision, FormatChangeDetails, EditResult } from 'docxodus/core';
+import { useAsyncOperation } from '../hooks/useAsyncOperation';
 
-interface RevisionPanelProps {
-  revisions: Revision[];
+export type ViewerRevision = RevisionListEntry | DocxDiffRevision;
+type Revision = ViewerRevision;
+type Resolution = () => void | EditResult | Promise<void | EditResult>;
+export interface RevisionPanelProps {
+  revisions: readonly ViewerRevision[];
+  onSelect?: (revision: ViewerRevision) => void;
+  onAccept?: (id: string) => ReturnType<Resolution>;
+  onReject?: (id: string) => ReturnType<Resolution>;
+  onAcceptAll?: Resolution;
+  onRejectAll?: Resolution;
+  /** Optional formatting evidence keyed by native revision id. Comparison records carry their own. */
+  formatDetails?: Record<string, FormatChangeDetails>;
 }
 
-type FilterType = 'all' | 'insertions' | 'deletions' | 'moves' | 'formatting';
+type FilterType = 'all' | 'insertions' | 'deletions' | 'moves' | 'formatting' | 'structural';
+const isInsertion = (r: Revision) => 'family' in r ? r.type === 'insert' : ['Inserted', 'Insertion'].includes(r.revisionType);
+const isDeletion = (r: Revision) => 'family' in r ? r.type === 'delete' : ['Deleted', 'Deletion'].includes(r.revisionType);
+const isMove = (r: Revision) => 'family' in r ? r.type === 'move' : r.revisionType === 'Moved';
+const isFormatChange = (r: Revision) => 'family' in r ? r.type === 'format' : r.revisionType === 'FormatChanged';
+const isStructural = (r: Revision) => 'family' in r && r.type === 'structure';
 
 function getRevisionTypeLabel(revision: Revision): string {
   if (isInsertion(revision)) return 'Inserted';
   if (isDeletion(revision)) return 'Deleted';
-  if (isMove(revision)) return revision.isMoveSource ? 'Moved from' : 'Moved to';
+  if (isMove(revision)) return 'family' in revision ? 'Moved' : revision.isMoveSource ? 'Moved from' : 'Moved to';
   if (isFormatChange(revision)) return 'Formatted';
-  return String(revision.revisionType);
+  return 'family' in revision ? revision.family.replaceAll('_', ' ') : String(revision.revisionType);
 }
 
 function getRevisionTypeClass(revision: Revision): string {
@@ -21,12 +36,14 @@ function getRevisionTypeClass(revision: Revision): string {
   if (isDeletion(revision)) return 'rdv-revision--deletion';
   if (isMove(revision)) return 'rdv-revision--move';
   if (isFormatChange(revision)) return 'rdv-revision--format';
-  return '';
+  return 'rdv-revision--structure';
 }
 
-function formatDate(isoDate: string): string {
+function formatDate(isoDate?: string): string {
+  if (!isoDate) return "";
   try {
     const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return isoDate;
     return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
@@ -79,10 +96,9 @@ interface FormatChangeItem {
 }
 
 // Get paired format changes (old → new for same property)
-function getFormatChanges(revision: Revision): FormatChangeItem[] {
-  if (!revision.formatChange) return [];
-
-  const { oldProperties, newProperties } = revision.formatChange;
+function getFormatChanges(details?: FormatChangeDetails): FormatChangeItem[] {
+  if (!details) return [];
+  const { oldProperties, newProperties } = details;
   const changes: FormatChangeItem[] = [];
   const processedKeys = new Set<string>();
 
@@ -116,18 +132,32 @@ function getFormatChanges(revision: Revision): FormatChangeItem[] {
   return changes;
 }
 
-export function RevisionPanel({ revisions }: RevisionPanelProps) {
+export function RevisionPanel({ revisions, onSelect, onAccept, onReject, onAcceptAll, onRejectAll, formatDetails }: RevisionPanelProps) {
+  const action = useAsyncOperation<void | EditResult>();
+  const resolve = (operation: Resolution) => {
+    void action.run(async () => {
+      const result = await operation();
+      if (result && !result.success) throw new Error(result.error?.message ?? 'The change could not be resolved.');
+      return result;
+    }).catch(() => { /* Displayed by the panel. */ });
+  };
+  const canResolveAll = revisions.every(rev => 'family' in rev && rev.resolutionStatus === 'supported');
   const [filter, setFilter] = useState<FilterType>('all');
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  // Pair each revision with its stable index in the original array so that
+  // filtering and expansion state stay tied to the revision itself, not to a
+  // shifting position within the filtered subset.
   const filteredRevisions = useMemo(() => {
-    if (filter === 'all') return revisions;
-    return revisions.filter((rev) => {
+    const withIds = revisions.map((revision, index) => ({ revision, id: 'family' in revision ? revision.id : `${revision.leftAnchor ?? ''}:${revision.rightAnchor ?? ''}:${revision.revisionType}:${index}` }));
+    if (filter === 'all') return withIds;
+    return withIds.filter(({ revision }) => {
       switch (filter) {
-        case 'insertions': return isInsertion(rev);
-        case 'deletions': return isDeletion(rev);
-        case 'moves': return isMove(rev);
-        case 'formatting': return isFormatChange(rev);
+        case 'insertions': return isInsertion(revision);
+        case 'deletions': return isDeletion(revision);
+        case 'moves': return isMove(revision);
+        case 'formatting': return isFormatChange(revision);
+        case 'structural': return isStructural(revision);
         default: return true;
       }
     });
@@ -139,9 +169,10 @@ export function RevisionPanel({ revisions }: RevisionPanelProps) {
     deletions: revisions.filter(isDeletion).length,
     moves: revisions.filter(isMove).length,
     formatting: revisions.filter(isFormatChange).length,
+    structural: revisions.filter(isStructural).length,
   }), [revisions]);
 
-  const toggleExpanded = (index: number) => {
+  const toggleExpanded = (index: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(index)) {
@@ -166,6 +197,7 @@ export function RevisionPanel({ revisions }: RevisionPanelProps) {
 
   return (
     <div className="rdv-revision-panel">
+      {action.error && <p className="rdv-feature-error" role="alert">{action.error.message}</p>}
       <div className="rdv-revision-header">
         <div className="rdv-revision-stats">
           <span className="rdv-revision-stat rdv-revision-stat--total">
@@ -192,7 +224,12 @@ export function RevisionPanel({ revisions }: RevisionPanelProps) {
             </span>
           )}
         </div>
+        <div className="rdv-review-actions">
+          {onAcceptAll && <button type="button" disabled={action.isRunning || !canResolveAll} onClick={() => resolve(onAcceptAll)}>Accept all</button>}
+          {onRejectAll && <button type="button" disabled={action.isRunning || !canResolveAll} onClick={() => resolve(onRejectAll)}>Reject all</button>}
+        </div>
         <select
+          aria-label="Filter revisions"
           className="rdv-revision-filter"
           value={filter}
           onChange={(e) => setFilter(e.target.value as FilterType)}
@@ -202,29 +239,30 @@ export function RevisionPanel({ revisions }: RevisionPanelProps) {
           <option value="deletions">Deletions ({stats.deletions})</option>
           <option value="moves">Moves ({stats.moves})</option>
           <option value="formatting">Formatting ({stats.formatting})</option>
+          <option value="structural">Structure ({stats.structural})</option>
         </select>
       </div>
 
       <div className="rdv-revision-list">
-        {filteredRevisions.map((revision, index) => {
-          const isExpanded = expandedIds.has(index);
+        {filteredRevisions.map(({ revision, id }) => {
+          const isExpanded = expandedIds.has(id);
           const needsTruncation = revision.text.length > 150;
-          const formatChanges = isFormatChange(revision) ? getFormatChanges(revision) : [];
+          const formatChanges = getFormatChanges('family' in revision ? formatDetails?.[revision.id] : revision.formatChange);
 
           return (
             <div
-              key={index}
+              key={id}
               className={`rdv-revision-item ${getRevisionTypeClass(revision)}`}
             >
               <div className="rdv-revision-item__header">
                 <span className="rdv-revision-type">
                   {getRevisionTypeLabel(revision)}
                 </span>
-                {isMove(revision) && revision.moveGroupId !== undefined && (
+                {isMove(revision) && 'moveGroupId' in revision && revision.moveGroupId !== undefined && (
                   <span className="rdv-revision-move-id">#{revision.moveGroupId}</span>
                 )}
                 <span className="rdv-revision-author">{revision.author || 'Unknown'}</span>
-                <span className="rdv-revision-date">{formatDate(revision.date)}</span>
+                <span className="rdv-revision-date">{formatDate(('dateUtc' in revision ? revision.dateUtc : undefined) ?? revision.date)}</span>
               </div>
 
               {revision.text && (
@@ -235,7 +273,7 @@ export function RevisionPanel({ revisions }: RevisionPanelProps) {
                   {needsTruncation && (
                     <button
                       className="rdv-revision-expand"
-                      onClick={() => toggleExpanded(index)}
+                      onClick={() => toggleExpanded(id)}
                     >
                       {isExpanded ? 'Show less' : 'Show more'}
                     </button>
@@ -243,6 +281,14 @@ export function RevisionPanel({ revisions }: RevisionPanelProps) {
                 </div>
               )}
 
+              {'family' in revision && revision.resolutionStatus !== 'supported' && (
+                <p className="rdv-revision-diagnostic">{revision.diagnostic?.message ?? `This change is ${revision.resolutionStatus} and cannot be resolved automatically.`}</p>
+              )}
+              <div className="rdv-review-actions">
+                {onSelect && <button type="button" onClick={() => onSelect(revision)}>Show in document</button>}
+                {'family' in revision && onAccept && <button type="button" disabled={action.isRunning || revision.resolutionStatus !== 'supported'} onClick={() => resolve(() => onAccept(revision.id))}>Accept</button>}
+                {'family' in revision && onReject && <button type="button" disabled={action.isRunning || revision.resolutionStatus !== 'supported'} onClick={() => resolve(() => onReject(revision.id))}>Reject</button>}
+              </div>
               {formatChanges.length > 0 && (
                 <div className="rdv-revision-item__format-details">
                   {formatChanges.map((change, i) => (

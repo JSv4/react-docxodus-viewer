@@ -1,143 +1,111 @@
-# Docxodus WASM CDN Loading Issues
+# Docxodus 12.4.1 runtime deployment
 
-## Problem Summary
+Deploy runtime files from the same package version as the JavaScript engine. The
+React package pins 12.4.1; earlier .NET 8 assets cannot be mixed with its .NET 10
+runtime. This document supersedes the older 3.x CDN workarounds.
 
-The Docxodus library uses .NET Blazor WebAssembly, which has compatibility issues when loaded from CDNs like jsDelivr or unpkg.
+## Copy verified static assets
 
-## Root Cause
-
-The .NET WASM runtime (`dotnet.js`) uses `credentials: "same-origin"` for all fetch requests internally:
-
-```javascript
-// Inside dotnet.js
-return globalThis.fetch(e, t || { credentials: "same-origin" })
+```sh
+npm install docxodus@12.4.1
+npx rdv-copy-runtime public/docxodus
 ```
 
-When the WASM files are served from a CDN:
-1. The CDN returns `Access-Control-Allow-Origin: *` (wildcard)
-2. The browser sends credentials with cross-origin requests
-3. **CORS spec forbids using `*` with credentials** - the browser blocks the request
+Or call the Node build helper:
 
-Error message:
-```
-Cross-Origin Request Blocked: Credential is not supported if the CORS header
-'Access-Control-Allow-Origin' is '*'
+```js
+import { copyDocxodusRuntime } from 'react-docxodus-viewer/assets';
+await copyDocxodusRuntime('public/docxodus');
 ```
 
-## Secondary Issue: Vite Bundler Conflicts
+It verifies every entry in the installed `export-assets.json` before copying,
+then replaces the destination's `wasm/_framework` directory and copies the worker,
+materializer, pagination bundle, schemas and manifest. Other files in the chosen
+directory remain untouched. Deploy that directory as static files. The demo uses
+`npm run sync:wasm` to place this same layout directly in `public/`.
 
-When hosting WASM files locally in `/public`, Vite's dev server has issues:
-
-```
-Failed to load url /wasm/_framework/dotnet.js. This file is in /public and will
-be copied as-is during build without going through the plugin transforms, and
-therefore should not be imported from source code.
-```
-
-This occurs because docxodus uses dynamic `import()` for the WASM loader, and Vite tries to analyze/resolve it during development.
-
-## Potential Solutions
-
-### Option 1: Modify dotnet.js Fetch Configuration (Recommended)
-
-Before publishing, patch the `dotnet.js` file to use `credentials: "omit"` for cross-origin requests:
-
-```javascript
-// Change from:
-{ credentials: "same-origin" }
-
-// To:
-{ credentials: url.startsWith(location.origin) ? "same-origin" : "omit" }
+```text
+public/docxodus/
+  export-assets.json
+  export-browser.bundle.js
+  export-resource-limits-v1.json
+  render-report-v2.schema.json
+  pagination.bundle.js
+  docxodus.worker.js
+  wasm/_framework/...
 ```
 
-Or simply:
-```javascript
-{ credentials: "omit" }
+Configure `wasmBasePath="/docxodus/wasm/"`. For a site hosted under a URL prefix,
+include that prefix, for example `"/my-app/docxodus/wasm/"`. The export hook derives
+the materializer URL as a sibling of `wasm/`; an explicit `browserModuleUrl` is
+available for custom hosting layouts.
+
+## Export bundles must remain byte-identical
+
+The 12.4.1 browser materializer fetches its own module and verifies its length and
+SHA-256 against `export-assets.json`. Rebundling, minifying, rewriting imports or
+appending a source-map comment changes those bytes and causes an explicit runtime
+verification failure. Runtime WASM and worker files are also verified.
+
+Use `useDocumentExport()` / `ExportPanel`, which load the raw static module, or:
+
+```ts
+const exporter = await loadBrowserExporter('/docxodus/export-browser.bundle.js');
+const result = await exporter.convertDocxToPaginatedHtml(file, {
+  wasmBasePath: '/docxodus/wasm/',
+  reviewProfile: 'final', commentProfile: 'hidden',
+});
 ```
 
-### Option 2: Use a CORS Proxy
+The `/export-browser` package entry re-exports the upstream contract. Bundlers can
+use its types and helpers, but actual materialization needs the unchanged static
+module. Do not regenerate asset hashes to hide a transformed or mismatched runtime.
 
-Set up a proxy that:
-- Forwards requests to the CDN
-- Strips credentials or adds proper CORS headers
-- Returns `Access-Control-Allow-Origin` matching the requesting origin instead of `*`
+## Vite development
 
-### Option 3: Self-Host with Proper Headers
+Vite may treat a dynamic import of a public `.js` file as a source import and
+append `?import`. Its normal source transforms are incompatible with digest-checked
+assets. Serve the runtime directory through a middleware before Vite's transforms.
+The repository's `wasmPublicPlugin` in `vite.config.ts` is the working example for
+the demo's `/wasm/` and root export files.
 
-Host the WASM files on a server you control with:
-```
-Access-Control-Allow-Origin: <specific-origin>
-Access-Control-Allow-Credentials: true
-```
+For the suggested `/docxodus/` layout, a small pre-transform middleware can serve
+only known copied assets. The essential behavior is to ignore query strings and
+return the original bytes with the correct MIME type. Keep path resolution bounded
+to the configured static directory. Production Vite builds copy public files
+unchanged; the production-preview integration test covers this configuration.
 
-### Option 4: Pre-initialize via Script Tag
+## HTTP serving
 
-Load `dotnet.js` via a script tag in `index.html` (bypasses dynamic import issues):
+Serve `.wasm` as `application/wasm`, JavaScript as `application/javascript`, and JSON
+as `application/json`. If serving `.br` precompressed variants, set
+`Content-Encoding: br` and the original content type. Servers without precompressed
+support can serve the uncompressed counterparts.
 
-```html
-<script src="/wasm/_framework/dotnet.js"></script>
-```
+Use a same-origin runtime deployment. If cross-origin isolation is needed by the
+hosting configuration, serve `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`. The demo config supplies these headers;
+its static hosting fallback also includes the existing COI service worker.
 
-Then expose the `dotnet` global for the library to use.
+Do not patch `dotnet.js` fetch behavior. `credentials: "same-origin"` does not itself
+send credentials to a different origin; the older recommendation to patch it was
+not a sound basis for deployment and would invalidate the new asset identity.
+Check the actual response headers, requested URLs and matching package version.
 
-## Vite Workaround (Verified Working)
+## Node/PDF export
 
-For local development with Vite, use a transform plugin to make the dynamic import opaque to the bundler.
+Install `@docxodus/export@12.4.1` and import `/server` only in Node. The companion
+owns its runtime deployment and browser materialization pipeline. It requires a
+non-root host with Chromium's sandbox and, on Linux, permitted user namespaces.
+`checkExportEnvironment()` reports deployment findings without rendering a file.
 
-**This approach has been tested and verified working** with:
-- Vite 7.2.4
-- React 19
-- docxodus 3.0.1
-- Local WASM files hosted in `/public/wasm/`
+This development host currently denies unprivileged user namespaces, including
+outside the command sandbox. The Node API boundary test passes; the real PDF test
+therefore reports a skip. It can be required on an eligible render host with:
 
-```typescript
-// vite.config.ts
-import { defineConfig, Plugin } from 'vite'
-import react from '@vitejs/plugin-react'
-
-function wasmExternalPlugin(): Plugin {
-  return {
-    name: 'wasm-external',
-    enforce: 'pre',
-    transform(code, id) {
-      if (id.includes('docxodus') && code.includes('import(')) {
-        return code.replace(
-          /await import\(\/\* webpackIgnore: true \*\/ dotnetPath\)/g,
-          'await (new Function("path", "return import(path)"))(dotnetPath)'
-        )
-      }
-      return null
-    },
-  }
-}
-
-export default defineConfig({
-  plugins: [wasmExternalPlugin(), react()],
-  server: {
-    headers: {
-      // Required for SharedArrayBuffer used by .NET WASM
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-  },
-  optimizeDeps: {
-    exclude: ['docxodus'],
-  },
-})
+```sh
+DOCXODUS_REQUIRE_PDF=1 npm run test:pdf
 ```
 
-**Setup steps:**
-1. Copy WASM files: `cp -r node_modules/docxodus/dist/wasm/* public/wasm/`
-2. Use the Vite config above
-3. Pass `/wasm/` as the base path to docxodus hooks: `useConversion('/wasm/')`
-
-## Recommended Fix for Package Maintainer
-
-1. **Patch `dotnet.js`** during build to use `credentials: "omit"`
-2. **Add Vite-compatible dynamic import** using `/* @vite-ignore */` comment
-3. **Document** the CORS requirements for self-hosting
-
-Example patched import in `index.ts`:
-```typescript
-const { dotnet } = await import(/* @vite-ignore */ dotnetPath);
-```
+Browser standalone HTML export is exercised with networking disabled after export
+and remains viewable as an offline artifact.

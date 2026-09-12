@@ -1,9 +1,11 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useDocxodus, PaginatedDocument } from 'docxodus/react';
-import type { PaginationResult, Revision, DocumentMetadata } from 'docxodus/react';
-import { CommentRenderMode, PaginationMode, AnnotationLabelMode, getDocumentMetadata } from 'docxodus';
-import { createWorkerDocxodus, isWorkerSupported } from 'docxodus/worker';
-import type { WorkerDocxodus } from 'docxodus/worker';
+import { useState, useCallback, useRef, useEffect, useMemo, useId, useSyncExternalStore } from 'react';
+import { PaginatedDocument } from './components/PaginatedDocument';
+import type { PaginationResult, RevisionListEntry as Revision, DocumentMetadata, DocxSession } from 'docxodus/core';
+import { CommentRenderMode, PaginationMode, AnnotationLabelMode } from 'docxodus/core';
+import { useDocxodusRuntime } from './runtime';
+import { useSessionState, useSessionQuery } from './hooks/useDocxSession';
+import type { DocumentSource } from './session';
+import { reconcileSourceAnchors } from './rendering/anchors';
 import type {
   DocumentViewerProps,
   ViewerSettings,
@@ -15,6 +17,9 @@ import type {
 } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { RevisionPanel } from './components/RevisionPanel';
+import { Icon } from './components/Icon';
+const noSubscribe = () => () => {};
+const notEditing = () => false;
 
 const OpenDocumentIcon = () => (
   <svg
@@ -81,6 +86,21 @@ function computeFitScale(
 
 export function DocumentViewer({
   file: controlledFile,
+  document: controlledDocument,
+  session: sessionController,
+  canvasEditor,
+  revisions: controlledRevisions,
+  conversionOptions,
+  rendererFingerprint,
+  layoutToken: suppliedLayoutToken,
+  citation,
+  onPageMap,
+  onPaginationComplete,
+  onRevisionSelect,
+  onAnchorSelect,
+  onTextSelectionChange,
+  selectedAnchorId,
+  allowRevisionResolution = true,
   html: controlledHtml,
   onFileChange,
   onConversionStart,
@@ -96,12 +116,14 @@ export function DocumentViewer({
   style,
   toolbar = 'top',
   showSettingsButton = true,
+  showUploadButton = true,
   showRevisionsTab = true,
   placeholder = 'Open a DOCX file to view',
   wasmBasePath,
   useWorker = true,
   warmup = false,
   fitMode = 'manual',
+  theme = 'classic',
   toolbarActions,
 }: DocumentViewerProps) {
   // Merge default settings. `defaultZoom` is a convenience shortcut for
@@ -118,10 +140,30 @@ export function DocumentViewer({
   // Internal state (uncontrolled mode)
   const [internalFile, setInternalFile] = useState<File | null>(null);
   const [internalHtml, setInternalHtml] = useState<string | null>(null);
+  const [renderedLayoutToken, setRenderedLayoutToken] = useState<DocumentViewerProps['layoutToken']>();
+  const [renderedOwner, setRenderedOwner] = useState<DocxSession | null>(null);
   const [internalSettings, setInternalSettings] = useState<ViewerSettings>(mergedDefaults);
 
   // Determine which values to use (controlled vs uncontrolled)
-  const file = controlledFile !== undefined ? controlledFile : internalFile;
+  const sessionState = useSessionState(sessionController);
+  const editingSuspended = useSyncExternalStore(canvasEditor?.subscribe ?? noSubscribe,
+    canvasEditor ? () => canvasEditor.getSnapshot().suspended : notEditing, notEditing);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  const [sessionDocument, setSessionDocument] = useState<{ bytes: Uint8Array; version: number; anchors: string[]; owner: DocxSession } | null>(null);
+  useEffect(() => {
+    let current = true;
+    Promise.resolve().then(() => {
+      if (!current || editingSuspended) return;
+      const snapshot = sessionController?.getSnapshot();
+      setSessionDocument(snapshot?.session && sessionController ? {
+        bytes: sessionController.save(), version: snapshot.version, owner: snapshot.session,
+        anchors: sessionController.read(session => Object.keys(session.project().anchorIndex)),
+      } : null);
+    }).catch(cause => { if (current) onErrorRef.current?.(cause instanceof Error ? cause : new Error(String(cause))); });
+    return () => { current = false; };
+  }, [sessionController, sessionState.session, sessionState.version, editingSuspended]);
+  const file = sessionController ? sessionDocument?.bytes ?? null : controlledDocument !== undefined ? controlledDocument : controlledFile !== undefined ? controlledFile : internalFile;
   const html = controlledHtml !== undefined ? controlledHtml : internalHtml;
   const settings = useMemo(
     () => controlledSettings
@@ -130,70 +172,12 @@ export function DocumentViewer({
     [controlledSettings, mergedDefaults, internalSettings]
   );
 
-  // Docxodus hook (used when not in worker mode)
-  const hookResult = useDocxodus(wasmBasePath);
-
-  // Worker instance state (used when useWorker=true)
-  const [worker, setWorker] = useState<WorkerDocxodus | null>(null);
-  const [workerReady, setWorkerReady] = useState(false);
-  const [workerError, setWorkerError] = useState<Error | null>(null);
-  // Derived rather than tracked separately: true exactly while a worker
-  // creation attempt is in flight (started, not yet ready, not yet errored).
-  const workerLoading = useWorker && isWorkerSupported() && !workerReady && !workerError;
-
-  // Create/destroy worker based on useWorker prop
-  const workerRef = useRef<WorkerDocxodus | null>(null);
-
-  useEffect(() => {
-    if (!useWorker || !isWorkerSupported()) {
-      return;
-    }
-
-    let cancelled = false;
-
-    createWorkerDocxodus({ wasmBasePath })
-      .then((workerInstance) => {
-        if (!cancelled) {
-          workerRef.current = workerInstance;
-          setWorker(workerInstance);
-          setWorkerReady(true);
-          setWorkerError(null);
-        } else {
-          workerInstance.terminate();
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setWorkerError(err instanceof Error ? err : new Error(String(err)));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      if (workerRef.current) {
-        workerRef.current.terminate();
-        workerRef.current = null;
-        setWorker(null);
-        setWorkerReady(false);
-      }
-    };
-  }, [useWorker, wasmBasePath]);
-
-  // Eagerly pre-warm the comparison code path once the worker is ready, so the
-  // first comparison doesn't pay the ~3s assembly-load latency. `prepare()` is
-  // idempotent and only exists on the worker, so this is a no-op in non-worker
-  // mode. Fire-and-forget: warmup failure must not surface as a viewer error.
-  useEffect(() => {
-    if (!warmup || !worker) return;
-    worker.prepare().catch(() => {
-      // Pre-warming is a best-effort optimization; ignore failures.
-    });
-  }, [warmup, worker]);
-
-  // Unified ready/loading/error state
-  const isReady = useWorker ? workerReady : hookResult.isReady;
-  const isLoading = useWorker ? workerLoading : hookResult.isLoading;
-  const initError = useWorker ? workerError : hookResult.error;
+  const runtime = useDocxodusRuntime({ wasmBasePath, useWorker, warmup, enabled: controlledHtml === undefined });
+  const { isReady, isLoading, error: initError } = runtime;
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const conversionGeneration = useRef(0);
+  const conversionAbort = useRef<AbortController | null>(null);
 
   // Local UI state
   const [isConverting, setIsConverting] = useState(false);
@@ -203,7 +187,16 @@ export function DocumentViewer({
   const [totalPages, setTotalPages] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('document');
-  const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [internalRevisions, setRevisions] = useState<Revision[]>([]);
+  const selectRevisions = useCallback((session: DocxSession) => session.listRevisions(), []);
+  const sessionRevisions = useSessionQuery(sessionController, selectRevisions);
+  const onRevisionsRef = useRef(onRevisionsExtracted);
+  useEffect(() => { onRevisionsRef.current = onRevisionsExtracted; }, [onRevisionsExtracted]);
+  useEffect(() => { if (sessionRevisions.data) onRevisionsRef.current?.(sessionRevisions.data); }, [sessionRevisions.data]);
+  const revisions = controlledRevisions ?? sessionRevisions.data ?? internalRevisions;
+  const layoutToken = useMemo(() => suppliedLayoutToken ?? (sessionState.session && rendererFingerprint
+    ? { documentVersion: sessionDocument?.version ?? sessionState.version, rendererFingerprint } : undefined),
+  [suppliedLayoutToken, sessionState.session, sessionState.version, sessionDocument, rendererFingerprint]);
   const [isExtractingRevisions, setIsExtractingRevisions] = useState(false);
 
   // Document metadata for progressive loading placeholders
@@ -211,6 +204,8 @@ export function DocumentViewer({
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const paginatedContainerRef = useRef<HTMLDivElement>(null);
+  const documentRootRef = useRef<HTMLElement | null>(null);
+  const pendingRevisionAnchor = useRef<string | undefined>(undefined);
 
   // Inter-page gap read from --rdv-page-gap CSS variable (defaults to 20)
   const [pageGap, setPageGap] = useState(20);
@@ -247,88 +242,67 @@ export function DocumentViewer({
     renderMoveOperations: settings.renderMoveOperations,
     renderUnsupportedContentPlaceholders: settings.renderUnsupportedContentPlaceholders,
     documentLanguage: settings.documentLanguage || undefined,
-  }), [settings]);
+    stampAnchors: settings.stampAnchors,
+    ...conversionOptions,
+  }), [settings, conversionOptions]);
 
-  // Fetch document metadata quickly (for progressive loading placeholders)
-  const fetchMetadata = useCallback(async (fileToFetch: File) => {
-    try {
-      // Use worker's getDocumentMetadata if available, otherwise direct call
-      const metadata = useWorker && worker
-        ? await worker.getDocumentMetadata(fileToFetch)
-        : await getDocumentMetadata(fileToFetch);
-      setDocumentMetadata(metadata);
-    } catch {
-      // Metadata extraction is non-critical, silently fail
-      setDocumentMetadata(null);
-    }
-  }, [useWorker, worker]);
-
-  // Extract revisions from document
-  const extractRevisions = useCallback(async (fileToExtract: File) => {
-    if (!isReady || !showRevisionsTab) return;
-
-    setIsExtractingRevisions(true);
-    try {
-      const extractedRevisions = useWorker && worker
-        ? await worker.getRevisions(fileToExtract)
-        : await hookResult.getRevisions(fileToExtract);
-      setRevisions(extractedRevisions);
-      onRevisionsExtracted?.(extractedRevisions);
-    } catch {
-      // Revision extraction is non-critical, silently fail
-      setRevisions([]);
-    } finally {
-      setIsExtractingRevisions(false);
-    }
-  }, [isReady, useWorker, worker, hookResult, showRevisionsTab, onRevisionsExtracted]);
-
-  // Convert file to HTML
-  const convert = useCallback(async (fileToConvert: File) => {
+  const convert = useCallback(async (fileToConvert: DocumentSource) => {
     if (!isReady) return;
-
+    const generation = ++conversionGeneration.current;
+    conversionAbort.current?.abort();
+    const abort = new AbortController(); conversionAbort.current = abort;
+    const current = () => generation === conversionGeneration.current;
     setIsConverting(true);
     setError(null);
     setRevisions([]);
     setViewMode('document');
-    // Don't reset documentMetadata here - we want to show placeholders during conversion
+    setDocumentMetadata(null);
+    setFileName(fileToConvert instanceof Uint8Array ? 'Document.docx' : fileToConvert.name);
     onConversionStart?.();
-
-    // Allow React to render loading state before heavy WASM work (only needed for non-worker mode)
-    if (!useWorker) {
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    }
-
+    void runtime.getDocumentMetadata(fileToConvert).then(metadata => {
+      if (current()) setDocumentMetadata(metadata);
+    }).catch(() => { /* Metadata is optional. */ });
     try {
-      const result = useWorker && worker
-        ? await worker.convertDocxToHtml(fileToConvert, getConvertOptions())
-        : await hookResult.convertToHtml(fileToConvert, getConvertOptions());
-
-      if (controlledHtml === undefined) {
-        setInternalHtml(result);
-      }
+      let result = await runtime.convertToHtml(fileToConvert, getConvertOptions());
+      if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
+      if (!current()) return;
+      if (canvasEditor && sessionDocument && (sessionDocument.owner !== sessionController?.getSnapshot().session || sessionDocument.version !== sessionController.getSnapshot().version)) return;
+      if (sessionDocument?.bytes === fileToConvert) result = reconcileSourceAnchors(result, sessionDocument.anchors);
+      if (controlledHtml === undefined) { setInternalHtml(result); setRenderedLayoutToken(layoutToken); setRenderedOwner(sessionDocument?.owner ?? null); }
       onConversionComplete?.(result);
+      if (showRevisionsTab && !controlledRevisions && !sessionController) {
+        setIsExtractingRevisions(true);
+        try {
+          const extracted = await runtime.getRevisions(fileToConvert);
+          if (current()) { setRevisions(extracted); onRevisionsExtracted?.(extracted); }
+        } catch (cause) {
+          if (current()) onError?.(cause instanceof Error ? cause : new Error(String(cause)));
+        } finally { if (current()) setIsExtractingRevisions(false); }
+      }
+    } catch (cause) {
+      if (!current()) return;
+      const failure = cause instanceof Error ? cause : new Error(String(cause));
+      setError(failure);
+      onError?.(failure);
+    } finally { if (current()) setIsConverting(false); }
+  }, [isReady, runtime, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete,
+    showRevisionsTab, controlledRevisions, sessionController, sessionDocument, onRevisionsExtracted, onError, layoutToken, canvasEditor]);
 
-      // Extract revisions in background after conversion
-      extractRevisions(fileToConvert);
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      setError(error);
-      onError?.(error);
-    } finally {
-      setIsConverting(false);
-    }
-  }, [isReady, useWorker, worker, hookResult, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete, onError, extractRevisions]);
-
-  // Auto-convert when WASM ready and file available. `convert` sets
-  // isConverting synchronously so the UI can show a spinner immediately;
-  // that can't be derived instead without breaking controlled-`html` mode,
-  // where `html` can stay non-null across a reconvert.
+  const convertRef = useRef(convert);
+  const conversionOptionsKey = JSON.stringify(conversionOptions ?? {});
+  const invalidateConversion = useCallback(() => { conversionGeneration.current++; conversionAbort.current?.abort(); }, []);
+  useEffect(() => { convertRef.current = convert; });
   useEffect(() => {
-    if (isReady && file && !html && !isConverting && controlledHtml === undefined) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
-      convert(file);
+    if (isReady && file && controlledHtml === undefined) void convertRef.current(file);
+    if (!file) {
+      void Promise.resolve().then(() => {
+        setIsConverting(false); setIsExtractingRevisions(false); setRevisions([]);
+        setFileName(''); setDocumentMetadata(null); setTotalPages(0);
+        if (controlledHtml === undefined) setInternalHtml(null);
+      });
     }
-  }, [isReady, file, html, isConverting, convert, controlledHtml]);
+    return invalidateConversion;
+  }, [isReady, file, controlledHtml, conversionOptionsKey, invalidateConversion]);
 
   // Handle file input change
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -342,17 +316,17 @@ export function DocumentViewer({
       setRevisions([]); // Reset revisions
       setViewMode('document');
 
-      if (controlledFile === undefined) {
+      if (sessionController) {
+        try { await sessionController.open(selectedFile); }
+        catch (cause) { const failure = cause instanceof Error ? cause : new Error(String(cause)); setError(failure); onErrorRef.current?.(failure); }
+      } else if (controlledFile === undefined && controlledDocument === undefined) {
         setInternalFile(selectedFile);
         setInternalHtml(null);
       }
       onFileChange?.(selectedFile);
 
       // Fetch metadata first for placeholders, then convert
-      fetchMetadata(selectedFile);
-      if (isReady && controlledHtml === undefined) {
-        await convert(selectedFile);
-      }
+      // Conversion follows the selected/controlled source in the effect above.
     }
   };
 
@@ -368,6 +342,9 @@ export function DocumentViewer({
 
   // Clear document
   const handleClear = () => {
+    conversionGeneration.current++;
+    setIsConverting(false);
+    setIsExtractingRevisions(false);
     if (controlledFile === undefined) {
       setInternalFile(null);
     }
@@ -383,8 +360,8 @@ export function DocumentViewer({
     setDocumentMetadata(null);
     onFileChange?.(null);
 
-    const input = document.getElementById('rdv-file-input') as HTMLInputElement;
-    if (input) input.value = '';
+    if (inputRef.current) inputRef.current.value = '';
+    sessionController?.close();
   };
 
   // Update settings
@@ -397,15 +374,14 @@ export function DocumentViewer({
   }, [settings, controlledSettings, onSettingsChange]);
 
   // Zoom controls
-  const handleZoomIn = () => updateSettings({
-    paginationScale: Math.min(settings.paginationScale + 0.1, 2.0)
-  });
-  const handleZoomOut = () => updateSettings({
-    paginationScale: Math.max(settings.paginationScale - 0.1, 0.3)
-  });
-  const handleZoomChange = (value: number) => updateSettings({
-    paginationScale: Math.max(0.3, Math.min(2.0, value))
-  });
+  const manualZoom = useRef(false);
+  useEffect(() => { manualZoom.current = false; }, [fitMode]);
+  const handleZoomChange = (value: number) => {
+    manualZoom.current = true;
+    updateSettings({ paginationScale: Math.max(0.3, Math.min(2.0, value)) });
+  };
+  const handleZoomIn = () => handleZoomChange(settings.paginationScale + 0.1);
+  const handleZoomOut = () => handleZoomChange(settings.paginationScale - 0.1);
 
   // Auto-fit: when fitMode is not 'manual', pick a scale that fits the page
   // into the viewer on initial render and whenever the viewer resizes.
@@ -425,6 +401,11 @@ export function DocumentViewer({
     const pageHeightPt = section?.pageHeightPt ?? 792;
 
     const applyFit = () => {
+      // An explicit zoom remains in effect through edits and layout changes.
+      // A new host fitMode re-enables automatic fitting.
+      if (manualZoom.current) return;
+      // Hidden tabs have no measurable layout; preserve their current zoom.
+      if (!container.clientWidth || !container.clientHeight) return;
       const scale = computeFitScale(
         fitMode,
         container.clientWidth,
@@ -448,7 +429,7 @@ export function DocumentViewer({
 
   // Page navigation
   const goToPage = (pageNum: number) => {
-    const container = paginatedContainerRef.current;
+    const container = documentRootRef.current;
     if (!container || pageNum < 1 || pageNum > totalPages) return;
     const pageElement = container.querySelector(`[data-page-number="${pageNum}"]`);
     if (pageElement) {
@@ -513,6 +494,8 @@ export function DocumentViewer({
         <div className="rdv-settings-body">
           <div className="rdv-settings-section">
             <h4>Display Options</h4>
+            <label className="rdv-settings-checkbox"><input type="checkbox" checked={settings.fragmentParagraphs} onChange={event => updateSettings({ fragmentParagraphs: event.target.checked })} /><span>Split long paragraphs across pages</span></label>
+            <label className="rdv-settings-checkbox"><input type="checkbox" checked={settings.stampAnchors} onChange={event => updateSettings({ stampAnchors: event.target.checked })} /><span>Enable document anchors and citations</span></label>
             <label className="rdv-settings-checkbox">
               <input
                 type="checkbox"
@@ -546,7 +529,7 @@ export function DocumentViewer({
                 <label key={mode} className="rdv-settings-radio">
                   <input
                     type="radio"
-                    name="commentMode"
+                    name={`${inputId}-commentMode`}
                     checked={settings.commentMode === mode}
                     onChange={() => updateSettings({ commentMode: mode })}
                   />
@@ -563,7 +546,7 @@ export function DocumentViewer({
                 <label key={mode} className="rdv-settings-radio">
                   <input
                     type="radio"
-                    name="annotationMode"
+                    name={`${inputId}-annotationMode`}
                     checked={settings.annotationMode === mode}
                     onChange={() => updateSettings({ annotationMode: mode })}
                   />
@@ -671,8 +654,8 @@ export function DocumentViewer({
   const renderToolbar = () => (
     <div className="rdv-toolbar">
       <div className="rdv-toolbar-left">
-        <label
-          htmlFor="rdv-file-input"
+        {showUploadButton && <><label
+          htmlFor={inputId}
           className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-open-btn"
           title="Open Document"
           aria-label="Open Document"
@@ -680,19 +663,20 @@ export function DocumentViewer({
           <OpenDocumentIcon />
         </label>
         <input
-          id="rdv-file-input"
+          id={inputId}
+          ref={inputRef}
           type="file"
           accept=".docx"
           onChange={handleFileChange}
           disabled={isProcessing}
           className="rdv-file-input"
-        />
+        /></>}
         {fileName && (
           <span className="rdv-toolbar-filename" title={fileName}>
             {fileName}
           </span>
         )}
-        {fileName && (
+        {showUploadButton && fileName && (
           <button
             className="rdv-toolbar-btn rdv-toolbar-icon-btn rdv-toolbar-clear"
             onClick={handleClear}
@@ -741,12 +725,13 @@ export function DocumentViewer({
               title="Previous Page"
               aria-label="Previous Page"
             >
-              ◀
+              <Icon name="chevronLeft" size={15} />
             </button>
             <div className="rdv-page-input-group">
               <input
                 type="number"
                 className="rdv-page-input"
+                aria-label="Page number"
                 value={currentPage}
                 min={1}
                 max={totalPages}
@@ -764,7 +749,7 @@ export function DocumentViewer({
               title="Next Page"
               aria-label="Next Page"
             >
-              ▶
+              <Icon name="chevron" size={15} />
             </button>
 
             <div className="rdv-toolbar-separator" />
@@ -785,6 +770,9 @@ export function DocumentViewer({
                 onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
                 aria-label="Zoom level"
               >
+                {![0.5, 0.75, 0.8, 0.9, 1, 1.25, 1.5, 2].includes(settings.paginationScale) && (
+                  <option value={settings.paginationScale}>{Math.round(settings.paginationScale * 100)}%</option>
+                )}
                 <option value="0.5">50%</option>
                 <option value="0.75">75%</option>
                 <option value="0.8">80%</option>
@@ -825,7 +813,7 @@ export function DocumentViewer({
               title="Settings"
               aria-label="Settings"
             >
-              ⚙
+              <Icon name="settings" size={16} />
             </button>
           </>
         )}
@@ -833,7 +821,7 @@ export function DocumentViewer({
     </div>
   );
 
-  const rootClassName = ['rdv-viewer', className].filter(Boolean).join(' ');
+  const rootClassName = ['rdv-viewer', theme === 'studio' && 'rdv-viewer--studio', className].filter(Boolean).join(' ');
 
   return (
     <div ref={viewerRef} className={rootClassName} style={style}>
@@ -846,7 +834,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {!initError && (isLoading || isConverting) && (
+        {!initError && (isLoading || isConverting) && !(canvasEditor && html) && (
           documentMetadata && isConverting ? (
             // Show page placeholders while converting - matches actual page dimensions for stable layout
             <div
@@ -857,7 +845,7 @@ export function DocumentViewer({
                 ...(settings.stableHeight && { minHeight: toCssLength(settings.stableHeight) }),
               } as React.CSSProperties}
             >
-              <div className="rdv-page-placeholders" style={{ backgroundColor: '#525659' }}>
+              <div className="rdv-page-placeholders" style={{ backgroundColor: 'var(--rdv-background, #525659)' }}>
                 {Array.from({ length: documentMetadata.estimatedPageCount || 1 }).map((_, index) => {
                   // Get section for this page (approximate - use first section if not enough)
                   const section = documentMetadata.sections[
@@ -927,7 +915,7 @@ export function DocumentViewer({
           </div>
         )}
 
-        {viewMode === 'document' && html && !isConverting && (
+        {viewMode === 'document' && html && (!isConverting || canvasEditor) && (
           <div
             ref={paginatedContainerRef}
             className="rdv-pages"
@@ -939,13 +927,39 @@ export function DocumentViewer({
           >
             <PaginatedDocument
               html={html}
+              canvasEditor={canvasEditor}
+              canvasOwner={renderedOwner}
               scale={settings.paginationScale}
               showPageNumbers={settings.showPageNumbers}
+              fragmentParagraphs={settings.fragmentParagraphs}
+              layoutToken={controlledHtml !== undefined ? layoutToken : renderedLayoutToken && {
+                documentVersion: renderedLayoutToken.documentVersion,
+                rendererFingerprint: layoutToken?.rendererFingerprint ?? renderedLayoutToken.rendererFingerprint,
+              }}
+              citation={citation}
+              onRootChange={root => { documentRootRef.current = root; }}
+              onError={onError}
+              onAnchorSelect={onAnchorSelect}
+              onTextSelectionChange={onTextSelectionChange}
+              selectedAnchorId={selectedAnchorId}
               pageGap={pageGap}
-              backgroundColor="#525659"
+              backgroundColor="var(--rdv-background, #525659)"
               className="rdv-paginated-document"
               onPaginationComplete={(result: PaginationResult) => {
                 setTotalPages(result.totalPages);
+                if (result.pageMap) {
+                  if (sessionController && rendererFingerprint && result.pageMap.documentVersion === sessionController.getSnapshot().version) {
+                    const registration = sessionController.run(session => session.registerPageMap(result.pageMap!, rendererFingerprint));
+                    if (!registration.success) onError?.(new Error(registration.message));
+                  }
+                  onPageMap?.(result.pageMap);
+                }
+                onPaginationComplete?.(result);
+                if (pendingRevisionAnchor.current) {
+                  const nodes = documentRootRef.current?.querySelectorAll<HTMLElement>('#pagination-container [data-source-anchor-id]');
+                  Array.from(nodes ?? []).find(node => node.dataset.sourceAnchorId === pendingRevisionAnchor.current)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                  pendingRevisionAnchor.current = undefined;
+                }
               }}
               onPageVisible={handlePageVisible}
             />
@@ -953,7 +967,19 @@ export function DocumentViewer({
         )}
 
         {viewMode === 'revisions' && html && !isConverting && (
-          <RevisionPanel revisions={revisions} />
+          <RevisionPanel
+            revisions={revisions}
+            onSelect={revision => {
+              if (!('family' in revision)) return;
+              onRevisionSelect?.(revision);
+              pendingRevisionAnchor.current = revision.anchorId ?? revision.affectedAnchors[0]?.id;
+              setViewMode('document');
+            }}
+            onAccept={sessionController && allowRevisionResolution ? id => sessionController.run(session => session.acceptRevision(id)) : undefined}
+            onReject={sessionController && allowRevisionResolution ? id => sessionController.run(session => session.rejectRevision(id)) : undefined}
+            onAcceptAll={sessionController && allowRevisionResolution ? () => sessionController.run(session => session.acceptAllRevisions()) : undefined}
+            onRejectAll={sessionController && allowRevisionResolution ? () => sessionController.run(session => session.rejectAllRevisions()) : undefined}
+          />
         )}
       </div>
 

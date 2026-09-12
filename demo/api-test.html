@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><title>React Docxodus integration tests</title></head>
+<body><div id="root"></div><script type="module">
+import * as library from '../src/index.ts';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+const root = createRoot(document.getElementById('root'));
+window.rdv = library;
+window.mountViewers = props => root.render(React.createElement(React.Fragment, null, ...props.map((props, key) => React.createElement(library.DocumentViewer, { ...props, key }))));
+window.mountEditors = props => root.render(React.createElement(React.Fragment, null, ...props.map((props, key) => React.createElement(library.DocumentEditor, { ...props, key }))));
+</script></body></html>

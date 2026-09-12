@@ -5,6 +5,14 @@
 export type CommentMode = 'disabled' | 'endnote' | 'inline' | 'margin';
 export type AnnotationMode = 'disabled' | 'above' | 'inline' | 'tooltip' | 'none';
 export type ViewMode = 'document' | 'revisions';
+/** Exact text selection within one canonical paragraph, including page fragments. */
+export interface DocumentTextSelection {
+  anchorId: string;
+  span: import('docxodus/core').CharSpan;
+  text: string;
+  blockText: string;
+  documentVersion?: number;
+}
 /**
  * Automatic zoom-fit mode.
  * - `manual` (default): user controls zoom via the toolbar.
@@ -78,6 +86,10 @@ export interface ViewerSettings {
    * @example "100%" // percentage of parent
    */
   stableHeight?: number | string;
+  /** Split ordinary paragraphs across page boundaries. Default true. */
+  fragmentParagraphs: boolean;
+  /** Stamp block anchors for navigation and incremental rendering. Default true. */
+  stampAnchors: boolean;
 }
 
 /**
@@ -115,6 +127,31 @@ export interface ToolbarAction {
 export interface DocumentViewerProps {
   /** File to display (controlled mode) */
   file?: File | null;
+  /** Controlled document bytes or File. Takes precedence over file. */
+  document?: import('../session').DocumentSource | null;
+  /** Live session: committed edits automatically refresh the viewer. */
+  session?: import('../session').DocxSessionController;
+  /** Direct page editing binding supplied by useDocumentEditor().viewerProps. */
+  canvasEditor?: import('../editing/CanvasEditor').CanvasEditor;
+  /** Native revision data for a host-rendered HTML view. */
+  revisions?: import('docxodus/core').RevisionListEntry[];
+  /** Converter overrides; the viewer owns pagination mode and scale. */
+  conversionOptions?: Omit<import('docxodus/core').ConversionOptions, 'paginationMode' | 'paginationScale'>;
+  /** Exact layout identity for PageMap production when using a live session. */
+  rendererFingerprint?: string;
+  layoutToken?: import('docxodus/core').PaginationOptions['layoutToken'];
+  citation?: import('docxodus/core').PageCitation;
+  onPageMap?: (map: import('docxodus/core').PageMap) => void;
+  onPaginationComplete?: (result: import('docxodus/core').PaginationResult) => void;
+  onRevisionSelect?: (revision: import('docxodus/core').RevisionListEntry) => void;
+  /** Canonical block selected in the rendered document. */
+  onAnchorSelect?: (anchorId: string) => void;
+  /** Selected characters inside a paragraph. Null means the range crosses paragraphs. */
+  onTextSelectionChange?: (selection: DocumentTextSelection | null) => void;
+  /** Highlight a selected canonical block without changing its document formatting. */
+  selectedAnchorId?: string;
+  /** Enable native accept/reject actions when session is supplied. */
+  allowRevisionResolution?: boolean;
   /** Pre-converted HTML content (skip conversion) */
   html?: string | null;
 
@@ -129,7 +166,7 @@ export interface DocumentViewerProps {
   /** Callback when visible page changes */
   onPageChange?: (page: number, total: number) => void;
   /** Callback when revisions are extracted from document */
-  onRevisionsExtracted?: (revisions: import('docxodus').Revision[]) => void;
+  onRevisionsExtracted?: (revisions: import('docxodus/core').RevisionListEntry[]) => void;
 
   /** Initial/controlled viewer settings */
   settings?: Partial<ViewerSettings>;
@@ -147,6 +184,8 @@ export interface DocumentViewerProps {
   /** Callback when settings change */
   onSettingsChange?: (settings: ViewerSettings) => void;
 
+  /** Toolbar and canvas palette. Document page styling is preserved. */
+  theme?: 'classic' | 'studio';
   /** Additional CSS class for the root element */
   className?: string;
   /** Inline styles for the root element */
@@ -155,6 +194,8 @@ export interface DocumentViewerProps {
   toolbar?: 'top' | 'bottom' | 'none';
   /** Show settings button in toolbar */
   showSettingsButton?: boolean;
+  /** Hide file-open and clear actions when a host owns document selection. */
+  showUploadButton?: boolean;
   /** Show revisions tab when document has tracked changes */
   showRevisionsTab?: boolean;
   /** Placeholder text when no document is loaded */
@@ -219,4 +260,6 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   annotationCssClassPrefix: 'annot-',
   renderUnsupportedContentPlaceholders: true,
   documentLanguage: '',
+  fragmentParagraphs: true,
+  stampAnchors: true,
 };

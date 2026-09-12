@@ -1,0 +1,6 @@
+# These digest-verified upstream assets must survive checkout byte for byte.
+public/wasm/** -text -whitespace linguist-vendored
+public/export-* -text -whitespace linguist-vendored
+public/pagination.bundle.js -text -whitespace linguist-vendored
+public/docxodus.worker.js -text -whitespace linguist-vendored
+public/render-report-v2.schema.json -text -whitespace linguist-vendored

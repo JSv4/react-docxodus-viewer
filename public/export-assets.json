@@ -1,0 +1,277 @@
+{
+  "schema": "https://docxodus.dev/schemas/export/export-assets/v1",
+  "schemaVersion": 1,
+  "packageVersion": "12.4.1",
+  "assets": [
+    {
+      "path": "./docxodus.worker.js",
+      "mediaType": "text/javascript",
+      "byteLength": 24687,
+      "sha256": "7df9140c9554700f668539b84c61ac700b150404c4d861a346522154d6c787d7"
+    },
+    {
+      "path": "./export-browser.bundle.js",
+      "mediaType": "text/javascript",
+      "byteLength": 324788,
+      "sha256": "8b0e71f4c52137f689d3317560f5614f15e208b250d37d13a51b55f03ee5f3fc"
+    },
+    {
+      "path": "./export-resource-limits-v1.json",
+      "mediaType": "application/json",
+      "byteLength": 1715,
+      "sha256": "c23c128f885174a7089be1157ee673d1aec0b3e51786517e2f0e44593c5e5347"
+    },
+    {
+      "path": "./pagination.bundle.js",
+      "mediaType": "text/javascript",
+      "byteLength": 145978,
+      "sha256": "9e0678e14e0d5e3fe1e20b96f9a3bb63cfb8677f252d3c0012884ccc669dbd7c"
+    },
+    {
+      "path": "./render-report-v2.schema.json",
+      "mediaType": "application/json",
+      "byteLength": 38241,
+      "sha256": "d4c56e378861f1a77d8050a7075c6efb1b616e85849ebabfdfaacf4eacc7a7c4"
+    },
+    {
+      "path": "./wasm/_framework/DocumentFormat.OpenXml.Framework.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 367893,
+      "sha256": "a5bed4f1e476463870f86f1c491557bde79e41aa2d0547618e1ae17945cc5e17"
+    },
+    {
+      "path": "./wasm/_framework/DocumentFormat.OpenXml.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 5212953,
+      "sha256": "48668843e91d6c04832dea17fe7db03016302560a53aa5d11a586f52fea4641e"
+    },
+    {
+      "path": "./wasm/_framework/Docxodus.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 4023577,
+      "sha256": "e85ac699b38c911241c317a67b03dbaae9ba0d55539d326651ae9cb830c9f270"
+    },
+    {
+      "path": "./wasm/_framework/DocxodusWasm.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 507669,
+      "sha256": "b2437a7703b107365de3885468269369dd113c0995b352b721b12781d67035da"
+    },
+    {
+      "path": "./wasm/_framework/System.Collections.Concurrent.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 23829,
+      "sha256": "08f4afc87ca78fd60381ed30bbeaec951a0b931f231e42433307645fb8160786"
+    },
+    {
+      "path": "./wasm/_framework/System.Collections.Immutable.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 29973,
+      "sha256": "311f6d3c9a2ef199d2a00c4206007589d94c6a1a290b03d10cd0fe6fb9ae7b50"
+    },
+    {
+      "path": "./wasm/_framework/System.Collections.NonGeneric.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 13589,
+      "sha256": "5ec0ca537eaa08ebbb4c7a88ecededc9caf10d38875b75cacfe19c388fcc41a9"
+    },
+    {
+      "path": "./wasm/_framework/System.Collections.Specialized.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 9493,
+      "sha256": "979425164e71cba50a8141750ca7cd89e673b57e65a39af53616adf55563597f"
+    },
+    {
+      "path": "./wasm/_framework/System.Collections.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 62229,
+      "sha256": "64e468568fc95500e61b969fb9aae2258f4424e18c325be91db48e8b7a129b14"
+    },
+    {
+      "path": "./wasm/_framework/System.ComponentModel.Primitives.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 7445,
+      "sha256": "b63fa548d31dfe982447f6022fb21a2c20d8f76521d50c678b881c564a53c431"
+    },
+    {
+      "path": "./wasm/_framework/System.ComponentModel.TypeConverter.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 45333,
+      "sha256": "e42905fcc6b0c1950bef91b2924e24771ecee33b9460a9d9efcbaa92de046a9e"
+    },
+    {
+      "path": "./wasm/_framework/System.ComponentModel.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 4885,
+      "sha256": "ae61d7fef3fc207808051425e9cd66606bad3060ce2fd8ab6b21b4dd8b9a760f"
+    },
+    {
+      "path": "./wasm/_framework/System.Console.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 15125,
+      "sha256": "d8b1ae2a6c4e375e19e99807ebfa7512f7ba3df3dc39004ba4c8e6f9922fb615"
+    },
+    {
+      "path": "./wasm/_framework/System.IO.Compression.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 112917,
+      "sha256": "ade57aa1e200ff4462322a483f2d9fce5c4c5e10a6c6f2d413b2a27c2265f931"
+    },
+    {
+      "path": "./wasm/_framework/System.IO.Packaging.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 88341,
+      "sha256": "336ff68a141b295922fd4e64d24874b3ac7ba7519965637de764edf4e14b22c5"
+    },
+    {
+      "path": "./wasm/_framework/System.IO.Pipelines.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 5909,
+      "sha256": "bcada4bfc72a9e80a7c1cd85d8dae0157352efaf9ad026455fe7a9dc820beed6"
+    },
+    {
+      "path": "./wasm/_framework/System.Linq.Expressions.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 75541,
+      "sha256": "ced08b53e2a822351d5e2a91052322d9cef3f04e39dde848a28491c59418c2c5"
+    },
+    {
+      "path": "./wasm/_framework/System.Linq.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 90389,
+      "sha256": "ab60b177059a48649e0678944374497e363896d5ed0233ed3d3c8a335b025344"
+    },
+    {
+      "path": "./wasm/_framework/System.Memory.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 15637,
+      "sha256": "c842d872878d5ead014aedb34db23742b15e619ead1842b2c8f95b7d4c8039ac"
+    },
+    {
+      "path": "./wasm/_framework/System.Net.Http.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 139029,
+      "sha256": "ce9bad577e8d06e93292c38284e5b6f4c717eb0886597ed38b538799975ae052"
+    },
+    {
+      "path": "./wasm/_framework/System.Net.Primitives.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 7445,
+      "sha256": "7929262d69d9dd1912c104c7eddba715733053e04ce02df9afd76f773012bd49"
+    },
+    {
+      "path": "./wasm/_framework/System.ObjectModel.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 12565,
+      "sha256": "4d1c98b1721b240b7fbde308671954ffb72ab7e892b308abe6c37b1a9b8baab3"
+    },
+    {
+      "path": "./wasm/_framework/System.Private.CoreLib.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 1650965,
+      "sha256": "f98d0419db49bffd890cba0dd115861d13f3b5f9e9563715ff4df3ec131b4c32"
+    },
+    {
+      "path": "./wasm/_framework/System.Private.Uri.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 70933,
+      "sha256": "e9112c7fa56294400694ded9ae2daf4c6273fbf5621e70e2d3ce92e2ea0315bf"
+    },
+    {
+      "path": "./wasm/_framework/System.Private.Xml.Linq.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 66837,
+      "sha256": "0771724336274e9905ad9efc0ad35ba223dc0727ff7f13ce69af71f7da66b617"
+    },
+    {
+      "path": "./wasm/_framework/System.Private.Xml.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 893205,
+      "sha256": "f7cc319961d6ee1a8a730f3f260d3e0f771ab45a5498f7663e03f1e548fe259a"
+    },
+    {
+      "path": "./wasm/_framework/System.Runtime.InteropServices.JavaScript.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 43797,
+      "sha256": "c2feec3f56b8c7a82e4aac54796241b3b330c57837d018698da3173d75427882"
+    },
+    {
+      "path": "./wasm/_framework/System.Runtime.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 7957,
+      "sha256": "8612e02d85097f3839231b0793dc8c7922e7d1fb5e6070d530727d4e06a29dc5"
+    },
+    {
+      "path": "./wasm/_framework/System.Security.Cryptography.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 25365,
+      "sha256": "869c61facb62ee61cc443065bc89d8bfd0d4fa8affee4dbc2e67a26816071080"
+    },
+    {
+      "path": "./wasm/_framework/System.Text.Encodings.Web.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 29461,
+      "sha256": "f2fa89b092fd244cf3424ee3bdc3831ba18978a6dd44c8b9fbef1a0779612b71"
+    },
+    {
+      "path": "./wasm/_framework/System.Text.Json.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 319253,
+      "sha256": "d674efa55aa85b0dc268e93a3679a6f32863df2c9f3fc4820877d10eaf206b92"
+    },
+    {
+      "path": "./wasm/_framework/System.Text.RegularExpressions.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 258325,
+      "sha256": "c80f4b49565b32d50a15ec53e09ffbcfdb35472bc0161eca293737a30d76b150"
+    },
+    {
+      "path": "./wasm/_framework/System.Xml.Linq.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 4373,
+      "sha256": "7b9b71b657b457f8e567ee656b11defa4da8db17b01e1eba015a43ae3f325e57"
+    },
+    {
+      "path": "./wasm/_framework/System.Xml.XDocument.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 4885,
+      "sha256": "13a711cccfeeaba38ada0d64175c49d2f572056ae0b552616347bcb64d68149a"
+    },
+    {
+      "path": "./wasm/_framework/System.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 4885,
+      "sha256": "bcf126d8aaa05eaaee1b09f3ef5f224a0983a01f089a0ee21f71733b9edbd118"
+    },
+    {
+      "path": "./wasm/_framework/dotnet.boot.js",
+      "mediaType": "text/javascript",
+      "byteLength": 9374,
+      "sha256": "3a62eeaec4190246a75dde64ff5966b04a8b01e6a7097f833a10806b284defcb"
+    },
+    {
+      "path": "./wasm/_framework/dotnet.js",
+      "mediaType": "text/javascript",
+      "byteLength": 37884,
+      "sha256": "5e8a03bf4210aa377a0a399b2b083bb8cbd0711ea9c0bdc24247814174024cf1"
+    },
+    {
+      "path": "./wasm/_framework/dotnet.native.js",
+      "mediaType": "text/javascript",
+      "byteLength": 224345,
+      "sha256": "1043e68414a17fa58a47cfaeec5bd181a95da9975541e52305dd956c9490be0b"
+    },
+    {
+      "path": "./wasm/_framework/dotnet.native.wasm",
+      "mediaType": "application/wasm",
+      "byteLength": 8549598,
+      "sha256": "7e6f541d9d3c089f3275a6aba43b0412749b25d451fb582117df22347173e004"
+    },
+    {
+      "path": "./wasm/_framework/dotnet.runtime.js",
+      "mediaType": "text/javascript",
+      "byteLength": 198480,
+      "sha256": "41b9eaad9187b46abbc2e752d7bfc06043e91fd264a61aecc959650fa24799db"
+    }
+  ]
+}
