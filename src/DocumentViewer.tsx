@@ -948,7 +948,7 @@ export function DocumentViewer({
               onPaginationComplete={(result: PaginationResult) => {
                 setTotalPages(result.totalPages);
                 if (result.pageMap) {
-                  if (sessionController && rendererFingerprint && result.pageMap.documentVersion === sessionController.getSnapshot().version) {
+                  if (sessionController && rendererFingerprint && (controlledHtml !== undefined || renderedOwner === sessionController.getSnapshot().session) && result.pageMap.documentVersion === sessionController.getSnapshot().version) {
                     const registration = sessionController.run(session => session.registerPageMap(result.pageMap!, rendererFingerprint));
                     if (!registration.success) onError?.(new Error(registration.message));
                   }

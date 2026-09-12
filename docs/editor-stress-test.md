@@ -52,6 +52,11 @@ pagination took 19.1 seconds. The scripted typing bursts and native commits took
 include the test's typing delay and commit debounce. Full-document reflow remains
 a performance limitation; continued typing during conversion is checked.
 
+The [performance campaign](performance.md) adds a shorter, phase-by-phase benchmark
+with `npm run test:performance`, along with guards against redundant pagination
+and native formatting work. The timings above describe the pre-optimization run
+merged in PR #40.
+
 Pagination is measured in Chromium; pixel-identical pagination with Microsoft
 Word is outside this test's scope. Repeated headers/footers and
 generated page-number fields use the advanced session controls. There are no

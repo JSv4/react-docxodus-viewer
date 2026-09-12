@@ -34,6 +34,9 @@ export class CanvasEditor {
   private listeners = new Set<() => void>();
   private selectionGuards = new Set<() => boolean>();
   private baselines = new Map<string, string>();
+  // Native formatting resolves style inheritance for every run. Keep only its
+  // plain text, keyed by the exact native subtree hash, across DOM replacements.
+  private preparedText = new Map<string, { hash: string; text: string }>();
   private anchorCache: { owner: DocxSession | null; version: number; ids: Map<string, string> } | null = null;
   private root: HTMLElement | null = null;
   private renderedOwner: DocxSession | null = null;
@@ -134,11 +137,21 @@ export class CanvasEditor {
       const id = block.dataset.sourceAnchorId!;
       const group = groups.get(id) ?? []; group.push(block); groups.set(id, group);
     }
+    const ids = [...groups.keys()].map(id => this.canonical(id)).filter((id): id is string => !!id);
+    const info = this.controller.read(session => session.getAnchorInfos(ids));
+    if (!anchorId) {
+      const live = new Set(ids);
+      for (const id of this.preparedText.keys()) if (!live.has(id)) this.preparedText.delete(id);
+      for (const id of this.baselines.keys()) if (!live.has(id)) this.baselines.delete(id);
+    }
     for (const [id, fragments] of groups) {
       try {
         const canonical = this.canonical(id);
         if (!canonical) continue;
-        const text = this.text(canonical);
+        const hash = info[canonical]?.contentHash;
+        const cached = this.preparedText.get(canonical);
+        const text = hash && cached?.hash === hash ? cached.text : this.text(canonical);
+        if (hash) this.preparedText.set(canonical, { hash, text });
         for (const block of fragments) {
           block.dataset.sourceAnchorId = canonical;
           prepareCanvasBreaks(block);
@@ -430,7 +443,7 @@ export class CanvasEditor {
   attach(root: HTMLElement, owner: DocxSession | null) {
     this.detach?.();
     this.root = root;
-    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
+    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.preparedText.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
     this.renderedOwner = owner;
     this.prepareParagraphs();
     const style = document.createElement('style');

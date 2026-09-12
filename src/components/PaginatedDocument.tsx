@@ -62,11 +62,28 @@ function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void>
   });
 }
 
+/** Zoom changes presentation, never the document's page breaks. */
+function scalePages(result: PaginationResult, scale: number, pageGap: number) {
+  for (const page of result.pages) {
+    if (CSS.supports('zoom', '1')) page.element.style.zoom = String(scale);
+    else {
+      page.element.style.transform = `scale(${scale})`;
+      page.element.style.transformOrigin = 'top left';
+      page.element.style.marginRight = `${page.dimensions.pageWidth * (scale - 1) * 4 / 3}px`;
+      page.element.style.marginBottom = `${pageGap + page.dimensions.pageHeight * (scale - 1) * 4 / 3}px`;
+    }
+  }
+}
+
 /** React-owned pagination over the core engine; no upstream editor dependency. */
 export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, showPageNumbers = true, pageGap = 20, cssPrefix = 'page-', fragmentParagraphs = true, layoutToken, citation, selectedAnchorId, backgroundColor = '#525659', className, style, ...callbacks }: PaginatedDocumentProps) {
   const host = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLElement | null>(null);
-  const activeLayout = useRef<{ wrapper: HTMLElement; dispose: () => void } | null>(null);
+  const activeLayout = useRef<{
+    wrapper: HTMLElement; dispose: () => void; engine: PaginationEngine; result: PaginationResult;
+    scale: number; pageGap: number; owner: DocxSession | null;
+    documentVersion?: number; rendererFingerprint?: string;
+  } | null>(null);
   useLayoutEffect(() => () => { activeLayout.current?.dispose(); activeLayout.current = null; }, []);
   const callbacksRef = useRef(callbacks);
   useEffect(() => { callbacksRef.current = callbacks; });
@@ -74,6 +91,28 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
   const { run, cancel } = task;
   const documentVersion = layoutToken?.documentVersion;
   const rendererFingerprint = layoutToken?.rendererFingerprint;
+  const scaleRef = useRef(scale);
+  useLayoutEffect(() => {
+    scaleRef.current = scale;
+    const active = activeLayout.current;
+    if (!active || active.scale === scale) return;
+    scalePages(active.result, scale, active.pageGap);
+    active.scale = scale;
+    // A draft may already have changed the old DOM while conversion is pending.
+    // Only publish measurements for the native version this layout represents.
+    if (canvasEditor && (canvasEditor.getSnapshot().suspended || !canvasEditor.acceptsLayout(active.owner, active.documentVersion))) return;
+    try {
+      const result = { ...active.result };
+      if (active.documentVersion !== undefined && active.rendererFingerprint !== undefined) {
+        active.engine.normalizePageMapFragmentIdentities();
+        result.pageMap = active.engine.materializePageMap(active.documentVersion, active.rendererFingerprint);
+      }
+      active.result = result;
+      callbacksRef.current.onPaginationComplete?.(result);
+    } catch (cause) {
+      callbacksRef.current.onError?.(cause instanceof Error ? cause : new Error(String(cause)));
+    }
+  }, [scale, task.data, canvasEditor]);
 
   useEffect(() => {
     const element = host.current;
@@ -172,15 +211,7 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
         scale: 1, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
       });
       const result = engine.paginate();
-      for (const page of result.pages) {
-        if (CSS.supports('zoom', '1')) page.element.style.zoom = String(scale);
-        else {
-          page.element.style.transform = `scale(${scale})`;
-          page.element.style.transformOrigin = 'top left';
-          page.element.style.marginRight = `${page.dimensions.pageWidth * (scale - 1) * 4 / 3}px`;
-          page.element.style.marginBottom = `${pageGap + page.dimensions.pageHeight * (scale - 1) * 4 / 3}px`;
-        }
-      }
+      scalePages(result, scaleRef.current, pageGap);
       if (documentVersion !== undefined && rendererFingerprint !== undefined) {
         engine.normalizePageMapFragmentIdentities();
         result.pageMap = engine.materializePageMap(documentVersion, rendererFingerprint);
@@ -191,7 +222,7 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
       body.current = documentBody;
       callbacksRef.current.onRootChange?.(documentBody);
       detachEditor = canvasEditor?.attach(documentBody, canvasOwner ?? null);
-      activeLayout.current = { wrapper, dispose };
+      activeLayout.current = { wrapper, dispose, engine, result, scale: scaleRef.current, pageGap, owner: canvasOwner ?? null, documentVersion, rendererFingerprint };
       callbacksRef.current.onPaginationComplete?.(result);
       if (typeof IntersectionObserver !== 'undefined') {
         const visible = new Map<Element, { page: number; ratio: number }>();
@@ -214,7 +245,7 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
       cancel();
       if (activeLayout.current?.wrapper !== wrapper) dispose();
     };
-  }, [html, canvasEditor, canvasOwner, scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, run, cancel]);
+  }, [html, canvasEditor, canvasOwner, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, run, cancel]);
 
   useEffect(() => {
     if (!body.current) return;

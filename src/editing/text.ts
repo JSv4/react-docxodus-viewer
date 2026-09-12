@@ -34,6 +34,11 @@ export function textChange(before: string, after: string, expandInsertion = true
 export function textChanges(before: string, after: string) {
   const changed = textChange(before, after);
   if (!changed) return [];
+  // A single insertion/deletion is already the smallest native edit. Running LCS
+  // over its borrowed neighbour can match a space inside the pasted text instead,
+  // splitting one keystroke burst into multiple writes and an expensive transaction.
+  const exact = textChange(before, after, false)!;
+  if (!exact.removed.length || !exact.inserted.length) return [changed];
   const tokenize = (value: string) => value.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
   const old = tokenize(changed.removed), next = tokenize(changed.inserted);
   // Bound work for unusually large pasted paragraphs.

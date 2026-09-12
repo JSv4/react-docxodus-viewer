@@ -45,7 +45,18 @@ test('fragmented pagination registers exact citations and invalidates them after
   expect(refreshed.errors).toEqual([]);
   await page.getByRole('button', { name: 'Next Page' }).click();
   await expect(page.getByRole('spinbutton')).not.toHaveValue('1');
+  const pages = page.locator('#pagination-container .page-box');
+  await pages.first().evaluate(element => { (element as HTMLElement).dataset.testRetainedPage = 'true'; });
+  const pageCount = await pages.count();
   await page.getByRole('combobox', { name: 'Zoom level' }).selectOption('2');
+  // Zoom keeps the existing DOM and remeasures portable geometry at the new scale.
+  await expect(pages.first()).toHaveAttribute('data-test-retained-page', 'true');
+  await expect(pages).toHaveCount(pageCount);
+  await expect.poll(() => pages.first().evaluate(element => getComputedStyle(element).zoom)).toBe('2');
+  expect(await page.evaluate(() => {
+    const s = window.layoutTest.controller.getSnapshot().session!;
+    return s.getPageCitation(window.layoutTest.anchor, { documentVersion: s.getVersion(), rendererFingerprint: 'pagination-test' }).availability;
+  })).toBe('available');
   await page.locator('.rdv-pages').evaluate(element => { element.scrollTop = 0; });
   await expect(page.getByRole('spinbutton')).toHaveValue('1');
   await page.getByRole('button', { name: 'Next Page' }).click();
@@ -72,4 +83,26 @@ test('a viewer opened in a hidden container waits for measurable pagination', as
   expect(await page.evaluate(() => window.layoutTest.errors)).toEqual([]);
   expect(await page.evaluate(() => window.layoutTest.map!.pages.length)).toBe(1);
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('host-rendered HTML can register its explicit layout token with a session', async ({ page }) => {
+  await page.goto('/api-test.html');
+  await page.waitForFunction(() => !!window.mountViewers);
+  await page.evaluate(async () => {
+    const controller = new window.rdv.DocxSessionController();
+    const session = await controller.open('blank', {}, '/wasm/');
+    const anchor = Object.keys(session.project().anchorIndex)[0];
+    session.replaceText(anchor, 'A host-rendered document.');
+    const html = await window.rdv.convertDocxToHtml(controller.save(), { paginationMode: window.rdv.PaginationMode.Paginated, stampAnchors: true });
+    window.layoutTest = { controller, anchor, errors: [] };
+    window.mountViewers([{ session: controller, html, rendererFingerprint: 'host-rendered',
+      layoutToken: { documentVersion: session.getVersion(), rendererFingerprint: 'host-rendered' },
+      onPageMap: map => { window.layoutTest.map = map; }, onError: error => window.layoutTest.errors.push(error.message) }]);
+  });
+  await page.waitForFunction(() => !!window.layoutTest.map);
+  expect(await page.evaluate(() => {
+    const { controller, anchor } = window.layoutTest;
+    return controller.read(s => s.getPageCitation(anchor, { documentVersion: s.getVersion(), rendererFingerprint: 'host-rendered' }).availability);
+  })).toBe('available');
+  expect(await page.evaluate(() => window.layoutTest.errors)).toEqual([]);
 });
