@@ -165,11 +165,26 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
       // The converter supplies its own default canvas color inside the ShadowRoot.
       // Apply the host's theme to the canvas without changing the document pages.
       container.style.backgroundColor = backgroundColor;
+      // Docxodus 12.4.1 measures note/header reserves while creating pages. Zooming
+      // those pages during measurement mixes scaled pixels with document points,
+      // clipping body paragraphs in documents with substantial footnotes.
       const engine = new PaginationEngine(staging, container, {
-        scale, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
-        layoutToken: documentVersion !== undefined && rendererFingerprint !== undefined ? { documentVersion, rendererFingerprint } : undefined,
+        scale: 1, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
       });
       const result = engine.paginate();
+      for (const page of result.pages) {
+        if (CSS.supports('zoom', '1')) page.element.style.zoom = String(scale);
+        else {
+          page.element.style.transform = `scale(${scale})`;
+          page.element.style.transformOrigin = 'top left';
+          page.element.style.marginRight = `${page.dimensions.pageWidth * (scale - 1) * 4 / 3}px`;
+          page.element.style.marginBottom = `${pageGap + page.dimensions.pageHeight * (scale - 1) * 4 / 3}px`;
+        }
+      }
+      if (documentVersion !== undefined && rendererFingerprint !== undefined) {
+        engine.normalizePageMapFragmentIdentities();
+        result.pageMap = engine.materializePageMap(documentVersion, rendererFingerprint);
+      }
       activeLayout.current?.dispose();
       Object.assign(wrapper.style, { opacity: '', position: '', top: '', left: '', width: '', pointerEvents: '' });
       wrapper.inert = false;
@@ -191,7 +206,10 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, scale = 1, 
         container.querySelectorAll(`.${cssPrefix}box[data-page-number]`).forEach(page => observer!.observe(page));
       }
       return result;
-    }).catch(error => { if (error?.name !== 'AbortError') callbacksRef.current.onError?.(error); });
+    }).catch(error => {
+      if (activeLayout.current?.wrapper !== wrapper) dispose();
+      if (error?.name !== 'AbortError') callbacksRef.current.onError?.(error);
+    });
     return () => {
       cancel();
       if (activeLayout.current?.wrapper !== wrapper) dispose();

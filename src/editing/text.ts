@@ -1,4 +1,3 @@
-import { ProjectionScopes } from 'docxodus/core';
 import type { DocxSession, EditResult, FormattingInspection } from 'docxodus/core';
 
 export function escapePattern(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -83,14 +82,21 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
     return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: live.visibleText }) }];
   }
   return changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
-    const match = session.grep(escapePattern(change.removed), { scope: ProjectionScopes.All })
-      .find(match => match.enclosingAnchor.id === anchorId && match.span.start === change.start && match.span.length === change.removed.length);
-    if (!match) throw new Error('This text cannot be mapped to an editable run. The document has not been changed.');
-    return session.replaceMatch(match, change.inserted);
+    const current = editableText(session.getFormatting(anchorId));
+    if (current.slice(change.start, change.start + change.removed.length) !== change.removed) throw new Error('This text changed before the edit could be applied.');
+    // 12.4.1 replaceMatch addresses only enclosingAnchor.id + span (its
+    // ReplaceTextAtSpan bridge). We already have those verified native offsets.
+    // Searching the entire package for a borrowed space or period produces
+    // thousands of irrelevant matches and stalls large-document typing.
+    return session.replaceMatch({ text: change.removed,
+      enclosingAnchor: { id: anchorId, kind: live.kind, scope: live.scope, unid: anchorId.split(':').at(-1)! },
+      span: { start: change.start, length: change.removed.length }, fragments: [],
+      contextBefore: current.slice(0, change.start), contextAfter: current.slice(change.start + change.removed.length), groups: [change.removed],
+    }, change.inserted);
   } }));
 }
 
-export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | ReturnType<DocxSession['executeBatch']> | null {
+export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | readonly EditResult[] | ReturnType<DocxSession['executeBatch']> | null {
   const steps = paragraphTextSteps(session, anchorId, before, after);
-  return steps.length ? session.executeBatch(steps) : null;
+  return steps.length === 1 ? steps[0].mutation() : steps.length ? session.executeBatch(steps) : null;
 }

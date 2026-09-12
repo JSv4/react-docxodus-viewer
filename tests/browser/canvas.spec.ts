@@ -224,3 +224,59 @@ test('typing across page fragments preserves the rest of a long paragraph', asyn
   expect(result.replace('EDITED HERE AGAIN', '')).toBe(text);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
+
+test('Word breaks, tabs, and nonbreaking hyphens stay intact while editing surrounding text', async ({ page }) => {
+  await open(page, 'Source');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => {
+    const id = window.editorTest.anchor;
+    return s.raw.replaceXml(id, s.raw.getXml(id).replace('Source', 'First</w:t><w:br/><w:t>Second</w:t><w:tab/><w:t>Non</w:t><w:noBreakHyphen/><w:t>breaking last.'));
+  }));
+  await expect(paragraphs(page).first()).toContainText('breaking last.');
+  await settled(page);
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Typed.');
+  await page.keyboard.press('Control+s');
+  const saved = await page.evaluate(async () => {
+    const controller = new window.rdv.DocxSessionController();
+    const s = await controller.open(window.editorTest.saved!, {}, '/wasm/');
+    const xml = new DOMParser().parseFromString(s.raw.getXml(window.editorTest.anchor), 'application/xml');
+    const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const text = s.getFormatting(window.editorTest.anchor)!.runs.map(r => r.text).join('');
+    const tokens = ['br', 'tab', 'noBreakHyphen'].map(name => xml.getElementsByTagNameNS(w, name).length);
+    controller.close(); return { text, tokens };
+  });
+  expect(saved).toEqual({ text: 'FirstSecondNonbreaking last. Typed.', tokens: [1, 1, 1] });
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('Backspace rejoins a split word without adding a space', async ({ page }) => {
+  await open(page, 'Alphabeta');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => nativeText(page)).toEqual(['Alpha', 'beta']);
+  await page.keyboard.press('Backspace');
+  await expect.poll(() => nativeText(page)).toEqual(['Alphabeta']);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual(['Alpha', 'beta']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('select-all formats body paragraphs without changing their interleaved footnotes', async ({ page }) => {
+  await open(page, 'Body paragraph.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => {
+    s.insertParagraph(window.editorTest.anchor, 'after', 'Another body paragraph.');
+    s.insertFootnote(window.editorTest.anchor, 4, 'Keep this footnote unchanged.');
+  }));
+  await expect(paragraphs(page).filter({ hasText: 'Keep this footnote unchanged.' })).toHaveCount(1);
+  await paragraphs(page).filter({ hasText: 'Body paragraph.' }).click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Control+b');
+  const formatted = await page.evaluate(() => window.editorTest.controllers[0].read(s => Object.entries(s.project().anchorIndex)
+    .filter(([, a]) => ['p', 'h', 'li'].includes(a.kind)).map(([id, a]) => ({ scope: a.scope, runs: s.getFormatting(id)!.runs }))));
+  expect(formatted.filter(p => p.scope === 'body').every(p => p.runs.every(r => r.effective.bold))).toBe(true);
+  expect(formatted.filter(p => p.scope === 'fn').every(p => p.runs.every(r => !r.effective.bold))).toBe(true);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});

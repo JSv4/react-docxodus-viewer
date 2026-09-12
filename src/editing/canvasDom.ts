@@ -3,7 +3,7 @@ import { paragraphSelector, shadowSelection } from './selection';
 export interface CanvasPoint { anchorId: string; offset: number }
 export interface CanvasRange { start: CanvasPoint; end: CanvasPoint; backward: boolean }
 export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-ref, a[class$="-backref"], a.comment-marker';
-const ignored = `${generatedContent}, [data-rdv-empty], del, [data-revision-type="deleted"]`;
+const ignored = `${generatedContent}, [data-rdv-empty], [data-rdv-presentation], [data-docx-tab], br, del, [data-revision-type="deleted"]`;
 
 export function canvasParagraphs(root: HTMLElement, anchorId?: string) {
   return Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})`))
@@ -16,10 +16,54 @@ export function canvasText(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
   if (node instanceof Element) {
     if (node.matches(ignored)) return '';
-    if (node.matches('[data-docx-tab]')) return '\t';
-    if (node.tagName === 'BR') return node.hasAttribute('data-rdv-break') ? '\n' : '';
   }
   return Array.from(node.childNodes).map(canvasText).join('');
+}
+
+/** The converter emits a directional sentinel after a Word break. Neither that
+ * sentinel nor w:br / w:tab occupies a character in native formatting spans. */
+export function prepareCanvasBreaks(block: HTMLElement) {
+  for (const br of block.querySelectorAll('br:not([data-rdv-empty])')) {
+    br.setAttribute('contenteditable', 'false');
+    const next = br.nextSibling;
+    if (next?.nodeType === Node.TEXT_NODE && /^[\u200e\u200f]/.test(next.textContent ?? '')) {
+      const marker = block.ownerDocument.createElement('span');
+      marker.dataset.rdvPresentation = 'true'; marker.contentEditable = 'false';
+      marker.textContent = next.textContent![0];
+      next.textContent = next.textContent!.slice(1);
+      br.after(marker);
+    }
+  }
+}
+
+/** w:noBreakHyphen renders a glyph but, like tabs, has no native text offset.
+ * Consult the source XML before excluding it so literal hyphens remain editable. */
+export function prepareCanvasHyphens(blocks: HTMLElement[], xml: string, nativeText: string) {
+  const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+  const offsets: number[] = [];
+  let text = '';
+  for (const element of parsed.getElementsByTagNameNS(word, '*')) {
+    if (element.localName === 't') text += element.textContent;
+    else if (element.localName === 'noBreakHyphen') offsets.push(text.length);
+  }
+  if (text !== nativeText) return;
+  for (const offset of offsets) {
+    let remaining = offset;
+    const nodes: Text[] = [];
+    for (const block of blocks) {
+      const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) if (!walker.currentNode.parentElement?.closest(ignored)) nodes.push(walker.currentNode as Text);
+    }
+    for (const node of nodes) {
+      if (remaining >= node.length) { remaining -= node.length; continue; }
+      if (node.data[remaining] !== '-') break;
+      const glyph = node.splitText(remaining); glyph.splitText(1);
+      const marker = node.ownerDocument.createElement('span');
+      marker.dataset.rdvPresentation = 'true'; marker.contentEditable = 'false'; marker.textContent = '-';
+      glyph.replaceWith(marker); break;
+    }
+  }
 }
 export const normalizedText = (text: string) => text.replace(/\u00a0/g, ' ');
 export const samePoint = (a: CanvasPoint, b: CanvasPoint) => a.anchorId === b.anchorId && a.offset === b.offset;
