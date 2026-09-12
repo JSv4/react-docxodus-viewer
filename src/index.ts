@@ -8,10 +8,19 @@ import './styles/DocumentViewer.css';
 
 // Main component
 export { DocumentViewer } from './DocumentViewer';
+export { DocumentEditor } from './DocumentEditor';
+export type { DocumentEditorProps, DocumentEditorHandle, DocumentEditorChange } from './DocumentEditor';
+export { EditorToolbar } from './components/EditorToolbar';
+export type { EditorToolbarProps, EditorToolbarGroup } from './components/EditorToolbar';
+export { ParagraphEditor } from './components/ParagraphEditor';
+export type { ParagraphEditorProps, ParagraphEditorHandle } from './components/ParagraphEditor';
+export { useDocumentEditor } from './hooks/useDocumentEditor';
+export type { DocumentEditorState, UseDocumentEditorOptions, EditorSelection } from './hooks/useDocumentEditor';
 
 // Types
 export type {
   DocumentViewerProps,
+  DocumentTextSelection,
   ViewerSettings,
   CommentMode,
   AnnotationMode,

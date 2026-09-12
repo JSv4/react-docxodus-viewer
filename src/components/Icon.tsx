@@ -27,6 +27,18 @@ const paths = {
   bold: 'M6 3h7a5 5 0 0 1 0 10H6z M6 13h8a4 4 0 0 1 0 8H6z',
   italic: 'M11 3h9 M4 21h9 M15 3L9 21',
   code: 'M8 6l-6 6 6 6 M16 6l6 6-6 6',
+  clearFormat: 'M6 3h14 M13 3L9 16 M5 21l8-8 6 6-2 2H5z',
+  alignLeft: 'M3 5h18 M3 10h12 M3 15h18 M3 20h12',
+  alignCenter: 'M3 5h18 M6 10h12 M3 15h18 M6 20h12',
+  alignRight: 'M3 5h18 M9 10h12 M3 15h18 M9 20h12',
+  alignJustify: 'M3 5h18 M3 10h18 M3 15h18 M3 20h18',
+  orderedList: 'M9 5h12 M9 12h12 M9 19h12 M3 3h1v4 M2 11c0-2 3-2 3 0l-3 3h3 M2 18h3l-2 2h2v2H2',
+  indent: 'M3 5h18 M10 10h11 M10 15h11 M3 20h18 M3 9l4 3-4 3',
+  outdent: 'M3 5h18 M10 10h11 M10 15h11 M3 20h18 M6 9l-4 3 4 3',
+  link: 'M10 13a5 5 0 0 0 7 0l4-4a5 5 0 0 0-7-7l-3 3 M14 11a5 5 0 0 0-7 0l-4 4a5 5 0 0 0 7 7l3-3',
+  table: 'M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18',
+  image: 'M3 3h18v18H3z M3 16l6-6 5 5 3-3 4 4 M16 7h.01',
+  pageBreak: 'M4 3h16v5H4z M4 16h16v5H4z M2 12h3 M8 12h3 M14 12h3 M20 12h2',
 } as const;
 
 export type IconName = keyof typeof paths;

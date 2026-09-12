@@ -5,6 +5,14 @@
 export type CommentMode = 'disabled' | 'endnote' | 'inline' | 'margin';
 export type AnnotationMode = 'disabled' | 'above' | 'inline' | 'tooltip' | 'none';
 export type ViewMode = 'document' | 'revisions';
+/** Exact text selection within one canonical paragraph, including page fragments. */
+export interface DocumentTextSelection {
+  anchorId: string;
+  span: import('docxodus/core').CharSpan;
+  text: string;
+  blockText: string;
+  documentVersion?: number;
+}
 /**
  * Automatic zoom-fit mode.
  * - `manual` (default): user controls zoom via the toolbar.
@@ -136,6 +144,8 @@ export interface DocumentViewerProps {
   onRevisionSelect?: (revision: import('docxodus/core').RevisionListEntry) => void;
   /** Canonical block selected in the rendered document. */
   onAnchorSelect?: (anchorId: string) => void;
+  /** Selected characters inside a paragraph. Null means the range crosses paragraphs. */
+  onTextSelectionChange?: (selection: DocumentTextSelection | null) => void;
   /** Highlight a selected canonical block without changing its document formatting. */
   selectedAnchorId?: string;
   /** Enable native accept/reject actions when session is supplied. */
@@ -172,6 +182,8 @@ export interface DocumentViewerProps {
   /** Callback when settings change */
   onSettingsChange?: (settings: ViewerSettings) => void;
 
+  /** Toolbar and canvas palette. Document page styling is preserved. */
+  theme?: 'classic' | 'studio';
   /** Additional CSS class for the root element */
   className?: string;
   /** Inline styles for the root element */

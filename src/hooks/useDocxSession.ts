@@ -27,7 +27,7 @@ export interface UseDocxSessionOptions {
 }
 
 /** Opens/replaces documents atomically and closes the owned native handle on unmount. */
-export function useDocxSession(source?: DocumentSource | null, options: UseDocxSessionOptions = {}) {
+export function useDocxSession(source?: DocumentSource | 'blank' | null, options: UseDocxSessionOptions = {}) {
   const [controller] = useState(() => new DocxSessionController());
   const runtime = useDocxodusRuntime({ wasmBasePath: options.wasmBasePath, enabled: false });
   const snapshot = useSessionState(controller);

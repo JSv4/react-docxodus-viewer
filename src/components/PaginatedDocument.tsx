@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react';
 import { PaginationEngine, clearPageCitationHighlight, navigateToPageCitation } from 'docxodus/core';
 import type { PageCitation, PaginationOptions, PaginationResult } from 'docxodus/core';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
+import { paragraphSelector, readTextSelection, shadowSelection } from '../editing/selection';
+import type { DocumentTextSelection } from '../types';
 
 export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' | 'showPageNumbers' | 'pageGap' | 'cssPrefix' | 'fragmentParagraphs' | 'layoutToken'> {
   html: string;
@@ -14,6 +16,7 @@ export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' 
   onPageVisible?: (page: number) => void;
   onError?: (error: Error) => void;
   onAnchorSelect?: (anchorId: string) => void;
+  onTextSelectionChange?: (selection: DocumentTextSelection | null) => void;
   selectedAnchorId?: string;
   /** The document's isolated DOM, for anchor/page navigation. */
   onRootChange?: (root: HTMLElement | null) => void;
@@ -100,7 +103,12 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       const target = event.target instanceof Element ? event.target : null;
       // Inline comment/revision wrappers have their own anchors. Editing a passage
       // should select its paragraph, rather than the discussion attached to it.
-      const block = target?.closest('p[data-source-anchor-id], h1[data-source-anchor-id], h2[data-source-anchor-id], h3[data-source-anchor-id], h4[data-source-anchor-id], h5[data-source-anchor-id], h6[data-source-anchor-id], li[data-source-anchor-id]');
+      const selection = shadowSelection(documentBody);
+      if (callbacksRef.current.onTextSelectionChange) {
+        if (target?.closest('a[href]')) event.preventDefault();
+        if (selection && !selection.isCollapsed) return;
+      }
+      const block = target?.closest(paragraphSelector);
       const anchor = (block ?? target?.closest('[data-source-anchor-id]'))?.getAttribute('data-source-anchor-id');
       if (anchor) callbacksRef.current.onAnchorSelect?.(anchor);
       const link = target?.closest('a[href^="#"]');
@@ -111,6 +119,14 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       }
     };
     documentBody.addEventListener('click', onClick);
+    const onSelection = () => {
+      const selection = shadowSelection(documentBody);
+      if (callbacksRef.current.onTextSelectionChange && selection && !selection.isCollapsed) {
+        callbacksRef.current.onTextSelectionChange(readTextSelection(documentBody, documentVersion));
+      }
+    };
+    documentBody.addEventListener('mouseup', onSelection);
+    documentBody.addEventListener('keyup', onSelection);
     let observer: IntersectionObserver | null = null;
     void run(async signal => {
       await waitForLayout(element, signal);
@@ -150,6 +166,8 @@ export function PaginatedDocument({ html, scale = 1, showPageNumbers = true, pag
       cancel();
       observer?.disconnect();
       documentBody.removeEventListener('click', onClick);
+      documentBody.removeEventListener('mouseup', onSelection);
+      documentBody.removeEventListener('keyup', onSelection);
       body.current = null;
       callbacksRef.current.onRootChange?.(null);
       shadow.replaceChildren();

@@ -5,6 +5,7 @@
 
 @import './variables.css';
 @import './features.css';
+@import './editor.css';
 
 /* ============================================
    DOCX VIEWER - Main container

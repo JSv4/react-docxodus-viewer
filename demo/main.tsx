@@ -1,10 +1,10 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import App from './DemoRouter'
 import './index.css'
-import App from './App'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Suspense fallback={<p role="status">Opening workspace…</p>}><App /></Suspense>
   </StrictMode>,
 )

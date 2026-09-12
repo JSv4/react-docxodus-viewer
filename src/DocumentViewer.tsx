@@ -5,6 +5,7 @@ import { CommentRenderMode, PaginationMode, AnnotationLabelMode } from 'docxodus
 import { useDocxodusRuntime } from './runtime';
 import { useSessionState, useSessionQuery } from './hooks/useDocxSession';
 import type { DocumentSource } from './session';
+import { reconcileSourceAnchors } from './rendering/anchors';
 import type {
   DocumentViewerProps,
   ViewerSettings,
@@ -94,6 +95,7 @@ export function DocumentViewer({
   onPaginationComplete,
   onRevisionSelect,
   onAnchorSelect,
+  onTextSelectionChange,
   selectedAnchorId,
   allowRevisionResolution = true,
   html: controlledHtml,
@@ -118,6 +120,7 @@ export function DocumentViewer({
   useWorker = true,
   warmup = false,
   fitMode = 'manual',
+  theme = 'classic',
   toolbarActions,
 }: DocumentViewerProps) {
   // Merge default settings. `defaultZoom` is a convenience shortcut for
@@ -141,11 +144,16 @@ export function DocumentViewer({
   const sessionState = useSessionState(sessionController);
   const onErrorRef = useRef(onError);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
-  const [sessionDocument, setSessionDocument] = useState<{ bytes: Uint8Array; version: number } | null>(null);
+  const [sessionDocument, setSessionDocument] = useState<{ bytes: Uint8Array; version: number; anchors: string[] } | null>(null);
   useEffect(() => {
     let current = true;
     Promise.resolve().then(() => {
-      if (current) setSessionDocument(sessionState.session && sessionController ? { bytes: sessionController.save(), version: sessionState.version } : null);
+      if (!current) return;
+      const snapshot = sessionController?.getSnapshot();
+      setSessionDocument(snapshot?.session && sessionController ? {
+        bytes: sessionController.save(), version: snapshot.version,
+        anchors: sessionController.read(session => Object.keys(session.project().anchorIndex)),
+      } : null);
     }).catch(cause => { if (current) onErrorRef.current?.(cause instanceof Error ? cause : new Error(String(cause))); });
     return () => { current = false; };
   }, [sessionController, sessionState.session, sessionState.version]);
@@ -246,8 +254,9 @@ export function DocumentViewer({
       if (current()) setDocumentMetadata(metadata);
     }).catch(() => { /* Metadata is optional. */ });
     try {
-      const result = await runtime.convertToHtml(fileToConvert, getConvertOptions());
+      let result = await runtime.convertToHtml(fileToConvert, getConvertOptions());
       if (!current()) return;
+      if (sessionDocument?.bytes === fileToConvert) result = reconcileSourceAnchors(result, sessionDocument.anchors);
       if (controlledHtml === undefined) { setInternalHtml(result); setRenderedLayoutToken(layoutToken); }
       onConversionComplete?.(result);
       if (showRevisionsTab && !controlledRevisions && !sessionController) {
@@ -266,7 +275,7 @@ export function DocumentViewer({
       onError?.(failure);
     } finally { if (current()) setIsConverting(false); }
   }, [isReady, runtime, getConvertOptions, controlledHtml, onConversionStart, onConversionComplete,
-    showRevisionsTab, controlledRevisions, sessionController, onRevisionsExtracted, onError, layoutToken]);
+    showRevisionsTab, controlledRevisions, sessionController, sessionDocument, onRevisionsExtracted, onError, layoutToken]);
 
   const convertRef = useRef(convert);
   const conversionOptionsKey = JSON.stringify(conversionOptions ?? {});
@@ -799,7 +808,7 @@ export function DocumentViewer({
     </div>
   );
 
-  const rootClassName = ['rdv-viewer', className].filter(Boolean).join(' ');
+  const rootClassName = ['rdv-viewer', theme === 'studio' && 'rdv-viewer--studio', className].filter(Boolean).join(' ');
 
   return (
     <div ref={viewerRef} className={rootClassName} style={style}>
@@ -916,6 +925,7 @@ export function DocumentViewer({
               onRootChange={root => { documentRootRef.current = root; }}
               onError={onError}
               onAnchorSelect={onAnchorSelect}
+              onTextSelectionChange={onTextSelectionChange}
               selectedAnchorId={selectedAnchorId}
               pageGap={pageGap}
               backgroundColor="var(--rdv-background, #525659)"
