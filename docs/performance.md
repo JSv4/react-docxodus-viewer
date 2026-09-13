@@ -125,6 +125,12 @@ added paragraph, and all independent XML/package assertions. That run's cold
 opening plus complete native text inventory took 20.62 s, versus 18.86 s in the
 previous pass; this change does not claim a cold-open improvement.
 
+After the paragraph-presentation fix, a final repeat passed all integrity checks
+with a 2.59 s median typing → settled layout. Its body benchmark cycles were
+1.79 / 1.78 s and its footnote cycle was 2.51 s, with the same zero-save,
+zero-conversion guards. Timings vary with the local run; the count-based guards
+and document integrity assertions are the portable regression requirements.
+
 ## Next work
 
 1. Repaginate the affected story/section, then downstream pages until layout
