@@ -6,6 +6,8 @@ import { useDocxodusRuntime } from './runtime';
 import { useSessionState, useSessionQuery } from './hooks/useDocxSession';
 import type { DocumentSource } from './session';
 import { reconcileSourceAnchors } from './rendering/anchors';
+import { liveRenderOptions, patchSourceBlocks } from './rendering/liveBlocks';
+import type { LiveBlockUpdate } from './rendering/liveBlocks';
 import type {
   DocumentViewerProps,
   ViewerSettings,
@@ -142,6 +144,9 @@ export function DocumentViewer({
   const [internalHtml, setInternalHtml] = useState<string | null>(null);
   const [renderedLayoutToken, setRenderedLayoutToken] = useState<DocumentViewerProps['layoutToken']>();
   const [renderedOwner, setRenderedOwner] = useState<DocxSession | null>(null);
+  const [renderedVersion, setRenderedVersion] = useState<number>();
+  const [liveBlocks, setLiveBlocks] = useState<LiveBlockUpdate>();
+  const sourceRender = useRef<{ html: string; owner: DocxSession; version: number; profile: string } | null>(null);
   const [internalSettings, setInternalSettings] = useState<ViewerSettings>(mergedDefaults);
 
   // Determine which values to use (controlled vs uncontrolled)
@@ -150,20 +155,20 @@ export function DocumentViewer({
     canvasEditor ? () => canvasEditor.getSnapshot().suspended : notEditing, notEditing);
   const onErrorRef = useRef(onError);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
-  const [sessionDocument, setSessionDocument] = useState<{ bytes: Uint8Array; version: number; anchors: string[]; owner: DocxSession } | null>(null);
+  const [sessionDocument, setSessionDocument] = useState<{ version: number; owner: DocxSession } | null>(null);
   useEffect(() => {
     let current = true;
     Promise.resolve().then(() => {
       if (!current || editingSuspended) return;
       const snapshot = sessionController?.getSnapshot();
       setSessionDocument(snapshot?.session && sessionController ? {
-        bytes: sessionController.save(), version: snapshot.version, owner: snapshot.session,
-        anchors: sessionController.read(session => Object.keys(session.project().anchorIndex)),
+        version: snapshot.version, owner: snapshot.session,
       } : null);
     }).catch(cause => { if (current) onErrorRef.current?.(cause instanceof Error ? cause : new Error(String(cause))); });
     return () => { current = false; };
   }, [sessionController, sessionState.session, sessionState.version, editingSuspended]);
-  const file = sessionController ? sessionDocument?.bytes ?? null : controlledDocument !== undefined ? controlledDocument : controlledFile !== undefined ? controlledFile : internalFile;
+  const sessionFile = useMemo(() => sessionState.session ? sessionController?.originalBytes ?? null : null, [sessionController, sessionState.session]);
+  const file = sessionController ? sessionFile : controlledDocument !== undefined ? controlledDocument : controlledFile !== undefined ? controlledFile : internalFile;
   const html = controlledHtml !== undefined ? controlledHtml : internalHtml;
   const settings = useMemo(
     () => controlledSettings
@@ -246,12 +251,43 @@ export function DocumentViewer({
     ...conversionOptions,
   }), [settings, conversionOptions]);
 
-  const convert = useCallback(async (fileToConvert: DocumentSource) => {
+  const convert = useCallback(async (fileToConvert: DocumentSource, force = false) => {
     if (!isReady) return;
     const generation = ++conversionGeneration.current;
     conversionAbort.current?.abort();
     const abort = new AbortController(); conversionAbort.current = abort;
     const current = () => generation === conversionGeneration.current;
+    const options = getConvertOptions();
+    const profile = JSON.stringify({ ...options, paginationScale: 1 });
+    try { if (sessionController) {
+      if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
+      if (!current() || !sessionDocument || sessionController.getSnapshot().session !== sessionDocument.owner ||
+        sessionController.getSnapshot().version !== sessionDocument.version) return;
+      const previous = sourceRender.current;
+      if (!force && previous?.owner === sessionDocument.owner && previous.profile === profile) {
+        const anchors = sessionController.getRenderChanges(previous.owner, previous.version);
+        if (anchors?.length === 0) return;
+        if (anchors) {
+          // Unsupported bridge profiles/blocks fall back to the complete converter.
+          const renderOptions = liveRenderOptions(options, sessionController);
+          const rendered = renderOptions && sessionController.renderBlocks(anchors, renderOptions);
+          const patched = rendered && anchors.every(id => rendered[id]) && patchSourceBlocks(previous.html, rendered);
+          if (patched) {
+            sourceRender.current = { ...previous, html: patched.html, version: sessionDocument.version };
+            setLiveBlocks({ owner: previous.owner, fromVersion: previous.version, toVersion: sessionDocument.version, blocks: patched.blocks });
+            setInternalHtml(patched.html); setRenderedLayoutToken(layoutToken); setRenderedOwner(previous.owner); setRenderedVersion(sessionDocument.version);
+            setIsConverting(false); setError(null);
+            return;
+          }
+        }
+      }
+      // Serialization is needed only for initial/full-profile renders and export.
+      fileToConvert = sessionController.save();
+    } } catch (cause) {
+      if (!current() || (cause instanceof Error && cause.name === 'AbortError')) return;
+      const failure = cause instanceof Error ? cause : new Error(String(cause));
+      setError(failure); setIsConverting(false); onError?.(failure); return;
+    }
     setIsConverting(true);
     setError(null);
     setRevisions([]);
@@ -263,12 +299,15 @@ export function DocumentViewer({
       if (current()) setDocumentMetadata(metadata);
     }).catch(() => { /* Metadata is optional. */ });
     try {
-      let result = await runtime.convertToHtml(fileToConvert, getConvertOptions());
+      let result = await runtime.convertToHtml(fileToConvert, options);
       if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
       if (!current()) return;
-      if (canvasEditor && sessionDocument && (sessionDocument.owner !== sessionController?.getSnapshot().session || sessionDocument.version !== sessionController.getSnapshot().version)) return;
-      if (sessionDocument?.bytes === fileToConvert) result = reconcileSourceAnchors(result, sessionDocument.anchors);
-      if (controlledHtml === undefined) { setInternalHtml(result); setRenderedLayoutToken(layoutToken); setRenderedOwner(sessionDocument?.owner ?? null); }
+      if (sessionDocument && sessionController && (sessionDocument.owner !== sessionController.getSnapshot().session || sessionDocument.version !== sessionController.getSnapshot().version)) return;
+      if (sessionController && sessionDocument) {
+        result = reconcileSourceAnchors(result, Object.keys(sessionController.getAnchorIndex()));
+        sourceRender.current = { html: result, owner: sessionDocument.owner, version: sessionDocument.version, profile };
+      }
+      if (controlledHtml === undefined) { setLiveBlocks(undefined); setInternalHtml(result); setRenderedLayoutToken(layoutToken); setRenderedOwner(sessionDocument?.owner ?? null); setRenderedVersion(sessionDocument?.version); }
       onConversionComplete?.(result);
       if (showRevisionsTab && !controlledRevisions && !sessionController) {
         setIsExtractingRevisions(true);
@@ -293,16 +332,19 @@ export function DocumentViewer({
   const invalidateConversion = useCallback(() => { conversionGeneration.current++; conversionAbort.current?.abort(); }, []);
   useEffect(() => { convertRef.current = convert; });
   useEffect(() => {
-    if (isReady && file && controlledHtml === undefined) void convertRef.current(file);
+    if (isReady && file && controlledHtml === undefined) void convertRef.current(file).catch(cause => {
+      if (cause?.name !== 'AbortError') onErrorRef.current?.(cause instanceof Error ? cause : new Error(String(cause)));
+    });
     if (!file) {
+      sourceRender.current = null;
       void Promise.resolve().then(() => {
         setIsConverting(false); setIsExtractingRevisions(false); setRevisions([]);
         setFileName(''); setDocumentMetadata(null); setTotalPages(0);
-        if (controlledHtml === undefined) setInternalHtml(null);
+        if (controlledHtml === undefined) { setInternalHtml(null); setLiveBlocks(undefined); setRenderedOwner(null); setRenderedVersion(undefined); }
       });
     }
     return invalidateConversion;
-  }, [isReady, file, controlledHtml, conversionOptionsKey, invalidateConversion]);
+  }, [isReady, file, sessionDocument, controlledHtml, conversionOptionsKey, invalidateConversion]);
 
   // Handle file input change
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -336,7 +378,7 @@ export function DocumentViewer({
       if (controlledHtml === undefined) {
         setInternalHtml(null);
       }
-      await convert(file);
+      await convert(file, true);
     }
   }, [file, convert, controlledHtml]);
 
@@ -929,6 +971,8 @@ export function DocumentViewer({
               html={html}
               canvasEditor={canvasEditor}
               canvasOwner={renderedOwner}
+              liveBlocks={controlledHtml === undefined ? liveBlocks : undefined}
+              sourceVersion={controlledHtml === undefined ? renderedVersion : undefined}
               scale={settings.paginationScale}
               showPageNumbers={settings.showPageNumbers}
               fragmentParagraphs={settings.fragmentParagraphs}

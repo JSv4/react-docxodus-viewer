@@ -81,8 +81,11 @@ structure while editing surrounding text. See the [NVCA stress test](editor-stre
 for a reproducible test against a substantial document with footnotes and fields.
 
 Typing appears immediately, then commits to the native DOCX after a short pause.
-The page stays mounted during conversion and restores the caret and scroll position
-after reflow. IME composition waits until confirmation before committing. Text
+Ordinary text and character formatting render changed blocks from the same live
+native session. Pages stay mounted when paragraph geometry is unchanged; text
+that changes page flow repaginates from the updated source HTML, preserving the
+caret and scroll position. Structural edits and unsupported render profiles use
+the full converter. IME composition waits until confirmation before committing. Text
 updates preserve unchanged runs, links, and formatting. Typing bursts and
 structural operations use native undo steps.
 
@@ -117,6 +120,13 @@ for each draft keystroke or initial document loading. Its `getDocument()` functi
 reads current committed DOCX bytes on demand; you do not need to serialize on every
 change. Keep the input `document` stable while editing. Passing newly saved bytes
 back as `document` would open a replacement and reset its history.
+
+An editor-owned session defaults to `emitMarkdownPatch: false`, matching the native
+TypeScript editor. React does not need a Markdown projection after each edit.
+For a host-owned session, pass `settings: { emitMarkdownPatch: false }` to
+`useDocxSession`, or to `controller.open`. The general controller keeps the upstream
+default for applications that consume `EditResult.patch`; editor callers can also
+opt back in through `sessionSettings`.
 
 Without `onSave`, the header downloads a DOCX. With it, your application controls
 storage and receives errors through `onError`. A ref exposes `controller`,

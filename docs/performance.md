@@ -29,7 +29,9 @@ are diagnostic measurements rather than CI pass/fail thresholds. The benchmark
 also enforces structural performance requirements: one initial pagination,
 retained page DOM during zoom, bounded formatting inspections after an edit, and
 one native write for a contiguous typing burst. Complete page maps and preserved
-text remain correctness requirements.
+text remain correctness requirements. Ordinary edits must use one native block
+batch and zero saved-package conversions; the two body edits retain their pages,
+while the footnote edit repaginates from updated source HTML.
 
 ## First pass
 
@@ -72,20 +74,58 @@ The full NVCA integrity suite verifies the saved document separately, including
 unchanged paragraph XML, fields, bookmarks, notes, sections, and unrelated package
 parts. See [the stress-test details](editor-stress-test.md).
 
+## Live native blocks
+
+React now shares one native session handle between its complete editing API and
+Docxodus 12.4.1's `ListAnchors` and `RenderEditorBlocksHtml` bridge. It does not
+instantiate a second upstream editor or save/reopen the document to render a
+typing burst. A bounded journal follows successful text/character-formatting
+mutations, including synchronous nested batches. Unknown changes, rollbacks,
+missing history, and owner replacement cannot be published as local block edits.
+
+The viewer retains authoritative unpaginated HTML, including hidden footnote and
+endnote registries. Native block updates preserve pagination metadata and the
+document's note reference ordinals. For unfragmented body paragraphs, geometry is
+compared with the last committed layout, before browser typing changed the DOM.
+Unchanged geometry retains page elements and the canvas event handlers; the page
+map is measured for the new native version. Changed wrapping, fragments, tables,
+and notes repaginate the updated source. Structural/global edits, image-bearing
+blocks, nested source identities, and unsupported custom render profiles retain
+the full converter fallback.
+
+Editor-owned sessions and demo sessions also use `emitMarkdownPatch: false`, as
+the native TypeScript editor does. General host-owned controllers retain the
+upstream default for consumers that need Markdown patches. The performance
+benchmark explicitly opts out; the full integrity stress test continues to
+exercise the general controller default. The studio no longer saves snapshots on
+every notification: it requests them when Verify or Export is open.
+
+The first live-block benchmark on September 12, 2026 measured:
+
+| Same NVCA benchmark | Previous pass | Native blocks |
+| --- | ---: | ---: |
+| First body typing → settled layout | 5.43 s | 1.71 s |
+| Middle body typing → settled layout | 5.36 s | 1.80 s |
+| Footnote typing → settled layout | 5.36 s | 2.55 s |
+| Native write duration | 148–158 ms | 8–49 ms |
+| Saves / whole conversions per ordinary edit | 1 / 1 | 0 / 0 |
+| Pagination calls per body edit | 1 | 0 |
+
+These timings include scripted typing and the 350 ms debounce. The new profile's
+Markdown setting contributes to the native write improvement. Body commit →
+settled geometry was about 0.51–0.52 s; footnote reflow took 1.39 s after commit.
+Cold open remains a full conversion and layout, and is a separate performance
+problem. The native block render itself measured 9–102 ms for these paragraphs.
+
 ## Next work
 
-1. Replace full saved-package conversion after ordinary edits with native block
-   rendering. Keep authoritative source HTML for body blocks and note registries;
-   handle consecutive edits and document replacements explicitly. Use the full
-   conversion path for changes whose render dependencies are not yet understood.
-2. Repaginate the affected story/section, then downstream pages until layout
+1. Repaginate the affected story/section, then downstream pages until layout
    stabilizes. Preserve footnote placement, paragraph fragments, focus, and exact
    versioned page-map completeness. Avoid substituting stale geometry for a fresh
    layout.
-3. Reduce cold opening and main-thread work through runtime startup overlap,
+2. Reduce cold opening and main-thread work through runtime startup overlap,
    demand-driven text validation, and bounded scheduling. Measure time to the
    first editable page separately from the time to a complete document layout.
 
-The current implementation still converts and paginates the whole document after
-an edit. The first pass removes redundant work around that pipeline; it does not
-yet provide incremental pagination.
+The current implementation updates blocks incrementally and can retain an
+unchanged page layout. It does not yet paginate only a subset of changed pages.

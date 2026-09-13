@@ -82,7 +82,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
     };
     for (const name of ['paginate', 'normalizePageMapFragmentIdentities', 'materializePageMap']) wrap(window.rdv.PaginationEngine.prototype, name);
     event('open:start');
-    const session = await controller.open(new Uint8Array(bytes), {}, '/wasm/');
+    const session = await controller.open(new Uint8Array(bytes), { emitMarkdownPatch: false }, '/wasm/');
     event('open:end');
     const anchors = Object.entries(session.project().anchorIndex);
     const body = anchors.filter(([, anchor]) => anchor.scope === 'body' && ['p', 'h', 'li'].includes(anchor.kind));
@@ -90,6 +90,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
     state.targets = [body[0][0], body[Math.floor(body.length / 2)][0], notes[Math.floor(notes.length / 2)][0]];
     const native = controller.read(session => session);
     for (const name of ['project', 'getFormatting', 'getAnchorInfos', 'listRevisions', 'listStyles', 'save', 'replaceMatch', 'executeBatch', 'renderBlock']) wrap(native, name);
+    wrap(controller, 'renderBlocks');
     event('mount');
     window.mountEditors([{ session: controller, wasmBasePath: '/wasm/', style: { height: '100vh' },
       viewerProps: { onConversionStart: () => event('convert:start'), onConversionComplete: () => event('convert:end'),
@@ -123,6 +124,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
     const paragraph = page.locator(`#pagination-container [data-source-anchor-id="${id}"][data-rdv-editable="true"]`).last();
     await paragraph.click(); await page.keyboard.press('End');
     const before = await page.evaluate(id => window.performanceTest.controller.read(s => s.getFormatting(id)!.runs.map(r => r.text).join('')), id);
+    await page.locator('#pagination-container .page-box').first().evaluate(element => { (element as HTMLElement).dataset.benchmarkPage = 'retained'; });
     await start(page, 'type:start');
     const marker = ` [Speed check ${index + 1}]`;
     await page.keyboard.type(marker, { delay: 15 });
@@ -135,6 +137,14 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
     expect(phase.calls.getFormatting.count).toBeLessThan(25);
     expect(phase.calls.replaceMatch.count).toBe(1);
     expect(phase.calls.executeBatch?.count ?? 0).toBe(0);
+    expect(phase.calls.save?.count ?? 0).toBe(0);
+    expect(phase.calls.project?.count ?? 0).toBe(0);
+    expect(phase.calls.renderBlocks.count).toBe(1);
+    expect(phase.events.some(event => event.name === 'convert:start')).toBe(false);
+    if (index < 2) {
+      expect(phase.calls.paginate?.count ?? 0).toBe(0);
+      await expect(page.locator('#pagination-container .page-box').first()).toHaveAttribute('data-benchmark-page', 'retained');
+    } else expect(phase.calls.paginate?.count ?? 0).toBe(1); // Footnote reserves need reflow.
     phases.push(phase);
     const after = await page.evaluate(id => window.performanceTest.controller.read(s => s.getFormatting(id)!.runs.map(r => r.text).join('')), id);
     expect(after.replace(marker, '')).toBe(before);
@@ -143,7 +153,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
   expect(await page.evaluate(() => window.performanceTest.errors)).toEqual([]);
   expect(pageErrors).toEqual([]);
   const report = { fixture: hash, browser: browser.version(), viewport: { width: 1480, height: 1050 }, pageCount,
-    notes: 'Cold core/worker per fresh browser context; editor mounts after native open. Typing uses 15 ms per character and a 350 ms commit debounce. Nested method timings overlap.', phases };
+    notes: 'Cold core/worker per fresh browser context; editor mounts after native open. Native editor profile: emitMarkdownPatch false. Typing uses 15 ms per character and a 350 ms commit debounce. Nested method timings overlap.', phases };
   const json = JSON.stringify(report, null, 2);
   writeFileSync(testInfo.outputPath('NVCA-performance.json'), json);
   await testInfo.attach('NVCA performance', { body: json, contentType: 'application/json' });

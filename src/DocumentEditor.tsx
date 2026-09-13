@@ -46,7 +46,7 @@ export const DocumentEditor = forwardRef<DocumentEditorHandle, DocumentEditorPro
   showHeader = true, showFormattingToolbar = true, defaultTextEditorOpen = false,
   toolbarGroups, toolbarChildren, viewerProps, onChange, onReady, onSave, onError, className = '', style,
 }, ref) {
-  const owned = useDocxSession(session ? undefined : document === undefined ? 'blank' : document, { wasmBasePath, settings: sessionSettings });
+  const owned = useDocxSession(session ? undefined : document === undefined ? 'blank' : document, { wasmBasePath, settings: { emitMarkdownPatch: false, ...sessionSettings } });
   const controller = session ?? owned.controller;
   const editor = useDocumentEditor(controller, { readOnly, onError });
   const editorRef = useRef(editor);
@@ -80,7 +80,7 @@ export const DocumentEditor = forwardRef<DocumentEditorHandle, DocumentEditorPro
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled || controller.getSnapshot().session !== current) return;
-      const anchors = controller.read(session => session.project().anchorIndex);
+      const anchors = controller.getAnchorIndex();
       const first = Object.entries(anchors).find(([, anchor]) => anchor.scope === 'body' && ['p', 'h', 'li'].includes(anchor.kind));
       if (first) editorRef.current.selectAnchor(first[0]);
     });

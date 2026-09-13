@@ -40,6 +40,7 @@ export class CanvasEditor {
   private anchorCache: { owner: DocxSession | null; version: number; ids: Map<string, string> } | null = null;
   private root: HTMLElement | null = null;
   private renderedOwner: DocxSession | null = null;
+  private renderedVersion = 0;
   private range: CanvasRange | null = null;
   private fallback: CanvasPoint | null = null;
   private restoreFocus = false;
@@ -80,7 +81,7 @@ export class CanvasEditor {
   private canonical(anchorId: string) {
     const { session: owner, version } = this.controller.getSnapshot();
     if (!this.anchorCache || this.anchorCache.owner !== owner || this.anchorCache.version !== version) {
-      const ids = this.controller.read(session => Object.keys(session.project().anchorIndex));
+      const ids = Object.keys(this.controller.getAnchorIndex());
       this.anchorCache = { owner, version, ids: new Map(ids.filter(id => /^(p|h|li):/.test(id)).map(id => [id.slice(id.indexOf(':')), id])) };
     }
     const identity = anchorId.slice(anchorId.indexOf(':'));
@@ -241,12 +242,27 @@ export class CanvasEditor {
   }) : Promise.resolve();
 
   beforeCommand = () => { this.capture(); return this.commit(); };
+  /** Reconcile committed block DOM without detaching the editing surface. */
+  updateLayout = (anchors: string[], update: () => void) => {
+    this.capture();
+    this.applying = true;
+    try {
+      update();
+      for (const anchor of anchors) this.prepareParagraphs(anchor);
+      this.renderedVersion = this.controller.getSnapshot().version;
+      this.restore();
+    } finally { this.applying = false; }
+  };
   afterCommand = () => {
     if (!this.root || !this.range || this.state.composing) return;
     this.restoreFocus = true;
     const update = (point: CanvasPoint) => { const anchorId = this.canonical(point.anchorId); return anchorId ? { ...point, anchorId, offset: Math.min(point.offset, this.text(anchorId).length) } : point; };
     this.range = { ...this.range, start: update(this.range.start), end: update(this.range.end) };
-    for (const { anchorId } of this.selectedSpans()) this.patch(anchorId);
+    // The viewer batches ordinary formatting with its live source update. A
+    // structural/global command still needs immediate caret reconciliation.
+    if (!this.renderedOwner || !this.controller.getRenderChanges(this.renderedOwner, this.renderedVersion)) {
+      for (const { anchorId } of this.selectedSpans()) this.patch(anchorId);
+    }
     this.restore(); this.notifySelection();
   };
   focus = () => {
@@ -445,6 +461,7 @@ export class CanvasEditor {
     this.root = root;
     if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.preparedText.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
     this.renderedOwner = owner;
+    this.renderedVersion = this.controller.getSnapshot().version;
     this.prepareParagraphs();
     const style = document.createElement('style');
     style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }';
