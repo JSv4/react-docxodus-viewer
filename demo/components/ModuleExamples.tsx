@@ -12,7 +12,7 @@ export default function ModuleExamples() {
   const [filename, setFilename] = useState('Launch brief.docx');
   const [error, setError] = useState('');
   const [changes, setChanges] = useState(0);
-  const document = useDocxSession(undefined, { wasmBasePath });
+  const document = useDocxSession(undefined, { wasmBasePath, settings: { emitMarkdownPatch: false } });
   const editor = useDocumentEditor(document.controller);
   const paragraph = useRef<ParagraphEditorHandle>(null);
   const block = useRef<DocumentEditorHandle>(null);

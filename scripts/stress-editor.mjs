@@ -25,8 +25,11 @@ if (!bytes && !process.env.RDV_STRESS_DOCX) {
 if (!verified(bytes)) {
   throw new Error('The stress fixture must match the pinned NVCA October 2025 document.');
 }
-const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', 'nvca.spec.ts', ...process.argv.slice(2)], {
-  stdio: 'inherit', env: { ...process.env, RDV_STRESS_DOCX: path },
+const args = process.argv.slice(2);
+const benchmark = args[0] === '--benchmark';
+if (benchmark) args.shift();
+const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', benchmark ? 'performance.spec.ts' : 'nvca.spec.ts', ...args], {
+  stdio: 'inherit', env: { ...process.env, RDV_STRESS_DOCX: path, ...(benchmark ? { RDV_PERFORMANCE: '1' } : {}) },
 });
 if (result.error) throw result.error;
 process.exitCode = result.status ?? 1;

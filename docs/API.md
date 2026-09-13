@@ -60,6 +60,15 @@ is read-only by contract; do not mutate through a selector. `controller.save()`
 returns current DOCX bytes; `controller.originalBytes` returns a detached copy of
 the opening document.
 
+`controller.getAnchorIndex()` reads the native anchor inventory without building
+the Markdown projection. Internally the viewer uses `getRenderChanges(owner,
+fromVersion)` and `renderBlocks(ids, options)` to render local text/formatting edits
+from that same session. A `null` change set requires the full converter. Batches,
+rollbacks, unknown mutations, and replaced session owners are checked before a
+block update can advance the displayed version. `onConversionStart` and
+`onConversionComplete` report full conversions; `onPageMap` and
+`onPaginationComplete` also report layouts updated through native blocks.
+
 | Family | Native operations available through the session |
 | --- | --- |
 | Projection and inspection | `project`, `projectAnchor`, `renderBlock`, `exists`, anchor/block metadata and bulk lookups, inline spans, formatting, styles, section info |

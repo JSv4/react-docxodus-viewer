@@ -122,7 +122,7 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       else if (target) {
         // Style/list changes can change an anchor's kind while retaining its identity.
         const identity = target.anchorId.split(':').slice(1).join(':');
-        const anchor = controller.read(session => Object.keys(session.project().anchorIndex).find(id => id.split(':').slice(1).join(':') === identity));
+        const anchor = Object.keys(controller.getAnchorIndex()).find(id => id.split(':').slice(1).join(':') === identity);
         if (anchor) {
           const text = controller.read(session => editableText(session.getFormatting(anchor)));
           const span = target.span && target.span.start + target.span.length <= text.length ? target.span : null;

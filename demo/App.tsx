@@ -45,12 +45,12 @@ function Workspace() {
   const input = useRef<HTMLInputElement>(null);
   const previewDialog = useRef<HTMLDialogElement>(null);
   const openSequence = useRef(0);
-  const session = useDocxSession();
+  const session = useDocxSession(undefined, { settings: { emitMarkdownPatch: false } });
   const { controller, open: openSession } = session;
   const editor = useDocumentEditor(controller, { onError: cause => setError(cause.message) });
   const { canvasEditor, select } = editor;
   const anchor = editor.selection?.anchorId ?? requestedAnchor;
-  const bytes = useSessionQuery(controller, snapshotBytes).data;
+  const bytes = useSessionQuery(panel === 'verify' || panel === 'export' ? controller : undefined, snapshotBytes).data;
   const counts = useSessionQuery(controller, documentCounts).data;
   const history = useDocumentHistory({ documentId, indexedDbName: 'react-docxodus-viewer-studio' });
   const busy = session.isLoading || sampleLoading;

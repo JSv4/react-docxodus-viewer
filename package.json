@@ -69,7 +69,8 @@
     "test:pdf": "node --test tests/node/export.test.mjs",
     "check": "npm run lint && npm test && npm run build && npm run check:api",
     "test:package": "npm run build:lib && node scripts/check-package.mjs",
-    "test:stress": "node scripts/stress-editor.mjs"
+    "test:stress": "node scripts/stress-editor.mjs",
+    "test:performance": "node scripts/stress-editor.mjs --benchmark"
   },
   "repository": {
     "type": "git",

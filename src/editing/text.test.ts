@@ -25,6 +25,17 @@ describe('paragraph text changes', () => {
     expect(textChange('unchanged', 'unchanged')).toBeNull();
     expect(textChange('', '')).toBeNull();
   });
+  it.each([
+    ['Before after', 'Before [Speed check 2] after'],
+    ['A sentence. ', 'A sentence. [Typing several words.] '],
+    ['A sentence.', ' [New text]A sentence.'],
+    ['First second third', 'First third'],
+  ])('keeps a contiguous insertion or deletion in one native write: %j → %j', (before, after) => {
+    const changes = textChanges(before, after);
+    expect(changes).toHaveLength(1);
+    const [change] = changes;
+    expect(before.slice(0, change.start) + change.inserted + before.slice(change.start + change.removed.length)).toBe(after);
+  });
   it('preserves the words between independent changes', () => {
     const before = 'alpha alpha omega.';
     const after = 'alpha bravo omega. Added.';

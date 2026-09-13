@@ -193,6 +193,8 @@ npm install
 npm run dev              # sync verified assets, then start Vite
 npm run check            # lint, unit tests, types, library/demo builds, API audit
 npm run test:browser     # actual 12.4.1 WASM workflows
+npm run test:performance # NVCA opening, zoom, typing and layout benchmark
+npm run test:stress      # NVCA editing and independent DOCX integrity checks
 npm run test:package     # packed consumer imports, types and runtime-copy command
 npm run test:pdf         # Node boundary + PDF when the host supports its sandbox
 ```
@@ -203,5 +205,7 @@ Set `RDV_TEST_PORT` to run browser checks on a different local port. Use
 studio and module examples; source-only API harness tests remain development checks.
 The API audit compares every published export against the installed 12.4.1
 TypeScript declarations and checks identity of the built runtime exports.
+See the [performance campaign](docs/performance.md) for measurements, regression
+guards, and the next optimization targets.
 
 MIT. Powered by [Docxodus](https://github.com/JSv4/Docxodus).
