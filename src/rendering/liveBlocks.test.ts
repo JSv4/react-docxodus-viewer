@@ -34,4 +34,9 @@ describe('native block source reconciliation', () => {
     const result = patchSourceBlocks(paragraph, { 'p:body:a': block.replace('<span', '<span onclick="bad()"') })!;
     expect(result.blocks['p:body:a']).not.toContain('onclick');
   });
+
+  it('keeps unsupported-content placeholders on the complete conversion path', () => {
+    const source = paragraph.replace('old', '<span class="unsupported-placeholder">[FORM FIELD]</span>');
+    expect(patchSourceBlocks(source, { 'p:body:a': block })).toBeNull();
+  });
 });

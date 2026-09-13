@@ -27,7 +27,7 @@ numbered headings, field results, and a Word nonbreaking hyphen.
 
 The test checks every body and footnote paragraph for canvas editability, then
 uses actual keyboard and toolbar input at twelve scattered locations. It covers
-zoom, typing through repeated native commits and background conversion,
+zoom, typing through repeated native commits and background rendering,
 undo/redo, selected formatting, paragraph splitting, multiline paste, merging,
 and saving a pending final keystroke. It reopens the edited DOCX in a new native
 session and checks all original paragraph text against the intended changes.
@@ -56,6 +56,12 @@ The [performance campaign](performance.md) adds a shorter, phase-by-phase benchm
 with `npm run test:performance`, along with guards against redundant pagination
 and native formatting work. The timings above describe the pre-optimization run
 merged in PR #40.
+
+After the live-session/block-rendering change, the full workload passed again
+with the same 65 pages and integrity results. Median typing-to-settled-layout was
+3.53 seconds (6.23 seconds in the first performance pass); the slowest edit was
+4.92 seconds. Ordinary body edits can retain pages, and changed page flow uses
+updated source HTML. Structural edits still exercise the full conversion path.
 
 Pagination is measured in Chromium; pixel-identical pagination with Microsoft
 Word is outside this test's scope. Repeated headers/footers and

@@ -117,6 +117,14 @@ settled geometry was about 0.51–0.52 s; footnote reflow took 1.39 s after comm
 Cold open remains a full conversion and layout, and is a separate performance
 problem. The native block render itself measured 9–102 ms for these paragraphs.
 
+The full NVCA integrity workload also passed with the host controller's original
+Markdown-patch setting. Its median typing → settled layout fell from 6.23 s to
+3.53 s (43% faster); median typing → commit was 1.29 s and the slowest edit was
+4.92 s. It retained 65 pages, 31 commits, 13 intentional paragraph changes, one
+added paragraph, and all independent XML/package assertions. That run's cold
+opening plus complete native text inventory took 20.62 s, versus 18.86 s in the
+previous pass; this change does not claim a cold-open improvement.
+
 ## Next work
 
 1. Repaginate the affected story/section, then downstream pages until layout

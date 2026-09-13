@@ -42,7 +42,7 @@ export function patchSourceBlocks(html: string, rendered: Record<string, string 
       fresh.getAttribute('data-anchor') !== original.getAttribute('data-anchor')) return null;
     // These require the complete converter profile/identity inventory. Never
     // discard image positioning, annotation anchors, or nested block identities.
-    const complex = 'img, svg, math, script, iframe, object, embed, [data-source-anchor-id]';
+    const complex = 'img, svg, math, script, iframe, object, embed, [data-source-anchor-id], .unsupported-placeholder, [data-content-type]';
     if (original.querySelector(complex) || fresh.querySelector(complex)) return null;
     // Isolated rendering numbers notes from one. Their unchanged source chrome
     // retains the full document's ordinals, reference IDs, and navigation links.

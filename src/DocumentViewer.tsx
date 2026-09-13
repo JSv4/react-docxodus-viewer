@@ -259,31 +259,33 @@ export function DocumentViewer({
     const current = () => generation === conversionGeneration.current;
     const options = getConvertOptions();
     const profile = JSON.stringify({ ...options, paginationScale: 1 });
-    try { if (sessionController) {
-      if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
-      if (!current() || !sessionDocument || sessionController.getSnapshot().session !== sessionDocument.owner ||
-        sessionController.getSnapshot().version !== sessionDocument.version) return;
-      const previous = sourceRender.current;
-      if (!force && previous?.owner === sessionDocument.owner && previous.profile === profile) {
-        const anchors = sessionController.getRenderChanges(previous.owner, previous.version);
-        if (anchors?.length === 0) return;
-        if (anchors) {
-          // Unsupported bridge profiles/blocks fall back to the complete converter.
-          const renderOptions = liveRenderOptions(options, sessionController);
-          const rendered = renderOptions && sessionController.renderBlocks(anchors, renderOptions);
-          const patched = rendered && anchors.every(id => rendered[id]) && patchSourceBlocks(previous.html, rendered);
-          if (patched) {
-            sourceRender.current = { ...previous, html: patched.html, version: sessionDocument.version };
-            setLiveBlocks({ owner: previous.owner, fromVersion: previous.version, toVersion: sessionDocument.version, blocks: patched.blocks });
-            setInternalHtml(patched.html); setRenderedLayoutToken(layoutToken); setRenderedOwner(previous.owner); setRenderedVersion(sessionDocument.version);
-            setIsConverting(false); setError(null);
-            return;
+    try {
+      if (sessionController) {
+        if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
+        if (!current() || !sessionDocument || sessionController.getSnapshot().session !== sessionDocument.owner ||
+          sessionController.getSnapshot().version !== sessionDocument.version) return;
+        const previous = sourceRender.current;
+        if (!force && previous?.owner === sessionDocument.owner && previous.profile === profile) {
+          const anchors = sessionController.getRenderChanges(previous.owner, previous.version);
+          if (anchors?.length === 0) return;
+          if (anchors) {
+            // Unsupported bridge profiles/blocks fall back to the complete converter.
+            const renderOptions = liveRenderOptions(options, sessionController);
+            const rendered = renderOptions && sessionController.renderBlocks(anchors, renderOptions);
+            const patched = rendered && anchors.every(id => rendered[id]) && patchSourceBlocks(previous.html, rendered);
+            if (patched) {
+              sourceRender.current = { ...previous, html: patched.html, version: sessionDocument.version };
+              setLiveBlocks({ owner: previous.owner, fromVersion: previous.version, toVersion: sessionDocument.version, blocks: patched.blocks });
+              setInternalHtml(patched.html); setRenderedLayoutToken(layoutToken); setRenderedOwner(previous.owner); setRenderedVersion(sessionDocument.version);
+              setIsConverting(false); setError(null);
+              return;
+            }
           }
         }
+        // Serialization is needed only for initial/full-profile renders and export.
+        fileToConvert = sessionController.save();
       }
-      // Serialization is needed only for initial/full-profile renders and export.
-      fileToConvert = sessionController.save();
-    } } catch (cause) {
+    } catch (cause) {
       if (!current() || (cause instanceof Error && cause.name === 'AbortError')) return;
       const failure = cause instanceof Error ? cause : new Error(String(cause));
       setError(failure); setIsConverting(false); onError?.(failure); return;
