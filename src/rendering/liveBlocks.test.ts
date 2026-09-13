@@ -10,7 +10,7 @@ describe('native block source reconciliation', () => {
     const parsed = new DOMParser().parseFromString(result.html, 'text/html');
     const p = parsed.querySelector('p')!;
     expect(p.getAttribute('data-keep-next')).toBe('true');
-    expect(p.className).toBe('docx-p');
+    expect(p.className).toBe(''); // Native inline CSS replaces generated classes.
     expect(p.querySelector('span')?.style.fontWeight).toBe('bold');
     expect(p.querySelector('a')?.outerHTML).toBe('<a class="footnote-ref" id="fn-ref-52" data-footnote-id="52">51</a>');
     expect(p.textContent).toBe('new51');
@@ -38,5 +38,13 @@ describe('native block source reconciliation', () => {
   it('keeps unsupported-content placeholders on the complete conversion path', () => {
     const source = paragraph.replace('old', '<span class="unsupported-placeholder">[FORM FIELD]</span>');
     expect(patchSourceBlocks(source, { 'p:body:a': block })).toBeNull();
+  });
+
+  it('updates paragraph CSS derived from run formatting while keeping pagination metadata', () => {
+    const result = patchSourceBlocks(paragraph, { 'p:body:a': block.replace('<p data-anchor="a">', '<p data-anchor="a" style="font-size: 24pt; line-height: 115%">') })!;
+    const p = new DOMParser().parseFromString(result.html, 'text/html').querySelector('p')!;
+    expect(p.style.fontSize).toBe('24pt');
+    expect(p.style.lineHeight).toBe('115%');
+    expect(p.dataset.keepNext).toBe('true');
   });
 });

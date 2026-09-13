@@ -8,6 +8,7 @@ import type { DocumentTextSelection } from '../types';
 import type { CanvasEditor } from '../editing/CanvasEditor';
 import { canvasParagraphs } from '../editing/canvasDom';
 import type { LiveBlockUpdate } from '../rendering/liveBlocks';
+import { replaceBlockPresentation } from '../rendering/liveBlocks';
 
 export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' | 'showPageNumbers' | 'pageGap' | 'cssPrefix' | 'fragmentParagraphs' | 'layoutToken'> {
   html: string;
@@ -84,7 +85,9 @@ type BlockGeometry = Map<string, { element: HTMLElement; box: number[] }>;
 function blockBox(element: HTMLElement, scale: number): number[] {
   const page = element.closest('[data-page-number]')!.getBoundingClientRect();
   const box = element.getBoundingClientRect();
-  return [box.left - page.left, box.top - page.top, box.width, box.height].map(value => value / scale);
+  const style = getComputedStyle(element);
+  return [...[box.left - page.left, box.top - page.top, box.width, box.height].map(value => value / scale),
+    ...[style.marginTop, style.marginBottom, style.marginLeft, style.marginRight].map(value => parseFloat(value) || 0)];
 }
 function measureBlocks(root: HTMLElement, scale: number): BlockGeometry {
   const grouped = new Map<string, HTMLElement[]>();
@@ -158,7 +161,7 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
         const patch = () => {
           for (const id of ids) {
             const fresh = new DOMParser().parseFromString(liveBlocks.blocks[id], 'text/html').body.firstElementChild!;
-            active.geometry.get(id)!.element.replaceChildren(...fresh.childNodes);
+            replaceBlockPresentation(active.geometry.get(id)!.element, fresh);
           }
         };
         if (canvasEditor) canvasEditor.updateLayout(ids, patch); else patch();
@@ -167,7 +170,7 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
         if (ids.every(id => {
           const before = active.geometry.get(id)!;
           return blockBox(before.element, active.scale).every((value, i) => Math.abs(value - before.box[i]) < 0.25);
-        })) {
+        }) && document.fonts?.status !== 'loading') {
           void run(() => {
             const result = { ...active.result };
             if (documentVersion !== undefined && rendererFingerprint !== undefined) {

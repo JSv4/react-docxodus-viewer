@@ -10,6 +10,15 @@ export interface LiveBlockUpdate {
   blocks: Record<string, string>;
 }
 
+/** Retain source/page identities, while taking presentation from the native block. */
+export function replaceBlockPresentation(target: Element, fresh: Element) {
+  for (const name of ['style', 'class', 'dir', 'lang']) {
+    const value = fresh.getAttribute(name);
+    if (value === null) target.removeAttribute(name); else target.setAttribute(name, value);
+  }
+  target.replaceChildren(...fresh.childNodes);
+}
+
 /** Only profiles expressible by the native editor bridge can use its block HTML. */
 export function liveRenderOptions(options: ConversionOptions, controller: DocxSessionController): EditorRenderOptions | null {
   if (!options.stampAnchors || options.additionalCss || options.documentLanguage ||
@@ -57,9 +66,10 @@ export function patchSourceBlocks(html: string, rendered: Record<string, string 
         if (/^on/i.test(attribute.name) || (/^(href|src|xlink:href)$/i.test(attribute.name) && /^\s*javascript:/i.test(attribute.value))) node.removeAttribute(attribute.name);
       }
     }
-    // Text and run formatting don't alter paragraph layout properties. Keep
-    // widow/keep/section metadata which the block renderer doesn't emit.
-    original.replaceChildren(...fresh.childNodes);
+    // Preserve widow/keep/section metadata which block rendering doesn't emit.
+    // Native run formatting can still change computed paragraph CSS (e.g. its
+    // maximum font size). Replace presentation, including stale generated classes.
+    replaceBlockPresentation(original, fresh);
     blocks[id] = original.outerHTML;
   }
   return { html: `<!doctype html>\n${source.documentElement.outerHTML}`, blocks };

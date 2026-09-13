@@ -44,12 +44,19 @@ test('live blocks retain pages for text/formatting, reflow wrapping from source,
   await expect(firstPage).toHaveAttribute('data-live-retained', 'true');
   await expect(first.locator('span').filter({ hasText: /^Alpha$/ })).toHaveCSS('font-weight', '700');
   expect(await page.evaluate(() => window.liveTest.conversions)).toBe(1);
+  // Paragraph font size is derived from its runs. Updating only inner spans
+  // would leave the paragraph's line spacing based on the old font size.
+  await page.evaluate(() => window.liveTest.controller.run(s => s.applyFormat(window.liveTest.anchor, null, { fontSizePts: 24 })));
+  await settled(page);
+  await expect(first).toHaveCSS('font-size', '32px');
+  expect(await page.evaluate(() => window.liveTest.conversions)).toBe(1);
+  await firstPage.evaluate(element => { (element as HTMLElement).dataset.liveRetained = 'true'; });
 
   // Browser typing changes height BEFORE commit. The saved layout measurements
   // must detect that, then reflow the source with all previous live edits intact.
   await first.click(); await page.keyboard.press('End');
   await page.keyboard.insertText(' A sentence that changes line wrapping.'.repeat(12));
-  await expect.poll(() => page.evaluate(() => window.liveTest.controller.getSnapshot().version)).toBe(5);
+  await expect.poll(() => page.evaluate(() => window.liveTest.controller.getSnapshot().version)).toBe(6);
   await settled(page);
   await expect(firstPage).not.toHaveAttribute('data-live-retained');
   await expect(first).toContainText('Alpha beta. More.');
@@ -65,11 +72,11 @@ test('live blocks retain pages for text/formatting, reflow wrapping from source,
     // The replacement reaches the SAME numeric version as the previous owner.
     const s = await controller.open('blank', { emitMarkdownPatch: false }, '/wasm/');
     const anchor = Object.keys(controller.getAnchorIndex())[0];
-    for (let i = 0; i < 5; i++) s.replaceText(anchor, `Replacement ${i}.`);
+    for (let i = 0; i < 6; i++) s.replaceText(anchor, `Replacement ${i}.`);
     window.liveTest.anchor = anchor; window.liveTest.map = undefined;
   });
   await settled(page);
-  await expect(first).toHaveText('Replacement 4.');
+  await expect(first).toHaveText('Replacement 5.');
   // Opening publishes version zero before the caller's follow-up edits; that
   // intermediate conversion may start and be superseded by the final version.
   expect(await page.evaluate(() => window.liveTest.conversions)).toBeGreaterThanOrEqual(2);
