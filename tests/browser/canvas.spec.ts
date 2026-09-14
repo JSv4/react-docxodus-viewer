@@ -68,7 +68,7 @@ test('Enter splits at the caret, Backspace joins, and undo/redo restore native p
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
-test('collapsed Enter is one native undo unit without a package transaction', async ({ page }) => {
+test('collapsed Enter uses one native undo unit and one batch render', async ({ page }) => {
   await open(page, 'Hello world.');
   await paragraphs(page).first().click();
   await page.keyboard.press('Home');
@@ -76,15 +76,30 @@ test('collapsed Enter is one native undo unit without a package transaction', as
   await page.evaluate(() => {
     const bridge = window.rdv.getWasmExports().DocxSessionBridge;
     const original = bridge.BeginTransaction;
+    const renderOne = bridge.RenderBlockHtml;
+    const renderMany = bridge.RenderEditorBlocksHtml;
+    if (!renderMany) throw new Error('The pinned native batch renderer is unavailable');
     Reflect.set(window, 'splitTransactions', 0);
+    Reflect.set(window, 'splitSingleRenders', 0);
+    Reflect.set(window, 'splitBatchRenders', 0);
     bridge.BeginTransaction = handle => {
       Reflect.set(window, 'splitTransactions', Reflect.get(window, 'splitTransactions') + 1);
       return original(handle);
+    };
+    bridge.RenderBlockHtml = (...args) => {
+      Reflect.set(window, 'splitSingleRenders', Reflect.get(window, 'splitSingleRenders') + 1);
+      return renderOne(...args);
+    };
+    bridge.RenderEditorBlocksHtml = (...args) => {
+      Reflect.set(window, 'splitBatchRenders', Reflect.get(window, 'splitBatchRenders') + 1);
+      return renderMany(...args);
     };
   });
   await page.keyboard.press('Enter');
   await expect.poll(() => nativeText(page)).toEqual(['Hello ', 'world.']);
   expect(await page.evaluate(() => Reflect.get(window, 'splitTransactions'))).toBe(0);
+  expect(await page.evaluate(() => Reflect.get(window, 'splitSingleRenders'))).toBe(0);
+  expect(await page.evaluate(() => Reflect.get(window, 'splitBatchRenders'))).toBe(1);
   await page.keyboard.press('Control+z');
   await expect.poll(() => nativeText(page)).toEqual(['Hello world.']);
   await page.keyboard.press('Control+y');

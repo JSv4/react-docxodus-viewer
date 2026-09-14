@@ -329,18 +329,31 @@ export class CanvasEditor {
     }
   }
   private patch(anchorId: string, after?: string) {
+    this.patchMany([anchorId], after);
+  }
+  private patchMany(anchorIds: string[], after?: string) {
     if (!this.root) return;
-    const canonical = this.canonical(anchorId);
-    if (!canonical) return;
-    const old = canvasParagraphs(this.root).filter(block => block.dataset.sourceAnchorId!.slice(block.dataset.sourceAnchorId!.indexOf(':')) === anchorId.slice(anchorId.indexOf(':')));
-    const html = this.controller.read(session => session.renderBlock(canonical, { fabricateClasses: false }));
-    const parsed = new DOMParser().parseFromString(html, 'text/html');
-    const block = parsed.body.firstElementChild as HTMLElement | null;
-    if (!block) throw new Error('The edited paragraph could not be rendered.');
-    block.dataset.sourceAnchorId = canonical;
-    if (old[0]) { old[0].replaceWith(block); old.slice(1).forEach(fragment => fragment.remove()); }
-    else if (after) canvasParagraphs(this.root, after).at(-1)?.after(block);
-    this.prepareParagraphs(canonical);
+    const ids = [...new Set(anchorIds.map(id => this.canonical(id)).filter((id): id is string => !!id))];
+    // Enter and multiline paste change several paragraphs together. The native
+    // batch renderer shares its converter setup and keeps the single-block
+    // presentation profile; missing results retain the per-block fallback.
+    const rendered = ids.length > 1 ? this.controller.renderBlocks(ids, {
+      cssPrefix: 'docx-', fabricateClasses: false, comments: false, renderTrackedChanges: false,
+    }) : null;
+    const paragraphs = canvasParagraphs(this.root);
+    for (const canonical of ids) {
+      const identity = canonical.slice(canonical.indexOf(':'));
+      const old = paragraphs.filter(block => block.dataset.sourceAnchorId!.slice(block.dataset.sourceAnchorId!.indexOf(':')) === identity);
+      const html = rendered?.[canonical] ?? this.controller.read(session => session.renderBlock(canonical, { fabricateClasses: false }));
+      const parsed = new DOMParser().parseFromString(html, 'text/html');
+      const block = parsed.body.firstElementChild as HTMLElement | null;
+      if (!block) throw new Error('The edited paragraph could not be rendered.');
+      block.dataset.sourceAnchorId = canonical;
+      if (old[0]) { old[0].replaceWith(block); old.slice(1).forEach(fragment => fragment.remove()); }
+      else if (after) canvasParagraphs(this.root, after).at(-1)?.after(block);
+      this.prepareParagraphs(canonical);
+      after = canonical;
+    }
   }
 
   /** Execute structural edits as one undo step, then restore the editing caret. */
@@ -358,8 +371,7 @@ export class CanvasEditor {
       this.fallback = before?.start ?? null;
       this.range = collapsed(outcome.point); this.restoreFocus = true;
       outcome.removed?.forEach(id => this.root && canvasParagraphs(this.root, id).forEach(block => block.remove()));
-      let previous: string | undefined;
-      for (const anchor of outcome.changed) { this.patch(anchor, previous); previous = anchor; }
+      this.patchMany(outcome.changed);
       this.restore(); this.notifySelection();
       return true;
     } catch (cause) { return this.fail(cause); }
