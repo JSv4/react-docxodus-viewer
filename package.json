@@ -71,7 +71,8 @@
     "test:package": "npm run build:lib && node scripts/check-package.mjs",
     "test:stress": "node scripts/stress-editor.mjs",
     "test:performance": "node scripts/stress-editor.mjs --benchmark",
-    "test:latency": "node scripts/benchmark-latency.mjs"
+    "test:latency": "node scripts/benchmark-latency.mjs",
+    "test:latency:native": "node scripts/benchmark-native-transactions.mjs"
   },
   "repository": {
     "type": "git",

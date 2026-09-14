@@ -383,6 +383,135 @@
           "lastEditToCurrentLayout": 1480.405000001192
         }
       ]
+    },
+    {
+      "mode": "module",
+      "profile": true,
+      "extended": true,
+      "build": "8f31e4c",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 65,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 7.114999994635582,
+            "p95": 15.564999997615814,
+            "max": 17.070000007748604
+          },
+          "eventTiming": {
+            "n": 86,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 152,
+          "lastEditToCurrentLayout": 1786.0199999958277
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.149999991059303,
+            "p95": 14.445000007748604,
+            "max": 15.099999994039536
+          },
+          "eventTiming": {
+            "n": 21,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.730000004172325,
+            "p95": 15.599999994039536,
+            "max": 16.990000009536743
+          },
+          "eventTiming": {
+            "n": 44,
+            "p50": 16,
+            "p95": 40,
+            "max": 56
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 561.6149999946356
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 64.2250000089407,
+            "p95": 64.2250000089407,
+            "max": 65.86999998986721
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "longestTask": 62,
+          "lastEditToCurrentLayout": 172.61500000953674
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 9.92000000178814,
+            "p95": 16.359999999403954,
+            "max": 16.700000002980232
+          },
+          "eventTiming": {
+            "n": 32,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 106,
+          "lastEditToCurrentLayout": 1515.3649999946356
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 10.820000007748604,
+            "p95": 16.25500001013279,
+            "max": 17.185000002384186
+          },
+          "eventTiming": {
+            "n": 54,
+            "p50": 16,
+            "p95": 24,
+            "max": 1408
+          },
+          "longestTask": 1539,
+          "lastEditToCurrentLayout": 2554.4249999970198
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 145.9350000023842,
+            "p95": 145.9350000023842,
+            "max": 145.9350000023842
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 152,
+            "p95": 152,
+            "max": 152
+          },
+          "longestTask": 351,
+          "lastEditToCurrentLayout": 6932.490000009537
+        }
+      ]
     }
   ],
   "limits": [

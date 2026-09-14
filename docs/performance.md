@@ -55,10 +55,76 @@ a full conversion and page-map validation afterward. Styled typing continues to
 need a real compound native edit; suppressing its rollback or receipt guarantees
 would change the API contract rather than solve that bottleneck.
 
+The subsequent `8f31e4c` module run measured Enter at 152 ms after retaining
+proven-unchanged style/empty-revision metadata across splits and removing empty
+selection deletion reads. The five ordinary phases peaked at 72 ms in this run;
+styled typing still reached 1,408 ms. These are single-run observations on that
+revision, not a repeated sub-150 ms result. Enter's structural reflow also took
+6.93 seconds to finish in the background. Its complete phase included a 351 ms
+long task after the input, so the input measurement does not establish a maximum
+for every later task.
+
 The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
 65 pages; the studio's different profile rendered 52. Compact results are in
 [the benchmark record](benchmarks/2026-09-13-latency.json).
+
+## Native transaction reproduction
+
+`npm run test:latency:native` isolates the remaining compound-edit stall from
+React, the editor canvas, rendering, and page-map registration. It imports the
+published `docxodus` core and WASM, opens the same NVCA fixture, replaces one word
+in a body paragraph, and applies Bold to the replacement in one `executeBatch`.
+`emitMarkdownPatch` is false. The batch uses the default atomic mode and retains
+its package hash and receipt behavior.
+
+The script alternates installed/candidate versions in fresh browser contexts
+(ABBA). Each context measures its first transaction and two repeats after
+undo/redo verification. Only synchronous `executeBatch` wall time is measured;
+fixture loading, projection, verification, undo and redo are outside that timer.
+Native bridge wrappers time the original calls without changing their behavior.
+Every attempt checks replacement text, Bold, a single version advancement, and
+text/formatting restoration through one undo and redo. These checks do not replace
+the full DOCX package integrity suite.
+
+Twelve serial attempts on the published packages reproduced the stall:
+
+| Package | First batch in each fresh context | Repeats after undo/redo |
+| --- | ---: | ---: |
+| 12.4.1 | 1,161–1,168 ms | 991–1,018 ms |
+| 12.5.0 | 1,199–1,202 ms | 984–1,010 ms |
+
+Across these attempts, `BeginTransaction` took 379–501 ms and
+`GetPackageContentHash` took 458–496 ms. Together they took 837–969 ms per batch.
+The text replacement and formatting calls together took 46–79 ms. Source
+inspection identifies complete-package checkpoint serialization at transaction
+begin and again when producing the package equivalence hash. The dependency
+upgrade alone did not eliminate this workload's stall; these measurements do not
+assess other 12.5.0 improvements or unreleased upstream builds. All twelve text,
+formatting, version, undo and redo checks passed, with no browser errors.
+The [native benchmark record](benchmarks/2026-09-13-native-transactions.json)
+contains the unrounded measurements and package fingerprints. This is a small
+diagnostic sample, not a percentile or cross-device latency guarantee.
+
+```sh
+# From this repository, after npm ci and installing Playwright Chromium:
+curl --fail --location \
+  'https://nvca.org/wp-content/uploads/2025/10/NVCA-Model-COI-10-1-2025.docx' \
+  --output /tmp/NVCA-Model-COI-10-1-2025.docx
+RDV_STRESS_DOCX=/tmp/NVCA-Model-COI-10-1-2025.docx npm run test:latency:native
+```
+
+To compare another published package without changing dependencies, use `npm pack
+docxodus@12.5.0 --pack-destination /tmp`, extract its tarball to a separate
+directory, and set `RDV_NATIVE_COMPARE_ROOT` to the extracted `package` directory.
+`RDV_NATIVE_BENCH_OUTPUT` overrides `test-results/native-transactions.json`.
+The report records the fixture, JavaScript and WASM SHA-256 hashes, package
+versions, browser, CPU, individual bridge calls and correctness checks. There is
+no build or preview server prerequisite for this native-only benchmark.
+
+The native dependency remains on the supported 12.4.1 API. The remaining
+transaction work is being reported upstream; no native runtime patch or private
+editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements
 
