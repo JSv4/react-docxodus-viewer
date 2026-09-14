@@ -101,7 +101,7 @@ try {
           try { return original.apply(this,args); } finally { entry.ms=performance.now()-entry.at; depth--;state.calls.push(entry); }
         };
       };
-      for (const name of ['capture','canonical','text','notifySelection','storyBlocks','selectedSpans','prepareParagraphs','attach','beginDraft','commit','patch','restore','updateLayout','navigate','publish']) wrap(canvas,name,'canvas');
+      for (const name of ['capture','canonical','text','notifySelection','storyBlocks','selectedSpans','prepareParagraphs','attach','beginDraft','commit','patch','patchMany','restore','updateLayout','navigate','publish']) wrap(canvas,name,'canvas');
       const bridge = controller.native.wasm;
       for (const name of Object.keys(bridge).filter(name=> name !== 'GetVersion')) wrap(bridge,name,'native');
       for (const name of ['renderBlocks','getAnchorIndex','run','publish']) wrap(controller,name,'controller');

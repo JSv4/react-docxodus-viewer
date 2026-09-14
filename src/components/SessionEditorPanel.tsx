@@ -14,7 +14,7 @@ export interface SessionEditorPanelProps { session: DocxSessionController; ancho
 export function SessionEditorPanel({ session: controller, anchorId, onAnchorSelect }: SessionEditorPanelProps) {
   const state = useSessionState(controller);
   const selectAnchors = useCallback(() => controller.getAnchorCatalog(), [controller]);
-  const inventory = useSessionQuery(controller, selectAnchors, { scope: 'document' });
+  const inventory = useSessionQuery(controller, selectAnchors, { scope: 'document', deferred: true });
   const images = useDocumentImages(controller);
   const controls = useContentControls(controller);
   const styles = useCallback(() => controller.getStyles(), [controller]);
@@ -25,7 +25,11 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
   const [controlValue, setControlValue] = useState('');
-  const anchors = Object.entries(inventory.data ?? {}).map(([id, value]) => ({ ...value, id }));
+  // Current identities keep new/deleted paragraphs selectable immediately;
+  // their expensive document-wide preview catalog can refresh after input.
+  const anchors = Object.entries(state.session ? controller.getAnchorIndex() : {}).map(([id, value]) => ({
+    ...value, id, textPreview: inventory.data?.[id]?.textPreview,
+  }));
   const proposed = anchorId ?? picked;
   const anchor = anchors.some(value => value.id === proposed) ? proposed : anchors.find(value => value.kind === 'p')?.id ?? '';
   const selectInfo = useCallback((session: DocxSession) => anchor ? visibleBlockText(session, anchor) : null, [anchor]);
@@ -52,7 +56,7 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
   };
   return <section className="rdv-feature-panel rdv-editor-panel" aria-label="Edit document"><div className="rdv-panel-heading"><span>MAKE IT YOURS</span><h3>Edit document</h3><p>Select a paragraph on the page, then shape the next version here.</p></div>
     {!state.session ? <p>Open a document to edit its blocks.</p> : <>
-      <label className="rdv-block-picker">Selected block<select value={anchor} onChange={event => { setPicked(event.target.value); onAnchorSelect?.(event.target.value); }}>{anchors.map(value => <option key={value.id} value={value.id}>{value.kind} · {value.textPreview || value.scope}</option>)}</select></label>
+      <label className="rdv-block-picker">Selected block<select value={anchor} onChange={event => { setPicked(event.target.value); onAnchorSelect?.(event.target.value); }}>{anchors.map(value => <option key={value.id} value={value.id}>{value.kind} · {(value.id === anchor ? info.data?.slice(0, 80) : value.textPreview) || value.scope}</option>)}</select></label>
       <div className="rdv-editor-toolbar"><div className="rdv-review-actions"><button type="button" onClick={() => apply(session => session.undo(), true)}><Icon name="undo" size={14} />Undo</button><button type="button" onClick={() => apply(session => session.redo(), true)}><Icon name="redo" size={14} />Redo</button></div><label>Track edits<select value={state.trackedChanges} onChange={event => apply(session => session.setTrackedChanges(Number(event.target.value)))}><option value={TrackedChangeMode.Accept}>Off</option><option value={TrackedChangeMode.RenderInline}>Track changes</option><option value={TrackedChangeMode.StripDeletions}>Strip deletions</option></select></label></div>
       <label className="rdv-content-editor">Paragraph content<textarea aria-label="Markdown content" value={text} placeholder="Write your next version…" onChange={event => setText(event.target.value)} /></label>
       <p className="rdv-field-hint">Markdown formatting is supported.</p>

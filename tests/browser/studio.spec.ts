@@ -4,6 +4,30 @@ const title = 'Good work takes shape.';
 const commented = 'Give every reviewer a clear next step before the final handoff.';
 const paragraph = 'Build a quieter place for important work. A document should carry the idea, the conversation, and a clear path to the next decision.';
 
+test('studio block previews follow a new paragraph and discard a replaced document', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New document', exact: true }).click();
+  const content = page.getByRole('textbox', { name: 'Markdown content' });
+  const picker = page.getByRole('combobox', { name: 'Selected block' });
+  await content.fill('Hello world.');
+  await page.getByRole('button', { name: 'Replace selected block' }).click();
+  const canvas = page.locator('.workspace-document #pagination-container');
+  await canvas.getByText('Hello world.', { exact: true }).click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('New ');
+  await expect(content).toHaveValue('New world.');
+  await expect(picker.locator('option:checked')).toContainText('New world.');
+  await expect(picker.locator('option[value^="p:"]')).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'New document', exact: true }).click();
+  await expect(content).toHaveValue('');
+  await expect(picker.locator('option[value^="p:"]')).toHaveCount(1);
+  await expect(picker).not.toContainText('world');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
 test('studio connects paragraph editing, navigation, keyboard commands and checkpoint previews', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
