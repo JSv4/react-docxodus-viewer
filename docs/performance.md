@@ -123,8 +123,8 @@ versions, browser, CPU, individual bridge calls and correctness checks. There is
 no build or preview server prerequisite for this native-only benchmark.
 
 The native dependency remains on the supported 12.4.1 API. The remaining
-transaction work is being reported upstream; no native runtime patch or private
-editing primitive is integrated here.
+transaction work is tracked in [Docxodus #788](https://github.com/JSv4/Docxodus/issues/788);
+no native runtime patch or private editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements
 
