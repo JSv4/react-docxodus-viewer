@@ -2,6 +2,7 @@ import { initialize, createBlankDocx, TrackedChangeMode } from 'docxodus/core';
 import type { DocxSession, DocxSessionSettings, EditResult, EditorRenderOptions } from 'docxodus/core';
 import { openNativeSession } from './nativeSession';
 import type { NativeSession } from './nativeSession';
+import { cacheSessionPageMaps } from './rendering/sessionPageMap';
 
 interface RenderChange { from: number; to: number; anchors: string[] | null }
 // During atomic callbacks getVersion() still reports the base version. Only
@@ -65,6 +66,7 @@ export class DocxSessionController {
   private listeners = new Set<() => void>();
   private generation = 0;
   private depth = 0;
+  private transactionDepth = 0;
   private configurationChanged = false;
   private metadataChanged = false;
   private trackedChanges = TrackedChangeMode.Accept;
@@ -109,19 +111,19 @@ export class DocxSessionController {
   getFormatting(anchorId: string) {
     const native = this.refreshReadCache();
     // An atomic shadow reports its base version until commit; never cache its reads.
-    if (this.depth) return native.getFormatting(anchorId);
+    if (this.depth || this.transactionDepth) return native.getFormatting(anchorId);
     if (!this.formattingCache.has(anchorId)) this.formattingCache.set(anchorId, native.getFormatting(anchorId));
     return this.formattingCache.get(anchorId)!;
   }
   /** Local text/run edits do not change style definitions. Unknown edits invalidate them. */
   getStyles() {
     const native = this.refreshReadCache();
-    if (this.depth) return native.listStyles();
+    if (this.depth || this.transactionDepth) return native.listStyles();
     return this.stylesCache ??= native.listStyles();
   }
   getRevisions() {
     const native = this.refreshReadCache();
-    if (this.depth) return native.listRevisions();
+    if (this.depth || this.transactionDepth) return native.listRevisions();
     return this.revisionsCache ??= native.listRevisions();
   }
 
@@ -139,6 +141,21 @@ export class DocxSessionController {
       // Full-render fallbacks and saved checkpoints retain the live anchor identities.
       const bridge = openNativeSession(input, { persistAnchorIds: true, ...settings });
       const native = bridge.session;
+      let pageMaps: ReturnType<typeof cacheSessionPageMaps> | undefined;
+      for (const name of ['executeBatch', 'previewBatch'] as const) {
+        const original = native[name];
+        if (typeof original !== 'function') continue;
+        Reflect.set(native, name, (...args: unknown[]) => {
+          if (!this.transactionDepth) pageMaps?.flush();
+          this.transactionDepth++;
+          try { return Reflect.apply(original, native, args); }
+          finally { this.transactionDepth--; }
+        });
+      }
+      if (typeof native.getPageMapStatus === 'function' && typeof native.getPageCitation === 'function') pageMaps = cacheSessionPageMaps(native, version => {
+        const owner = this.snapshot.session;
+        return this.native === native && !!owner && native.getVersion() === this.snapshot.version && this.getRenderChanges(owner, version) !== null;
+      }, () => this.transactionDepth > 0);
       const previous = this.native;
       const methods = new Map<PropertyKey, unknown>();
       const observed = new Proxy(native, {
@@ -270,13 +287,13 @@ export class DocxSessionController {
   getAnchorIndex() {
     if (!this.bridge) throw new Error('Open a document session first.');
     this.refreshReadCache();
-    return this.depth ? this.bridge.anchorIndex() : this.anchorsCache ??= this.bridge.anchorIndex();
+    return this.depth || this.transactionDepth ? this.bridge.anchorIndex() : this.anchorsCache ??= this.bridge.anchorIndex();
   }
 
   /** Picker previews: build once, then refresh only paragraphs changed by local edits. */
   getAnchorCatalog() {
     const native = this.refreshReadCache();
-    if (this.depth) return native.project().anchorIndex;
+    if (this.depth || this.transactionDepth) return native.project().anchorIndex;
     if (!this.catalogCache) this.catalogCache = native.project().anchorIndex;
     else if (this.catalogChanges.size) {
       const next = { ...this.catalogCache };
