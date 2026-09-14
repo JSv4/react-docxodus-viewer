@@ -387,6 +387,9 @@ export class CanvasEditor {
   }
   private removeRange(session: DocxSession, range: CanvasRange) {
     const { start, end } = range;
+    // A caret has no text to remove. The following native split/insertion
+    // validates its own anchor/span without two redundant formatting reads.
+    if (samePoint(start, end)) return { results: [] as EditResult[], removed: [] as string[] };
     if (start.anchorId === end.anchorId) return { results: this.replace(session, start.anchorId, start.offset, end.offset, ''), removed: [] as string[] };
     const blocks = [...new Set(this.storyBlocks(start.anchorId).map(block => block.dataset.sourceAnchorId!))];
     const first = blocks.indexOf(start.anchorId), last = blocks.indexOf(end.anchorId);
