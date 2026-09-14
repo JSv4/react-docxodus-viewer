@@ -184,7 +184,7 @@ try {
     .replace(' Still typing.', '');
   if (restored !== info.nativeText) errors.push('Text outside the inserted passages changed');
   if(await page.getByRole('alert').count()) errors.push('Visible editor alert');
-  const result={label,base,mode,doc,instrument,code:execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim(), dirty:!!execFileSync('git', ['status', '--porcelain'], { encoding:'utf8' }).trim(),browser:browser.version(),info,errors,phases};
+  const result={label,base,mode,doc,instrument,buildRevision:process.env.RDV_BENCH_REVISION || null,workspaceCommit:execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim(),workspaceDirty:!!execFileSync('git', ['status', '--porcelain'], { encoding:'utf8' }).trim(),browser:browser.version(),info,errors,phases};
   await writeFile(`${directory}/${label}.json`,JSON.stringify(result,null,2));
   console.log(JSON.stringify({label,info,errors,output:`${directory}/${label}.json`}));
   if (errors.length) throw new Error(errors.join('; '));

@@ -63,6 +63,7 @@ export class DocxSessionController {
   private catalogCache: ReturnType<DocxSession['project']>['anchorIndex'] | null = null;
   private catalogChanges = new Set<string>();
   private revisionsCache: ReturnType<DocxSession['listRevisions']> | null = null;
+  private revisionTrackingKnownOff = false;
   private listeners = new Set<() => void>();
   private generation = 0;
   private depth = 0;
@@ -102,7 +103,11 @@ export class DocxSessionController {
       const changed = start < 0 ? null : covered(this.journal.slice(start), this.cacheVersion, version);
       if (changed) changed.forEach(id => { this.formattingCache.delete(id); this.catalogChanges.add(id); });
       else { this.formattingCache.clear(); this.stylesCache = null; this.catalogCache = null; this.catalogChanges.clear(); }
-      this.anchorsCache = null; this.revisionsCache = null; this.cacheVersion = version;
+      this.anchorsCache = null;
+      // A proven local, untracked text/run edit cannot add a first revision.
+      // Existing revisions or unknown edits always require a fresh native read.
+      if (!changed || !this.revisionTrackingKnownOff || this.revisionsCache?.length !== 0) this.revisionsCache = null;
+      this.cacheVersion = version;
     }
     return this.native;
   }
@@ -141,6 +146,15 @@ export class DocxSessionController {
       // Full-render fallbacks and saved checkpoints retain the live anchor identities.
       const bridge = openNativeSession(input, { persistAnchorIds: true, ...settings });
       const native = bridge.session;
+      const setTrackedChanges = native.setTrackedChanges.bind(native);
+      native.setTrackedChanges = mode => {
+        setTrackedChanges(mode);
+        if (this.native === native) {
+          this.revisionsCache = null;
+          // A transaction can roll back its settings; retain no proof from it.
+          this.revisionTrackingKnownOff = !this.transactionDepth && mode === TrackedChangeMode.Accept;
+        }
+      };
       let pageMaps: ReturnType<typeof cacheSessionPageMaps> | undefined;
       for (const name of ['executeBatch', 'previewBatch'] as const) {
         const original = native[name];
@@ -199,6 +213,7 @@ export class DocxSessionController {
       this.settings = { ...settings };
       this.wasmBasePath = wasmBasePath;
       this.trackedChanges = settings.trackedChanges === 'render_inline' ? TrackedChangeMode.RenderInline : settings.trackedChanges === 'strip_deletions' ? TrackedChangeMode.StripDeletions : TrackedChangeMode.Accept;
+      this.revisionTrackingKnownOff = this.trackedChanges === TrackedChangeMode.Accept;
       previous?.close();
       this.publish({ session: observed, version: native.getVersion(), change: this.snapshot.change + 1, isLoading: false, lastResult: null, trackedChanges: this.trackedChanges });
       return observed;

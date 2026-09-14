@@ -61,7 +61,7 @@ describe('DocxSessionController', () => {
     expect(controller.getFormatting('p:body:a')).not.toBe(first);
     controller.getStyles(); controller.getRevisions();
     expect(listStyles).toHaveBeenCalledTimes(1);
-    expect(listRevisions).toHaveBeenCalledTimes(2);
+    expect(listRevisions).toHaveBeenCalledTimes(1);
     expect(getFormatting).toHaveBeenCalledTimes(3);
     // Read callbacks expose the original synchronous API; unobserved writes
     // must invalidate shared reads even before a React notification occurs.
@@ -69,6 +69,17 @@ describe('DocxSessionController', () => {
     expect(controller.getFormatting('p:body:b')).not.toBe(unchanged);
     controller.getStyles();
     expect(listStyles).toHaveBeenCalledTimes(2);
+    controller.getRevisions();
+    expect(listRevisions).toHaveBeenCalledTimes(2);
+    // A setting mutation through the native read escape hatch must invalidate
+    // the empty-revision proof even though settings do not advance the version.
+    controller.read(s => s.setTrackedChanges(engine.TrackedChangeMode.RenderInline));
+    owner.replaceMatch(match, 'tracked');
+    controller.getRevisions();
+    expect(listRevisions).toHaveBeenCalledTimes(3);
+    owner.replaceMatch(match, 'also tracked');
+    controller.getRevisions();
+    expect(listRevisions).toHaveBeenCalledTimes(4);
     controller.close();
     expect(() => controller.getFormatting('p:body:a')).toThrow('Open a document');
   });
