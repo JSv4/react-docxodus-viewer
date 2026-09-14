@@ -42,6 +42,67 @@ function nativeBridge(session: NativeSession): bridge.NativeSession {
 afterEach(() => vi.restoreAllMocks());
 
 describe('DocxSessionController', () => {
+  it('reuses reads for unchanged paragraphs and invalidates unknown native changes', async () => {
+    const native = new NativeSession();
+    const getFormatting = vi.fn((id: string) => ({ anchorId: id, version: native.getVersion() }));
+    const listStyles = vi.fn(() => []);
+    const listRevisions = vi.fn(() => []);
+    Object.assign(native, { getFormatting, listStyles, listRevisions });
+    vi.spyOn(bridge, 'openNativeSession').mockReturnValue(nativeBridge(native));
+    const controller = new DocxSessionController();
+    const owner = await controller.open(new Uint8Array([1]));
+    const first = controller.getFormatting('p:body:a');
+    const unchanged = controller.getFormatting('p:body:b');
+    expect(controller.getFormatting('p:body:a')).toBe(first);
+    controller.getStyles(); controller.getStyles(); controller.getRevisions();
+    const match: Parameters<DocxSession['replaceMatch']>[0] = { enclosingAnchor: { id: 'p:body:a', kind: 'p', scope: 'body', unid: 'a' }, text: '', span: { start: 0, length: 0 }, fragments: [], contextBefore: '', contextAfter: '', groups: [] };
+    owner.replaceMatch(match, 'edited');
+    expect(controller.getFormatting('p:body:b')).toBe(unchanged);
+    expect(controller.getFormatting('p:body:a')).not.toBe(first);
+    controller.getStyles(); controller.getRevisions();
+    expect(listStyles).toHaveBeenCalledTimes(1);
+    expect(listRevisions).toHaveBeenCalledTimes(2);
+    expect(getFormatting).toHaveBeenCalledTimes(3);
+    // Read callbacks expose the original synchronous API; unobserved writes
+    // must invalidate shared reads even before a React notification occurs.
+    controller.read(s => s.replaceText('p:body:a', 'outside run'));
+    expect(controller.getFormatting('p:body:b')).not.toBe(unchanged);
+    controller.getStyles();
+    expect(listStyles).toHaveBeenCalledTimes(2);
+    controller.close();
+    expect(() => controller.getFormatting('p:body:a')).toThrow('Open a document');
+  });
+
+  it('keeps document query snapshots stable on layout registration and refreshes settings', async () => {
+    vi.spyOn(bridge, 'openNativeSession').mockReturnValue(nativeBridge(new NativeSession()));
+    const controller = new DocxSessionController();
+    await controller.open(new Uint8Array([1]));
+    const documentSnapshot = controller.getQuerySnapshot();
+    const sessionSnapshot = controller.getSnapshot();
+    controller.run(s => s.registerPageMap({} as Parameters<DocxSession['registerPageMap']>[0]));
+    expect(controller.getQuerySnapshot()).toBe(documentSnapshot);
+    expect(controller.getSnapshot()).not.toBe(sessionSnapshot);
+    controller.run(s => s.setRevisionAuthor('Editor'));
+    expect(controller.getQuerySnapshot()).toBe(controller.getSnapshot());
+    expect(controller.getQuerySnapshot()).not.toBe(documentSnapshot);
+  });
+
+  it('reads atomic shadow changes without reusing cached base-version formatting', async () => {
+    const native = new NativeSession(true);
+    const getFormatting = vi.fn(() => ({ marker: 'before' }));
+    Object.assign(native, { getFormatting });
+    vi.spyOn(bridge, 'openNativeSession').mockReturnValue(nativeBridge(native));
+    const controller = new DocxSessionController();
+    await controller.open(new Uint8Array([1]));
+    const before = controller.getFormatting('p:body:a');
+    controller.run(s => s.executeBatch([{ tool: 'test', action: 'shadow', mutation: () => {
+      getFormatting.mockReturnValue({ marker: 'shadow' });
+      expect(controller.getFormatting('p:body:a')).not.toBe(before);
+      return s.replaceText('p:body:a', 'change');
+    } }]));
+    expect(controller.getFormatting('p:body:a')).toMatchObject({ marker: 'shadow' });
+  });
+
   it('collects staged edits before atomic commit and treats raw mutations as a full-render boundary', async () => {
     vi.spyOn(bridge, 'openNativeSession').mockReturnValue(nativeBridge(new NativeSession(true)));
     const controller = new DocxSessionController();

@@ -82,9 +82,21 @@ test('caret formatting applies to new typing and selected text formats only that
   await page.waitForTimeout(1500);
   await page.keyboard.press('Home');
   for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.evaluate(() => {
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge;
+    const original = bridge.GetPackageContentHash!;
+    Reflect.set(window, 'formatBatchHashes', 0);
+    bridge.GetPackageContentHash = handle => {
+      Reflect.set(window, 'formatBatchHashes', Reflect.get(window, 'formatBatchHashes') + 1);
+      return original(handle);
+    };
+  });
   await page.getByRole('button', { name: 'Italic', exact: true }).click();
   const italic = await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs.filter(run => run.effective.italic).map(run => run.text).join('')));
   expect(italic).toBe('Plain');
+  expect(await page.evaluate(() => Reflect.get(window, 'formatBatchHashes'))).toBe(0);
+  await page.keyboard.press('Control+z');
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs.some(run => run.effective.italic)))).toBe(false);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 

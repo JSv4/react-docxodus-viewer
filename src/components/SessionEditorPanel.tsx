@@ -4,30 +4,31 @@ import type { DocxSession, EditResult } from 'docxodus/core';
 import { documentBytes } from '../session';
 import type { DocxSessionController } from '../session';
 import { useSessionQuery, useSessionState } from '../hooks/useDocxSession';
-import { useDocumentImages, useContentControls, useDocumentProjection } from '../hooks/useSessionFeatures';
+import { useDocumentImages, useContentControls } from '../hooks/useSessionFeatures';
 import { Icon } from './Icon';
 
 export interface SessionEditorPanelProps { session: DocxSessionController; anchorId?: string; onAnchorSelect?: (anchorId: string) => void }
-const styles = (session: DocxSession) => session.listStyles();
 
 /** Small form-based editing surface. Hosts can compose the same session API into their own UI. */
 export function SessionEditorPanel({ session: controller, anchorId, onAnchorSelect }: SessionEditorPanelProps) {
   const state = useSessionState(controller);
-  const projection = useDocumentProjection(controller);
+  const selectAnchors = useCallback(() => controller.getAnchorCatalog(), [controller]);
+  const inventory = useSessionQuery(controller, selectAnchors, { scope: 'document' });
   const images = useDocumentImages(controller);
   const controls = useContentControls(controller);
-  const styleList = useSessionQuery(controller, styles);
+  const styles = useCallback(() => controller.getStyles(), [controller]);
+  const styleList = useSessionQuery(controller, styles, { scope: 'document' });
   const [picked, setPicked] = useState('');
   const [draft, setDraft] = useState<{ anchor: string; value: string } | null>(null);
   const [find, setFind] = useState('');
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
   const [controlValue, setControlValue] = useState('');
-  const anchors = Object.entries(projection.projection?.anchorIndex ?? {}).map(([id, value]) => ({ ...value, id }));
+  const anchors = Object.entries(inventory.data ?? {}).map(([id, value]) => ({ ...value, id }));
   const proposed = anchorId ?? picked;
   const anchor = anchors.some(value => value.id === proposed) ? proposed : anchors.find(value => value.kind === 'p')?.id ?? '';
   const selectInfo = useCallback((session: DocxSession) => anchor ? session.getAnchorInfo(anchor) : null, [anchor]);
-  const info = useSessionQuery(controller, selectInfo);
+  const info = useSessionQuery(controller, selectInfo, { scope: 'document' });
   const text = draft?.anchor === anchor ? draft.value : info.data?.visibleText ?? '';
   const setText = (value: string) => setDraft({ anchor, value });
   const apply = (operation: (session: DocxSession) => unknown, refreshContent = false) => {

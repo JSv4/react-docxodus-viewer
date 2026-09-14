@@ -193,8 +193,8 @@ export function DocumentViewer({
   const [showSettings, setShowSettings] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('document');
   const [internalRevisions, setRevisions] = useState<Revision[]>([]);
-  const selectRevisions = useCallback((session: DocxSession) => session.listRevisions(), []);
-  const sessionRevisions = useSessionQuery(sessionController, selectRevisions);
+  const selectRevisions = useCallback((session: DocxSession) => sessionController?.getRevisions() ?? session.listRevisions(), [sessionController]);
+  const sessionRevisions = useSessionQuery(sessionController, selectRevisions, { scope: 'document' });
   const onRevisionsRef = useRef(onRevisionsExtracted);
   useEffect(() => { onRevisionsRef.current = onRevisionsExtracted; }, [onRevisionsExtracted]);
   useEffect(() => { if (sessionRevisions.data) onRevisionsRef.current?.(sessionRevisions.data); }, [sessionRevisions.data]);

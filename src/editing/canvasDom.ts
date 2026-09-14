@@ -6,8 +6,9 @@ export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-r
 const ignored = `${generatedContent}, [data-rdv-empty], [data-rdv-presentation], [data-docx-tab], br, del, [data-revision-type="deleted"]`;
 
 export function canvasParagraphs(root: HTMLElement, anchorId?: string) {
-  return Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})`))
-    .filter(node => (!anchorId || node.dataset.sourceAnchorId === anchorId) &&
+  const anchor = anchorId === undefined ? '' : `[data-source-anchor-id="${anchorId.replace(/["\\\n\r\f]/g, char => `\\${char.charCodeAt(0).toString(16)} `)}"]`;
+  return Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})${anchor}`))
+    .filter(node =>
       !Array.from(node.querySelectorAll<HTMLElement>(paragraphSelector)).some(child => child.dataset.sourceAnchorId === node.dataset.sourceAnchorId));
 }
 
@@ -86,6 +87,7 @@ export function readCanvasRange(root: HTMLElement): CanvasRange | null {
   const composed = (selection as Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] }).getComposedRanges?.({ shadowRoots: [tree] });
   const range = composed?.[0] ?? selection.getRangeAt(0);
   const start = canvasPoint(root, range.startContainer, range.startOffset);
+  if (start && range.startContainer === range.endContainer && range.startOffset === range.endOffset) return { start, end: start, backward: false };
   const end = canvasPoint(root, range.endContainer, range.endOffset);
   if (!start || !end) return null;
   const anchor = selection.anchorNode && canvasPoint(root, selection.anchorNode, selection.anchorOffset);

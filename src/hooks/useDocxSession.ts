@@ -12,8 +12,9 @@ export function useSessionState(controller?: DocxSessionController | null) {
 }
 
 /** Reactive read-only projection over any native session query. */
-export function useSessionQuery<T>(controller: DocxSessionController | null | undefined, selector: (session: DocxSession) => T) {
-  const snapshot = useSessionState(controller);
+export function useSessionQuery<T>(controller: DocxSessionController | null | undefined, selector: (session: DocxSession) => T, options: { scope?: 'session' | 'document' } = {}) {
+  const getSnapshot = options.scope === 'document' ? controller?.getQuerySnapshot : controller?.getSnapshot;
+  const snapshot = useSyncExternalStore(controller?.subscribe ?? noSubscribe, getSnapshot ?? emptySnapshot, emptySnapshot);
   return useMemo(() => {
     if (!controller || !snapshot.session) return { data: null, error: null };
     try { return { data: controller.read(selector), error: null }; }

@@ -34,9 +34,6 @@ export class CanvasEditor {
   private listeners = new Set<() => void>();
   private selectionGuards = new Set<() => boolean>();
   private baselines = new Map<string, string>();
-  // Native formatting resolves style inheritance for every run. Keep only its
-  // plain text, keyed by the exact native subtree hash, across DOM replacements.
-  private preparedText = new Map<string, { hash: string; text: string }>();
   private anchorCache: { owner: DocxSession | null; version: number; ids: Map<string, string> } | null = null;
   private root: HTMLElement | null = null;
   private renderedOwner: DocxSession | null = null;
@@ -77,7 +74,7 @@ export class CanvasEditor {
     if (conflict) this.publish({ conflict: true, suspended: true });
     this.callbacks?.onError(error); return false;
   }
-  private text(anchorId: string) { return this.controller.read(session => editableText(session.getFormatting(anchorId))); }
+  private text(anchorId: string) { return editableText(this.controller.getFormatting(anchorId)); }
   private canonical(anchorId: string) {
     const { session: owner, version } = this.controller.getSnapshot();
     if (!this.anchorCache || this.anchorCache.owner !== owner || this.anchorCache.version !== version) {
@@ -119,6 +116,7 @@ export class CanvasEditor {
   selectedSpans = () => {
     if (!this.root || !this.range || this.renderedOwner !== this.controller.getSnapshot().session) return [];
     const { start, end } = this.range;
+    if (start.anchorId === end.anchorId) return [{ anchorId: this.canonical(start.anchorId) ?? start.anchorId, span: { start: start.offset, length: Math.max(0, end.offset - start.offset) } }];
     const ids = [...new Set(this.storyBlocks(start.anchorId).map(block => block.dataset.sourceAnchorId!))];
     const identity = (id: string) => id.slice(id.indexOf(':'));
     const first = ids.findIndex(id => identity(id) === identity(start.anchorId)), last = ids.findIndex(id => identity(id) === identity(end.anchorId));
@@ -139,20 +137,15 @@ export class CanvasEditor {
       const group = groups.get(id) ?? []; group.push(block); groups.set(id, group);
     }
     const ids = [...groups.keys()].map(id => this.canonical(id)).filter((id): id is string => !!id);
-    const info = this.controller.read(session => session.getAnchorInfos(ids));
     if (!anchorId) {
       const live = new Set(ids);
-      for (const id of this.preparedText.keys()) if (!live.has(id)) this.preparedText.delete(id);
       for (const id of this.baselines.keys()) if (!live.has(id)) this.baselines.delete(id);
     }
     for (const [id, fragments] of groups) {
       try {
         const canonical = this.canonical(id);
         if (!canonical) continue;
-        const hash = info[canonical]?.contentHash;
-        const cached = this.preparedText.get(canonical);
-        const text = hash && cached?.hash === hash ? cached.text : this.text(canonical);
-        if (hash) this.preparedText.set(canonical, { hash, text });
+        const text = this.text(canonical);
         for (const block of fragments) {
           block.dataset.sourceAnchorId = canonical;
           prepareCanvasBreaks(block);
@@ -459,7 +452,7 @@ export class CanvasEditor {
   attach(root: HTMLElement, owner: DocxSession | null) {
     this.detach?.();
     this.root = root;
-    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.preparedText.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
+    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
     this.renderedOwner = owner;
     this.renderedVersion = this.controller.getSnapshot().version;
     this.prepareParagraphs();

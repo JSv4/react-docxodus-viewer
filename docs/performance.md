@@ -1,5 +1,28 @@
 # Editor performance campaign
 
+The current follow-up targets interaction responses under 150 ms. The first
+changes remove atomic batch/receipt overhead from single-paragraph formatting,
+share formatting and style reads across controls, preserve cached formatting
+only for anchors proven unchanged by the native edit journal, and keep page-map
+notifications from refreshing document-only queries. Normal typing now builds
+its verified native span from formatting instead of requesting a full Markdown
+projection for anchor metadata. Caret selection avoids repeated document scans.
+
+In a local Chromium production benchmark of the pinned NVCA document, selected-word
+Bold improved from about 1.3 seconds to 80 ms event-to-paint. Twenty-four arrow
+presses caused no additional native formatting queries (previously 72). These
+results do not yet meet the full responsiveness target: subsequent page-map
+registration and page-flow updates can still block the main thread for hundreds
+of milliseconds or longer. That layout work is the next stage of this campaign.
+
+`useSessionQuery(controller, selector, { scope: 'document' })` opts a read into
+document/settings updates only. Its default still observes the full session,
+including page-map availability. The controller's shared formatting/styles reads
+must be treated as read-only. Unknown mutations, raw native version gaps, session
+replacement, and atomic shadow reads invalidate or bypass these caches. Enriched
+`editor.details.info` metadata is now evaluated only when accessed; hosts should
+read the current details object before requesting that metadata.
+
 The reference workload is the 65-page October 2025 NVCA Model Certificate of
 Incorporation. Its 234 body paragraphs, 110 footnote paragraphs, fields, lists,
 bookmarks, and section changes exercise more than a short sample document.

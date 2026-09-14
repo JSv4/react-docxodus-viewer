@@ -15,7 +15,6 @@ import './App.css';
 const WASM_BASE_PATH = import.meta.env.BASE_URL + 'wasm/';
 const FINGERPRINT = 'react-studio-v12.4.1';
 const snapshotBytes = (session: DocxSession) => session.save();
-const documentCounts = (session: DocxSession) => ({ comments: session.listComments().length, revisions: session.listRevisions().length });
 const docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 type Panel = 'edit' | 'review' | 'comments' | 'annotations' | 'history' | 'verify' | 'export';
 const tabs: { id: Panel; label: string; icon: IconName; hint: string }[] = [
@@ -51,7 +50,8 @@ function Workspace() {
   const { canvasEditor, select } = editor;
   const anchor = editor.selection?.anchorId ?? requestedAnchor;
   const bytes = useSessionQuery(panel === 'verify' || panel === 'export' ? controller : undefined, snapshotBytes).data;
-  const counts = useSessionQuery(controller, documentCounts).data;
+  const documentCounts = useCallback((session: DocxSession) => ({ comments: session.listComments().length, revisions: controller.getRevisions().length }), [controller]);
+  const counts = useSessionQuery(controller, documentCounts, { scope: 'document' }).data;
   const history = useDocumentHistory({ documentId, indexedDbName: 'react-docxodus-viewer-studio' });
   const busy = session.isLoading || sampleLoading;
   const ready = !!session.session;

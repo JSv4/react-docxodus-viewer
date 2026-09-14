@@ -77,11 +77,15 @@ export function textChanges(before: string, after: string) {
 
 /** Preserve surrounding runs, links and paragraph formatting instead of rewriting a block. */
 export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string): Parameters<DocxSession['executeBatch']>[0] {
-  const live = session.getAnchorInfo(anchorId);
-  if (!live || editableText(session.getFormatting(anchorId)) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
+  const formatting = session.getFormatting(anchorId);
+  if (!formatting || editableText(formatting) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
+  const canonical = formatting.anchorId;
+  const [kind, scope] = canonical.split(':');
   const changes = textChanges(before, after);
   if (!changes.length) return [];
   if (!before.length) {
+    const live = session.getAnchorInfo(canonical);
+    if (!live) throw new Error('This paragraph changed. Reload its text before applying your draft.');
     // replaceText accepts Markdown. Escape literal typing into an empty paragraph.
     const literal = after.replace(/([\\`*_{}[\]()#+.!<>|~-])/g, '\\$1');
     return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: live.visibleText }) }];
@@ -94,7 +98,7 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.
     return session.replaceMatch({ text: change.removed,
-      enclosingAnchor: { id: anchorId, kind: live.kind, scope: live.scope, unid: anchorId.split(':').at(-1)! },
+      enclosingAnchor: { id: canonical, kind, scope, unid: canonical.split(':').at(-1)! },
       span: { start: change.start, length: change.removed.length }, fragments: [],
       contextBefore: current.slice(0, change.start), contextAfter: current.slice(change.start + change.removed.length), groups: [change.removed],
     }, change.inserted);
