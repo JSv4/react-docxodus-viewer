@@ -64,6 +64,41 @@ revision, not a repeated sub-150 ms result. Enter's structural reflow also took
 long task after the input, so the input measurement does not establish a maximum
 for every later task.
 
+At `0dad65d`, structural edits switched from separate paragraph renders to the
+existing native batch renderer. Enter measured 136 ms in the module, but 280 ms
+with profiling and 320 ms without it in the studio. The studio trace identified
+another 125 ms spent generating the sidebar's full Markdown preview catalog
+during the keypress. This motivates deferring that optional catalog while keeping
+current native block identities and the selected paragraph's text immediately
+available. It also shows why module-only timing cannot establish studio latency.
+
+The `8fd41f7` follow-up uses React's deferred query value for sidebar previews.
+In the studio profile, the 126 ms Markdown projection moved after Enter's first
+frame instead of extending its input handler. Three serial production runs on
+that final application revision measured:
+
+| Interaction | Module, no profiling | Studio, no profiling | Studio, profiling |
+| --- | ---: | ---: | ---: |
+| Largest response in the five ordinary phases | 144 ms | 72 ms | 128 ms |
+| Enter response | 112 ms | 152 ms | 160 ms |
+| Explicitly styled typing response | 1,496 ms | 1,416 ms | 1,432 ms |
+
+All text, formatting and native Enter-undo checks passed. The full extended
+`RDV_LATENCY_LIMIT_MS=150` gate failed in every run: styled typing remains above
+target, as does Enter in the studio. Enter's complete structural layout took
+7.07–7.67 seconds, with later native validation/layout tasks reaching 372 ms.
+The module also recorded a 372 ms background task after continuous typing.
+These results improve response times without establishing a 150 ms editor-wide
+maximum. The remaining compound native transaction cost is tracked upstream below.
+
+The full NVCA integrity test also passed on `8fd41f7`: 65 pages, 234 body and
+110 footnote paragraphs editable, 13 intentionally modified paragraphs, one added
+paragraph, and 31 native commits. Independent package inspection confirmed
+unchanged paragraph XML, fields, bookmarks, notes, sections, and unrelated parts.
+The [integrity record](benchmarks/2026-09-13-nvca-integrity.json) includes the
+revision and assertions. Its source-harness timings use native default Markdown
+patches and are not the production input-response metric.
+
 The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
 65 pages; the studio's different profile rendered 52. Compact results are in
@@ -201,6 +236,14 @@ replacement, and atomic shadow reads invalidate or bypass these caches. Enriched
 `editor.details.info` metadata is now evaluated only when accessed and is
 non-enumerable so framework prop inspection cannot trigger a native query. Hosts
 should explicitly read it from the current details object when they need it.
+
+`useSessionQuery(controller, selector, { deferred: true })` lets React defer
+optional preview refreshes within the same document. Values may briefly lag
+edits; use current session identities and native validation for actions. Opening,
+closing, or replacing the owner immediately discards the prior owner's result.
+The sidebar opts its block-label catalog into this behavior while obtaining
+current selectable IDs from the lightweight native inventory. Queries remain
+synchronous by default, and the native editing API is unchanged.
 
 The reference workload is the 65-page October 2025 NVCA Model Certificate of
 Incorporation. Its 234 body paragraphs, 110 footnote paragraphs, fields, lists,

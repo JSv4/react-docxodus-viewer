@@ -46,7 +46,9 @@ const { controller, session, version, error, isLoading } = document;
 // Omit file for manual document.open(file), document.create(), document.close().
 // source=null closes the session; an invalid replacement retains the previous one.
 
-const projection = useSessionQuery(controller, s => s.project());
+// Memoize selectors with React's useCallback (or declare them outside the component).
+const readProjection = useCallback((s: DocxSession) => s.project(), []);
+const projection = useSessionQuery(controller, readProjection);
 const commands = useSessionCommands(controller, ['replaceText', 'insertTable', 'undo']);
 const result = commands.replaceText(anchorId, '**Revised clause**');
 if (!result.success) console.error(result.error?.code, result.error?.message);
@@ -55,7 +57,12 @@ if (!result.success) console.error(result.error?.code, result.error?.message);
 `session` exposes all 140 public native methods. Calls through that session or
 `controller.run()` observe mutations and notify subscribers. `useSessionCommands`
 returns any requested subset with the original signatures. `useSessionQuery`
-executes a read-only selector again when the session changes. `controller.read()`
+executes a read-only selector again when the session changes. Its optional
+`{ scope: 'document' }` excludes page-map notifications; `{ deferred: true }`
+lets React defer noncritical previews within the same owner. Deferred values may
+briefly lag edits, while document replacement and close discard prior-owner
+results immediately. Keep selectors stable and use current native state to
+validate mutations. `controller.read()`
 is read-only by contract; do not mutate through a selector. `controller.save()`
 returns current DOCX bytes; `controller.originalBytes` returns a detached copy of
 the opening document.

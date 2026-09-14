@@ -512,6 +512,780 @@
           "lastEditToCurrentLayout": 6932.490000009537
         }
       ]
+    },
+    {
+      "mode": "module",
+      "profile": true,
+      "extended": true,
+      "build": "0dad65d",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 65,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.534999996423721,
+            "p95": 17.32499998807907,
+            "max": 17.49500000476837
+          },
+          "eventTiming": {
+            "n": 86,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 133,
+          "lastEditToCurrentLayout": 1691.7450000047684
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.344999998807907,
+            "p95": 15.41499999165535,
+            "max": 15.830000013113022
+          },
+          "eventTiming": {
+            "n": 23,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 10.275000005960464,
+            "p95": 16.094999998807907,
+            "max": 16.890000015497208
+          },
+          "eventTiming": {
+            "n": 58,
+            "p50": 16,
+            "p95": 40,
+            "max": 56
+          },
+          "longestTask": 84,
+          "lastEditToCurrentLayout": 510.6399999856949
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 68.67500001192093,
+            "p95": 68.67500001192093,
+            "max": 70.64999997615814
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "longestTask": 67,
+          "lastEditToCurrentLayout": 166.6550000011921
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 10.00500002503395,
+            "p95": 16.21000000834465,
+            "max": 17.145000010728836
+          },
+          "eventTiming": {
+            "n": 31,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 105,
+          "lastEditToCurrentLayout": 1470.5699999928474
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 7.865000009536743,
+            "p95": 14.049999982118607,
+            "max": 17.020000010728836
+          },
+          "eventTiming": {
+            "n": 49,
+            "p50": 16,
+            "p95": 24,
+            "max": 1416
+          },
+          "longestTask": 1547,
+          "lastEditToCurrentLayout": 2564.2000000178814
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 130.49000000953674,
+            "p95": 130.49000000953674,
+            "max": 130.49000000953674
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 136,
+            "p95": 136,
+            "max": 136
+          },
+          "longestTask": 343,
+          "lastEditToCurrentLayout": 6913.5250000059605
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": false,
+      "extended": true,
+      "build": "0dad65d",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.74499997496605,
+            "p95": 16.38500002026558,
+            "max": 17.209999978542328
+          },
+          "eventTiming": {
+            "n": 89,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 114,
+          "lastEditToCurrentLayout": 1768.155000001192
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.175000011920929,
+            "p95": 15.680000007152557,
+            "max": 16.299999982118607
+          },
+          "eventTiming": {
+            "n": 24,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.71000000834465,
+            "p95": 15.629999995231628,
+            "max": 16.615000009536743
+          },
+          "eventTiming": {
+            "n": 59,
+            "p50": 16,
+            "p95": 48,
+            "max": 48
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 482.22499999403954
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 1.0149999856948853,
+            "p95": 1.0149999856948853,
+            "max": 53.525000005960464
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 24,
+            "p95": 24,
+            "max": 56
+          },
+          "longestTask": 84,
+          "lastEditToCurrentLayout": 209.78499999642372
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 8.769999980926514,
+            "p95": 14.109999984502792,
+            "max": 16.939999997615814
+          },
+          "eventTiming": {
+            "n": 29,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 118,
+          "lastEditToCurrentLayout": 1514.5850000083447
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.450000017881393,
+            "p95": 14.0799999833107,
+            "max": 16.429999977350235
+          },
+          "eventTiming": {
+            "n": 50,
+            "p50": 16,
+            "p95": 24,
+            "max": 1384
+          },
+          "longestTask": 1508,
+          "lastEditToCurrentLayout": 2577.4749999940395
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 308.47499999403954,
+            "p95": 308.47499999403954,
+            "max": 308.47499999403954
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 320,
+            "p95": 320,
+            "max": 320
+          },
+          "longestTask": 341,
+          "lastEditToCurrentLayout": 7325.310000002384
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": true,
+      "extended": true,
+      "build": "0dad65d",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.965000003576279,
+            "p95": 15.629999995231628,
+            "max": 17.259999990463257
+          },
+          "eventTiming": {
+            "n": 100,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 112,
+          "lastEditToCurrentLayout": 1725.7349999845028
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.5,
+            "p95": 14.560000002384186,
+            "max": 15.75
+          },
+          "eventTiming": {
+            "n": 23,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.764999985694885,
+            "p95": 96.10499998927116,
+            "max": 117.39499998092651
+          },
+          "eventTiming": {
+            "n": 60,
+            "p50": 16,
+            "p95": 128,
+            "max": 128
+          },
+          "longestTask": 109,
+          "lastEditToCurrentLayout": 1544.9099999964237
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 53.50500002503395,
+            "p95": 53.50500002503395,
+            "max": 55.28000000119209
+          },
+          "eventTiming": {
+            "n": 4,
+            "p50": 32,
+            "p95": 56,
+            "max": 56
+          },
+          "longestTask": 52,
+          "lastEditToCurrentLayout": 155.48500001430511
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 6.75,
+            "p95": 12.299999982118607,
+            "max": 17.080000013113022
+          },
+          "eventTiming": {
+            "n": 36,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 133,
+          "lastEditToCurrentLayout": 1523.9099999964237
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.245000004768372,
+            "p95": 16.455000013113022,
+            "max": 17.185000002384186
+          },
+          "eventTiming": {
+            "n": 45,
+            "p50": 16,
+            "p95": 24,
+            "max": 1456
+          },
+          "longestTask": 1578,
+          "lastEditToCurrentLayout": 2721.1700000166893
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 271.75999999046326,
+            "p95": 271.75999999046326,
+            "max": 271.75999999046326
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 280,
+            "p95": 280,
+            "max": 280
+          },
+          "longestTask": 343,
+          "lastEditToCurrentLayout": 7428.049999982119
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": false,
+      "extended": true,
+      "build": "8fd41f7",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.71000000834465,
+            "p95": 15.424999982118607,
+            "max": 17.87000000476837
+          },
+          "eventTiming": {
+            "n": 90,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 144,
+          "lastEditToCurrentLayout": 1755.080000013113
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.004999995231628,
+            "p95": 12.474999994039536,
+            "max": 15.78999999165535
+          },
+          "eventTiming": {
+            "n": 24,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.485000014305115,
+            "p95": 15.194999992847443,
+            "max": 16.40999999642372
+          },
+          "eventTiming": {
+            "n": 59,
+            "p50": 16,
+            "p95": 48,
+            "max": 56
+          },
+          "longestTask": 96,
+          "lastEditToCurrentLayout": 485.75500002503395
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 0.45499998331069946,
+            "p95": 0.45499998331069946,
+            "max": 70.56499999761581
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 24,
+            "p95": 24,
+            "max": 72
+          },
+          "longestTask": 69,
+          "lastEditToCurrentLayout": 192.7650000154972
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.180000007152557,
+            "p95": 14.780000001192093,
+            "max": 16.520000010728836
+          },
+          "eventTiming": {
+            "n": 28,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 125,
+          "lastEditToCurrentLayout": 1537.630000025034
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.615000009536743,
+            "p95": 15.950000017881393,
+            "max": 17.00499999523163
+          },
+          "eventTiming": {
+            "n": 53,
+            "p50": 16,
+            "p95": 24,
+            "max": 1416
+          },
+          "longestTask": 1534,
+          "lastEditToCurrentLayout": 2633.399999976158
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 141.96500000357628,
+            "p95": 141.96500000357628,
+            "max": 141.96500000357628
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 152,
+            "p95": 152,
+            "max": 152
+          },
+          "longestTask": 336,
+          "lastEditToCurrentLayout": 7292.475000023842
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": true,
+      "extended": true,
+      "build": "8fd41f7",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.935000002384186,
+            "p95": 15.909999996423721,
+            "max": 18.49500000476837
+          },
+          "eventTiming": {
+            "n": 96,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 116,
+          "lastEditToCurrentLayout": 1736.969999998808
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.990000009536743,
+            "p95": 15.599999994039536,
+            "max": 15.71000000834465
+          },
+          "eventTiming": {
+            "n": 28,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.640000015497208,
+            "p95": 17.16499999165535,
+            "max": 108.15000000596046
+          },
+          "eventTiming": {
+            "n": 62,
+            "p50": 16,
+            "p95": 56,
+            "max": 128
+          },
+          "longestTask": 115,
+          "lastEditToCurrentLayout": 1491.844999998808
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 81.52500000596046,
+            "p95": 81.52500000596046,
+            "max": 83.09999999403954
+          },
+          "eventTiming": {
+            "n": 4,
+            "p50": 24,
+            "p95": 88,
+            "max": 88
+          },
+          "longestTask": 80,
+          "lastEditToCurrentLayout": 216.0150000154972
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 9.319999992847443,
+            "p95": 15.765000015497208,
+            "max": 17.319999992847443
+          },
+          "eventTiming": {
+            "n": 28,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 122,
+          "lastEditToCurrentLayout": 1527.4599999785423
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.799999982118607,
+            "p95": 16.594999998807907,
+            "max": 17.520000010728836
+          },
+          "eventTiming": {
+            "n": 47,
+            "p50": 16,
+            "p95": 24,
+            "max": 1432
+          },
+          "longestTask": 1559,
+          "lastEditToCurrentLayout": 2610.2950000166893
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 151.13000002503395,
+            "p95": 151.13000002503395,
+            "max": 151.13000002503395
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 160,
+            "p95": 160,
+            "max": 160
+          },
+          "longestTask": 372,
+          "lastEditToCurrentLayout": 7672.189999997616
+        }
+      ]
+    },
+    {
+      "mode": "module",
+      "profile": false,
+      "extended": true,
+      "build": "8fd41f7",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 65,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 11.689999997615814,
+            "p95": 15.840000003576279,
+            "max": 21.96000000834465
+          },
+          "eventTiming": {
+            "n": 94,
+            "p50": 16,
+            "p95": 32,
+            "max": 40
+          },
+          "longestTask": 372,
+          "lastEditToCurrentLayout": 2926.735000014305
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.0799999833107,
+            "p95": 13.655000001192093,
+            "max": 15.5
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.694999992847443,
+            "p95": 16.195000022649765,
+            "max": 135.9350000023842
+          },
+          "eventTiming": {
+            "n": 56,
+            "p50": 16,
+            "p95": 128,
+            "max": 144
+          },
+          "longestTask": 128,
+          "lastEditToCurrentLayout": 1571.9149999916553
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 64.83000001311302,
+            "p95": 64.83000001311302,
+            "max": 65.80500000715256
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "longestTask": 69,
+          "lastEditToCurrentLayout": 190.21500000357628
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.240000009536743,
+            "p95": 14.310000002384186,
+            "max": 14.610000014305115
+          },
+          "eventTiming": {
+            "n": 29,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 149,
+          "lastEditToCurrentLayout": 1586.1050000190735
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.974999994039536,
+            "p95": 16.36499997973442,
+            "max": 16.96500000357628
+          },
+          "eventTiming": {
+            "n": 51,
+            "p50": 16,
+            "p95": 24,
+            "max": 1496
+          },
+          "longestTask": 1628,
+          "lastEditToCurrentLayout": 2664.940000027418
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 103.22999998927116,
+            "p95": 103.22999998927116,
+            "max": 103.22999998927116
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 112,
+            "p95": 112,
+            "max": 112
+          },
+          "longestTask": 362,
+          "lastEditToCurrentLayout": 7071.8499999940395
+        }
+      ]
     }
   ],
   "limits": [
