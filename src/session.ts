@@ -31,6 +31,14 @@ function definitionsCovered(changes: RenderChange[], from: number, to: number): 
   }
   return from === to;
 }
+function localCharacterFormat(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  // Code formatting can synthesize a document-wide character style. Accessors
+  // and custom serialization cannot establish which operation native code saw.
+  return (prototype === Object.prototype || prototype === null) && !('code' in value) && !('toJSON' in value) &&
+    Object.values(Object.getOwnPropertyDescriptors(value)).every(property => 'value' in property);
+}
 
 export type DocumentSource = File | Uint8Array;
 
@@ -211,7 +219,7 @@ export class DocxSessionController {
                 const result = Reflect.apply(value, target, args);
                 if (property === 'setTrackedChanges') this.trackedChanges = args[0] as TrackedChangeMode;
                 return result;
-              }, String(property));
+              }, String(property), args);
             });
           }
           return methods.get(property);
@@ -235,7 +243,7 @@ export class DocxSessionController {
     }
   }
 
-  private invoke<T>(operation: () => T, name = 'run'): T {
+  private invoke<T>(operation: () => T, name = 'run', args: unknown[] = []): T {
     const from = this.native?.getVersion() ?? 0;
     const start = this.pendingChanges.length;
     this.depth++;
@@ -243,7 +251,7 @@ export class DocxSessionController {
       const result = operation();
       const to = this.native?.getVersion() ?? from;
       const edit = result as EditResult | undefined;
-      const local = (name === 'replaceMatch' || name === 'applyFormat') && edit?.success &&
+      const local = (name === 'replaceMatch' || (name === 'applyFormat' && localCharacterFormat(args[2]))) && edit?.success &&
         edit.created?.length === 0 && edit.removed?.length === 0 && edit.modified?.length &&
         edit.modified.every(ref => /^(p|h|li):(body|fn|en):/.test(ref.id));
       const split = name === 'splitParagraph' && edit?.success && edit.created?.length === 1 &&

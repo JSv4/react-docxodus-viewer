@@ -33,9 +33,15 @@ test('split metadata caches match native style and revision reads while ownershi
     check(s.splitParagraph(right, 0));
     const existingRevisionsRefreshed = controller.getRevisions() !== existing;
     const movedRevisionsMatchNative = JSON.stringify(controller.getRevisions()) === JSON.stringify(s.listRevisions());
+    const stylesBeforeCode = controller.getStyles(), versionBeforeCode = s.getVersion();
+    check(s.applyFormat(anchor, { start: 0, length: 1 }, { code: true }));
+    const codeRefreshesDefinitions = controller.getStyles() !== stylesBeforeCode &&
+      JSON.stringify(controller.getStyles()) === JSON.stringify(s.listStyles());
+    const codeRequiresFullRender = controller.getRenderChanges(s, versionBeforeCode) === null;
     controller.close();
     return { keptStyles, keptEmptyRevisions, freshInventory, freshFormatting, renderBoundary, stylesMatchNative,
-      emptyMatchNative, trackingInvalidatedEmpty, existingRevisionsRefreshed, movedRevisionsMatchNative };
+      emptyMatchNative, trackingInvalidatedEmpty, existingRevisionsRefreshed, movedRevisionsMatchNative,
+      codeRefreshesDefinitions, codeRequiresFullRender };
   });
-  expect(Object.values(result)).toEqual(Array(10).fill(true));
+  expect(Object.values(result)).toEqual(Array(12).fill(true));
 });
