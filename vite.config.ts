@@ -102,7 +102,7 @@ const libConfig = defineConfig({
 
 // Demo app configuration
 const demoConfig = defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/react-docxodus-viewer/' : '/',
+  base: process.env.RDV_BASE_PATH ?? (process.env.GITHUB_ACTIONS ? '/react-docxodus-viewer/' : '/'),
   plugins: [wasmPublicPlugin(), react()],
   root: 'demo',
   publicDir: resolve(__dirname, 'public'),
