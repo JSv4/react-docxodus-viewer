@@ -117,7 +117,9 @@ export class CanvasEditor {
   selectedSpans = () => {
     if (!this.root || !this.range || this.renderedOwner !== this.controller.getSnapshot().session) return [];
     const { start, end } = this.range;
-    if (start.anchorId === end.anchorId) return [{ anchorId: this.canonical(start.anchorId) ?? start.anchorId, span: { start: start.offset, length: Math.max(0, end.offset - start.offset) } }];
+    // Undo can remove a paragraph before the old page DOM has been replaced.
+    if (!this.canonical(start.anchorId) || !this.canonical(end.anchorId)) return [];
+    if (start.anchorId === end.anchorId) return [{ anchorId: this.canonical(start.anchorId)!, span: { start: start.offset, length: Math.max(0, end.offset - start.offset) } }];
     const ids = [...new Set(this.storyBlocks(start.anchorId).map(block => block.dataset.sourceAnchorId!))];
     const identity = (id: string) => id.slice(id.indexOf(':'));
     const first = ids.findIndex(id => identity(id) === identity(start.anchorId)), last = ids.findIndex(id => identity(id) === identity(end.anchorId));
@@ -307,7 +309,7 @@ export class CanvasEditor {
   };
   private restore() {
     if (!this.root || !this.range || !this.restoreFocus) return;
-    if (!domPoint(this.root, this.range.start)) {
+    if (!this.canonical(this.range.start.anchorId) || !domPoint(this.root, this.range.start)) {
       const fallback = this.fallback && this.canonical(this.fallback.anchorId);
       const block = fallback ?? canvasParagraphs(this.root)[0]?.dataset.sourceAnchorId;
       if (block) this.range = collapsed({ anchorId: block, offset: Math.min(this.fallback?.offset ?? 0, this.text(block).length) });
@@ -342,15 +344,16 @@ export class CanvasEditor {
   }
 
   /** Execute structural edits as one undo step, then restore the editing caret. */
-  private mutate(action: string, operation: (session: DocxSession) => { results: EditResult[]; point: CanvasPoint; changed: string[]; removed?: string[] }) {
+  private mutate(action: string, operation: (session: DocxSession) => { results: EditResult[]; point: CanvasPoint; changed: string[]; removed?: string[] }, atomic = true) {
     if (this.callbacks?.readOnly || !this.beforeCommand()) return false;
     const before = this.range;
     try {
       this.applying = true;
       let outcome: ReturnType<typeof operation> | undefined;
-      check(this.controller.run(session => session.executeBatch([{ tool: 'CanvasEditor', action, mutation: () => {
-        outcome = operation(session); return outcome.results;
-      } }])));
+      check(this.controller.run(session => {
+        const mutation = () => { outcome = operation(session); return outcome.results; };
+        return atomic ? session.executeBatch([{ tool: 'CanvasEditor', action, mutation }]) : mutation();
+      }));
       if (!outcome) return false;
       this.fallback = before?.start ?? null;
       this.range = collapsed(outcome.point); this.restoreFocus = true;
@@ -401,6 +404,9 @@ export class CanvasEditor {
   insertText = (value: string, paragraphBreak = false) => {
     const range = this.root && readCanvasRange(this.root) || this.range;
     if (!range) return false;
+    // A collapsed Enter is exactly one native split, which already owns an
+    // undo/version unit. Selections and pasted text still need atomic rollback.
+    const atomic = !(paragraphBreak && samePoint(range.start, range.end));
     return this.mutate(paragraphBreak ? 'split paragraph' : 'insert text', session => {
       const { results, removed } = this.removeRange(session, range);
       const lines = paragraphBreak ? ['', ''] : value.replace(/\r\n?/g, '\n').split('\n');
@@ -416,7 +422,7 @@ export class CanvasEditor {
         }
       }
       return { results, point: { anchorId: anchor, offset }, changed, removed };
-    });
+    }, atomic);
   };
   private merge(direction: -1 | 1) {
     const range = this.range;

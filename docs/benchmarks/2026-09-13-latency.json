@@ -1,0 +1,393 @@
+{
+  "date": "2026-09-13",
+  "machine": "Intel Core Ultra 7 258V; 8 logical CPUs; Linux x64",
+  "browser": "Chromium 143.0.7499.4",
+  "viewport": [
+    1480,
+    1050
+  ],
+  "cpuThrottling": false,
+  "runs": [
+    {
+      "mode": "module",
+      "profile": true,
+      "build": "77d1441",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 65,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.650000005960464,
+            "p95": 15.605000004172325,
+            "max": 17.00499999523163
+          },
+          "eventTiming": {
+            "n": 84,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 158,
+          "lastEditToCurrentLayout": 1714.0600000023842
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.859999999403954,
+            "p95": 12.409999996423721,
+            "max": 16.21500000357628
+          },
+          "eventTiming": {
+            "n": 26,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.600000008940697,
+            "p95": 16.66499999165535,
+            "max": 16.91500000655651
+          },
+          "eventTiming": {
+            "n": 55,
+            "p50": 16,
+            "p95": 40,
+            "max": 56
+          },
+          "longestTask": 85,
+          "lastEditToCurrentLayout": 513.9800000041723
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 66.92499999701977,
+            "p95": 66.92499999701977,
+            "max": 68.13500000536442
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "longestTask": 65,
+          "lastEditToCurrentLayout": 183.87999999523163
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.8900000005960464,
+            "p95": 14.844999998807907,
+            "max": 15.530000001192093
+          },
+          "eventTiming": {
+            "n": 25,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 160,
+          "lastEditToCurrentLayout": 1548.9149999916553
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": true,
+      "build": "77d1441",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.009999990463257,
+            "p95": 16.41499999165535,
+            "max": 17.774999991059303
+          },
+          "eventTiming": {
+            "n": 103,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 110,
+          "lastEditToCurrentLayout": 1681.7900000065565
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 7.3900000005960464,
+            "p95": 13.465000003576279,
+            "max": 14.409999996423721
+          },
+          "eventTiming": {
+            "n": 23,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.075000002980232,
+            "p95": 15.515000000596046,
+            "max": 16.719999998807907
+          },
+          "eventTiming": {
+            "n": 52,
+            "p50": 16,
+            "p95": 48,
+            "max": 48
+          },
+          "longestTask": 141,
+          "lastEditToCurrentLayout": 493.1499999910593
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 54.125,
+            "p95": 54.125,
+            "max": 55.51500000059605
+          },
+          "eventTiming": {
+            "n": 4,
+            "p50": 32,
+            "p95": 56,
+            "max": 56
+          },
+          "longestTask": 53,
+          "lastEditToCurrentLayout": 148.40000000596046
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 9.17000000178814,
+            "p95": 17.400000005960464,
+            "max": 112.88499999046326
+          },
+          "eventTiming": {
+            "n": 29,
+            "p50": 16,
+            "p95": 24,
+            "max": 128
+          },
+          "longestTask": 128,
+          "lastEditToCurrentLayout": 1579.3650000095367
+        }
+      ]
+    },
+    {
+      "mode": "module",
+      "profile": false,
+      "build": "77d1441",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 65,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.099999994039536,
+            "p95": 15.305000007152557,
+            "max": 16.75499999523163
+          },
+          "eventTiming": {
+            "n": 81,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 142,
+          "lastEditToCurrentLayout": 1719.609999999404
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 7.489999994635582,
+            "p95": 13.644999995827675,
+            "max": 15.129999995231628
+          },
+          "eventTiming": {
+            "n": 18,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.075000002980232,
+            "p95": 17.105000004172325,
+            "max": 108.79999999701977
+          },
+          "eventTiming": {
+            "n": 61,
+            "p50": 16,
+            "p95": 80,
+            "max": 112
+          },
+          "longestTask": 101,
+          "lastEditToCurrentLayout": 1524.2549999952316
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 51.445000007748604,
+            "p95": 51.445000007748604,
+            "max": 52.46500000357628
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 56,
+            "p95": 56,
+            "max": 56
+          },
+          "longestTask": 57,
+          "lastEditToCurrentLayout": 157.92000000178814
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 10.160000011324883,
+            "p95": 17.49500000476837,
+            "max": 108.79999999701977
+          },
+          "eventTiming": {
+            "n": 23,
+            "p50": 16,
+            "p95": 24,
+            "max": 128
+          },
+          "longestTask": 119,
+          "lastEditToCurrentLayout": 1546.0649999976158
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": false,
+      "build": "77d1441",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.160000011324883,
+            "p95": 15.760000005364418,
+            "max": 17.125
+          },
+          "eventTiming": {
+            "n": 91,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 111,
+          "lastEditToCurrentLayout": 1759.2549999952316
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.259999990463257,
+            "p95": 13.939999997615814,
+            "max": 16.12999999523163
+          },
+          "eventTiming": {
+            "n": 23,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.185000002384186,
+            "p95": 13.915000006556511,
+            "max": 112.125
+          },
+          "eventTiming": {
+            "n": 61,
+            "p50": 16,
+            "p95": 64,
+            "max": 144
+          },
+          "longestTask": 115,
+          "lastEditToCurrentLayout": 1489.8699999898672
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 70.98999999463558,
+            "p95": 70.98999999463558,
+            "max": 72.97499999403954
+          },
+          "eventTiming": {
+            "n": 4,
+            "p50": 32,
+            "p95": 80,
+            "max": 80
+          },
+          "longestTask": 70,
+          "lastEditToCurrentLayout": 201.8449999988079
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.4000000059604645,
+            "p95": 15.17000000178814,
+            "max": 15.774999991059303
+          },
+          "eventTiming": {
+            "n": 33,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 129,
+          "lastEditToCurrentLayout": 1480.405000001192
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Chrome Event Timing is quantized and only events reaching the 16 ms threshold are reported; percentiles are not population INP.",
+    "Full pagination can outlast input responses; these runs do not establish an editor-wide 150 ms maximum.",
+    "Explicitly formatted typing still uses native atomic transactions and reached 1360 ms in an additional boundary profile at 77d1441."
+  ]
+}

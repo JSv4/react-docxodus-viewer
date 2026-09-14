@@ -68,6 +68,30 @@ test('Enter splits at the caret, Backspace joins, and undo/redo restore native p
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
+test('collapsed Enter is one native undo unit without a package transaction', async ({ page }) => {
+  await open(page, 'Hello world.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await page.evaluate(() => {
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge;
+    const original = bridge.BeginTransaction;
+    Reflect.set(window, 'splitTransactions', 0);
+    bridge.BeginTransaction = handle => {
+      Reflect.set(window, 'splitTransactions', Reflect.get(window, 'splitTransactions') + 1);
+      return original(handle);
+    };
+  });
+  await page.keyboard.press('Enter');
+  await expect.poll(() => nativeText(page)).toEqual(['Hello ', 'world.']);
+  expect(await page.evaluate(() => Reflect.get(window, 'splitTransactions'))).toBe(0);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual(['Hello world.']);
+  await page.keyboard.press('Control+y');
+  await expect.poll(() => nativeText(page)).toEqual(['Hello ', 'world.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
 test('caret formatting applies to new typing and selected text formats only that range', async ({ page }) => {
   await open(page, 'Plain text.');
   await paragraphs(page).first().click();

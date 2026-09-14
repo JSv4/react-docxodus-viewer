@@ -28,6 +28,7 @@ const instrument = process.env.RDV_BENCH_PROFILE === '1';
 const cpu = process.env.RDV_BENCH_CPU === '1';
 const formatting = process.env.RDV_BENCH_FORMAT !== '0';
 const wrapping = process.env.RDV_BENCH_WRAP !== '0';
+const extended = process.env.RDV_BENCH_EXTENDED === '1';
 const label = `${base.includes('github.io') ? 'pages' : 'local'}-${mode}-${doc}${instrument ? '-profile' : ''}`;
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1480, height: 1050 } });
@@ -139,8 +140,10 @@ try {
     const keys=phase.events.filter(e=>e.type==='keydown');
     const inputs=phase.events.filter(e=>e.type==='input');
     const lastInput=inputs.at(-1)?.at;
+    const lastTextEdit=phase.events.filter(e=>e.type==='beforeinput' || e.type==='input').at(-1)?.at;
     phase.summary={ actionMs, keyToFrame:quantiles(keys.filter(e=>e.nextFrame).map(e=>e.nextFrame-e.at)), inputToFrame:quantiles(inputs.filter(e=>e.nextFrame).map(e=>e.nextFrame-e.at)), eventTiming:quantiles(phase.interactions.filter(e=>e.id).map(e=>e.duration)), frameGaps:quantiles(phase.frames.map(e=>e.gap)), longTaskCount:phase.longTasks.length,longTaskTotal:phase.longTasks.reduce((sum,e)=>sum+e.ms,0), longestTask:Math.max(0,...phase.longTasks.map(e=>e.ms)), longTasksDuringTyping:phase.longTasks.filter(e=>e.at<=lastInput), lastInputToNextPublish:lastInput ? phase.versions.find(e=>e.at>=lastInput)?.at-lastInput : undefined };
-    const lastEdit = lastInput ?? (name === 'bold' ? keys.at(-1)?.at : undefined);
+    const lastEdit = lastTextEdit ?? (name === 'bold' || name === 'enter' ? keys.at(-1)?.at : undefined);
+    phase.summary.longTasksDuringTyping = phase.longTasks.filter(e=>lastTextEdit !== undefined && e.at<=lastTextEdit);
     if (lastEdit !== undefined) phase.summary.lastEditToCurrentLayout = phase.versions.find(event => event.at >= lastEdit && event.map?.availability === 'available' && event.map.documentVersion === event.version)?.at - lastEdit;
     console.log(JSON.stringify({label,phase:name,summary:phase.summary})); phases.push(phase);
   };
@@ -168,7 +171,6 @@ try {
       await page.keyboard.type(' Still typing.', { delay: 55 });
     });
   }
-  await page.screenshot({path:`${directory}/${label}.png`});
   for (const phase of phases) {
     if(phase.name==='bold') continue;
     const count=phase.events.filter(e=>e.type==='keydown').length;
@@ -183,8 +185,33 @@ try {
     .replace(' A longer passage that forces the paragraph to wrap across additional lines.'.repeat(8), '')
     .replace(' Still typing.', '');
   if (restored !== info.nativeText) errors.push('Text outside the inserted passages changed');
+  if (extended) {
+    const beforeStyled = phases.at(-1).after;
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Control+b');
+    await runPhase('styled_pause_resume', async () => {
+      await page.keyboard.type(' Styled text.', {delay:65});
+      await page.waitForTimeout(420);
+      await page.keyboard.type(' More style.', {delay:65});
+    });
+    const styled = phases.at(-1).after;
+    if (!styled.includes(' Styled text. More style.') || styled.replace(' Styled text. More style.', '') !== beforeStyled) errors.push('Styled typing changed surrounding text');
+    const styledFormat = await page.evaluate(() => {
+      const s=window.latency, runs=s.native.getFormatting(s.target).runs;
+      const start=runs.map(run=>run.text).join('').indexOf(' Styled text. More style.');
+      const relevant=runs.filter(run=>run.span.start<start+25 && run.span.start+run.span.length>start);
+      return relevant.length>0 && relevant.every(run=>(run.effective.bold===true)===(s.canvas.getSnapshot().format.bold===true));
+    });
+    if (!styledFormat) errors.push('Styled typing did not retain its native Bold setting');
+    await runPhase('enter', () => page.keyboard.press('Enter'));
+    await page.keyboard.press('Control+z');
+    const undone = await page.evaluate(() => window.latency.native.getFormatting(window.latency.target).runs.map(run=>run.text).join(''));
+    if (undone !== styled) errors.push('Enter did not undo as one native edit');
+    await page.waitForFunction(() => window.latency.native.getPageMapStatus().availability === 'available');
+  }
   if(await page.getByRole('alert').count()) errors.push('Visible editor alert');
-  const result={label,base,mode,doc,instrument,buildRevision:process.env.RDV_BENCH_REVISION || null,workspaceCommit:execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim(),workspaceDirty:!!execFileSync('git', ['status', '--porcelain'], { encoding:'utf8' }).trim(),browser:browser.version(),info,errors,phases};
+  await page.screenshot({path:`${directory}/${label}.png`});
+  const result={label,base,mode,doc,instrument,extended,buildRevision:process.env.RDV_BENCH_REVISION || null,workspaceCommit:execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim(),workspaceDirty:!!execFileSync('git', ['status', '--porcelain'], { encoding:'utf8' }).trim(),browser:browser.version(),info,errors,phases};
   await writeFile(`${directory}/${label}.json`,JSON.stringify(result,null,2));
   console.log(JSON.stringify({label,info,errors,output:`${directory}/${label}.json`}));
   if (errors.length) throw new Error(errors.join('; '));

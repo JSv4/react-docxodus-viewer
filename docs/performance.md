@@ -15,6 +15,40 @@ first results still left page-map registration and page-flow updates blocking th
 main thread for hundreds of milliseconds or longer, motivating the cooperative
 layout work below.
 
+## Repeated production results
+
+Four serial NVCA production runs on September 13, 2026 (commit `77d1441`)
+covered the standalone module and full studio twice each, once with native-call
+timers and once without. All native text, formatting and surrounding-text checks
+passed. The largest observed input response across these runs was **144 ms**.
+
+| Interaction | Worst input response across four runs |
+| --- | ---: |
+| Continuous typing | 24 ms |
+| Arrow-key caret movement | 24 ms |
+| Pause/resume typing | 144 ms |
+| Selected-word Bold | 80 ms |
+| Resuming typing during line wrapping | 128 ms |
+
+Selected-word Bold previously reached 1,344 ms in the local module. Line-wrap
+tasks previously blocked the main thread for 1.5–1.6 seconds; the longest task
+in these four runs was 160 ms. Continuous typing's key-handler-to-rAF p95 stayed
+at 15–17 ms. Native formatting reads during 24 arrow presses fell from 72 to zero.
+
+Full reflow is still background work: the final wrap edit took 1.48–1.58 seconds
+to obtain a current page map, including the 350 ms debounce. Cold opening,
+exports, large multi-step mutations, and slower devices are not covered by the
+150 ms result. An additional explicit-format typing benchmark still reached
+1,360 ms: native atomic transactions clone the package and generate a complete
+receipt/hash. Preserving atomic rollback and one-step undo for compound edits
+still carries that cost. These results do **not** establish an editor-wide
+150 ms maximum.
+
+The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
+143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
+65 pages; the studio's different profile rendered 52. Compact results are in
+[the benchmark record](benchmarks/2026-09-13-latency.json).
+
 ## Cooperative layout and reproducible interaction measurements
 
 The follow-up preserves Docxodus's page-flow decisions while yielding between
@@ -64,6 +98,11 @@ Reports and a screenshot go to `test-results/latency` (override with
 for repeated runs. `RDV_BENCH_DOC=sample` selects the small sample, and
 `RDV_BENCH_URL` selects a deployed production build. Run browser benchmarks
 serially without concurrent builds or other CPU-heavy work.
+Set `RDV_BENCH_REVISION` to the actual served build revision; local workspace
+provenance is recorded separately and cannot establish a deployment's revision.
+`RDV_BENCH_EXTENDED=1` also measures explicitly formatted typing and Enter, then
+checks native formatting and one-step Enter undo. The formatted-typing phase
+currently exceeds the optional 150 ms gate on NVCA.
 
 Key-handler-to-rAF timing excludes prior input queuing and measures a paint
 opportunity. Chrome Event Timing includes queuing, processing and presentation,
