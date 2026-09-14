@@ -4,7 +4,7 @@ import { openNativeSession } from './nativeSession';
 import type { NativeSession } from './nativeSession';
 import { cacheSessionPageMaps } from './rendering/sessionPageMap';
 
-interface RenderChange { from: number; to: number; anchors: string[] | null }
+interface RenderChange { from: number; to: number; anchors: string[] | null; preservesDefinitions?: boolean }
 // During atomic callbacks getVersion() still reports the base version. Only
 // explicitly read-only calls may pass through without invalidating local edits.
 const READ_ONLY = new Set<string>([
@@ -23,6 +23,13 @@ function covered(changes: RenderChange[], from: number, to: number): string[] | 
     change.anchors.forEach(id => anchors.add(id)); from = change.to;
   }
   return from === to ? [...anchors] : null;
+}
+function definitionsCovered(changes: RenderChange[], from: number, to: number): boolean {
+  for (const change of changes) {
+    if (change.from !== from || !change.preservesDefinitions) return false;
+    from = change.to;
+  }
+  return from === to;
 }
 
 export type DocumentSource = File | Uint8Array;
@@ -100,13 +107,18 @@ export class DocxSessionController {
     const version = this.native.getVersion();
     if (version !== this.cacheVersion) {
       const start = this.journal.findIndex(change => change.from === this.cacheVersion);
-      const changed = start < 0 ? null : covered(this.journal.slice(start), this.cacheVersion, version);
+      const changes = start < 0 ? null : this.journal.slice(start);
+      const changed = changes && covered(changes, this.cacheVersion, version);
+      const stableDefinitions = !!changes && definitionsCovered(changes, this.cacheVersion, version);
       if (changed) changed.forEach(id => { this.formattingCache.delete(id); this.catalogChanges.add(id); });
-      else { this.formattingCache.clear(); this.stylesCache = null; this.catalogCache = null; this.catalogChanges.clear(); }
+      else { this.formattingCache.clear(); this.catalogCache = null; this.catalogChanges.clear(); }
+      if (!stableDefinitions) this.stylesCache = null;
       this.anchorsCache = null;
-      // A proven local, untracked text/run edit cannot add a first revision.
+      // Proven text/run edits and paragraph splits do not define styles or,
+      // when tracking is disabled, add a first revision. A split still changes
+      // anchor ownership and must invalidate formatting, inventory and layout.
       // Existing revisions or unknown edits always require a fresh native read.
-      if (!changed || !this.revisionTrackingKnownOff || this.revisionsCache?.length !== 0) this.revisionsCache = null;
+      if (!stableDefinitions || !this.revisionTrackingKnownOff || this.revisionsCache?.length !== 0) this.revisionsCache = null;
       this.cacheVersion = version;
     }
     return this.native;
@@ -120,7 +132,7 @@ export class DocxSessionController {
     if (!this.formattingCache.has(anchorId)) this.formattingCache.set(anchorId, native.getFormatting(anchorId));
     return this.formattingCache.get(anchorId)!;
   }
-  /** Local text/run edits do not change style definitions. Unknown edits invalidate them. */
+  /** Text/run edits and paragraph splits preserve definitions. Unknown edits invalidate them. */
   getStyles() {
     const native = this.refreshReadCache();
     if (this.depth || this.transactionDepth) return native.listStyles();
@@ -234,23 +246,29 @@ export class DocxSessionController {
       const local = (name === 'replaceMatch' || name === 'applyFormat') && edit?.success &&
         edit.created?.length === 0 && edit.removed?.length === 0 && edit.modified?.length &&
         edit.modified.every(ref => /^(p|h|li):(body|fn|en):/.test(ref.id));
+      const split = name === 'splitParagraph' && edit?.success && edit.created?.length === 1 &&
+        edit.removed?.length === 0 && edit.modified?.length === 1 &&
+        [...edit.created, ...edit.modified].every(ref => /^(p|h|li):(body|fn|en):/.test(ref.id));
       const children = this.pendingChanges.slice(start);
       if (from !== to) {
+        const wrapper = name === 'run' || name === 'executeBatch' || name === 'runWithPreconditions';
         let anchors = local ? edit!.modified.map(ref => ref.id) :
-          (name === 'run' || name === 'executeBatch' || name === 'runWithPreconditions') ? covered(children, from, to) : null;
+          wrapper ? covered(children, from, to) : null;
+        let preservesDefinitions = !!(local || split || (wrapper && definitionsCovered(children, from, to)));
         // Atomic callbacks edit a native shadow document. Its public version
         // remains at baseVersion until one successful transaction commit.
         const batch = result as ReturnType<DocxSession['executeBatch']> | undefined;
         if (name === 'executeBatch' && children.length && batch?.mode === 'atomic' && batch.success &&
           !batch.preview && !batch.rolledBack && batch.baseVersion === from && batch.resultVersion === to) {
           anchors ??= covered(children, from, from);
+          preservesDefinitions ||= definitionsCovered(children, from, from);
         }
-        this.pendingChanges.splice(start, this.pendingChanges.length - start, { from, to, anchors });
+        this.pendingChanges.splice(start, this.pendingChanges.length - start, { from, to, anchors, preservesDefinitions });
       } else if (this.depth === 1 || (name === 'executeBatch' &&
         ((result as ReturnType<DocxSession['executeBatch']>)?.rolledBack || (result as ReturnType<DocxSession['executeBatch']>)?.preview))) {
         this.pendingChanges.splice(start);
       } else if (local || (!READ_ONLY.has(name) && !['run', 'executeBatch', 'runWithPreconditions'].includes(name))) {
-        this.pendingChanges.splice(start, this.pendingChanges.length - start, { from, to, anchors: local ? edit!.modified.map(ref => ref.id) : null });
+        this.pendingChanges.splice(start, this.pendingChanges.length - start, { from, to, anchors: local ? edit!.modified.map(ref => ref.id) : null, preservesDefinitions: !!(local || split) });
       }
       if (name === 'setTrackedChanges' || name === 'setRevisionAuthor' || name === 'registerPageMap') this.configurationChanged = true;
       if (name === 'setTrackedChanges' || name === 'setRevisionAuthor') { this.metadataChanged = true; this.clearReadCache(); }

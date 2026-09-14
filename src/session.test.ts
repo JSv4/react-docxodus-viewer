@@ -17,6 +17,10 @@ class NativeSession {
     this.#version++;
     return { success: true, created: [], removed: [], modified: [match.enclosingAnchor] };
   }
+  splitParagraph(id: string) {
+    this.#version++;
+    return { success: true, created: [{ id: 'p:body:split' }], removed: [], modified: [{ id }] };
+  }
   executeBatch(steps: { mutation: () => unknown }[]) {
     const before = this.#version;
     if (this.atomic) this.#batchVersion = before;
@@ -42,6 +46,35 @@ function nativeBridge(session: NativeSession): bridge.NativeSession {
 afterEach(() => vi.restoreAllMocks());
 
 describe('DocxSessionController', () => {
+  it.each([false, true])('retains definitions across proven splits but invalidates ownership and unknown writes (atomic: %s)', async atomic => {
+    const native = new NativeSession(atomic);
+    const listStyles = vi.fn(() => []), listRevisions = vi.fn(() => []);
+    const getFormatting = vi.fn(() => ({ version: native.getVersion() }));
+    Object.assign(native, { listStyles, listRevisions, getFormatting });
+    vi.spyOn(bridge, 'openNativeSession').mockReturnValue(nativeBridge(native));
+    const controller = new DocxSessionController();
+    const owner = await controller.open(new Uint8Array([1]));
+    const styles = controller.getStyles(), revisions = controller.getRevisions();
+    const formatting = controller.getFormatting('p:body:a'), index = controller.getAnchorIndex();
+    controller.run(s => atomic ? s.executeBatch([{ tool: 'test', action: 'split', mutation: () => s.splitParagraph('p:body:a', 0) }]) : s.splitParagraph('p:body:a', 0));
+    expect(controller.getStyles()).toBe(styles);
+    expect(controller.getRevisions()).toBe(revisions);
+    expect(controller.getFormatting('p:body:a')).not.toBe(formatting);
+    expect(controller.getAnchorIndex()).not.toBe(index);
+    expect(controller.getRenderChanges(owner, 0)).toBeNull();
+    expect(listStyles).toHaveBeenCalledTimes(1);
+    expect(listRevisions).toHaveBeenCalledTimes(1);
+    controller.read(s => s.splitParagraph('p:body:a', 0));
+    controller.getStyles(); controller.getRevisions();
+    expect(listStyles).toHaveBeenCalledTimes(2);
+    expect(listRevisions).toHaveBeenCalledTimes(2);
+    controller.run(s => { s.replaceText('p:body:a', 'unknown'); return s.splitParagraph('p:body:a', 0); });
+    controller.getStyles(); controller.getRevisions();
+    expect(listStyles).toHaveBeenCalledTimes(3);
+    expect(listRevisions).toHaveBeenCalledTimes(3);
+    controller.close();
+  });
+
   it('reuses reads for unchanged paragraphs and invalidates unknown native changes', async () => {
     const native = new NativeSession();
     const getFormatting = vi.fn((id: string) => ({ anchorId: id, version: native.getVersion() }));
