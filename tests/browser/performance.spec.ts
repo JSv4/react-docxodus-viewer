@@ -80,7 +80,10 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
         }
       });
     };
-    for (const name of ['paginate', 'normalizePageMapFragmentIdentities', 'materializePageMap']) wrap(window.rdv.PaginationEngine.prototype, name);
+    // This native helper runs exactly once at the start of both synchronous
+    // and cooperative pagination. Its count measures full flow attempts; its
+    // duration is only registry parsing, not the asynchronous layout duration.
+    for (const name of ['parseHeaderFooterRegistry', 'normalizePageMapFragmentIdentities', 'materializePageMap']) wrap(window.rdv.PaginationEngine.prototype, name);
     event('open:start');
     const session = await controller.open(new Uint8Array(bytes), { emitMarkdownPatch: false }, '/wasm/');
     event('open:end');
@@ -104,7 +107,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
   expect(pageCount).toBe(65);
   // Count-based guards are portable across machines. Timings are reported, not
   // asserted against arbitrary wall-clock budgets on shared CI runners.
-  expect(phases[0].calls.paginate.count).toBe(1);
+  expect(phases[0].calls.parseHeaderFooterRegistry.count).toBe(1);
   for (const zoom of ['0.5', '2', '1']) {
     await start(page, 'zoom:start');
     const firstPage = page.locator('#pagination-container .page-box').first();
@@ -115,7 +118,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
     await expect(firstPage).toHaveAttribute('data-benchmark-page', 'retained');
     expect(await page.evaluate(() => window.performanceTest.map!.pages.length)).toBe(pageCount);
     const phase = await capture(page, `zoom:${zoom}`);
-    expect(phase.calls.paginate?.count ?? 0).toBe(0);
+    expect(phase.calls.parseHeaderFooterRegistry?.count ?? 0).toBe(0);
     expect(phase.calls.getFormatting?.count ?? 0).toBeLessThan(5);
     phases.push(phase);
   }
@@ -142,9 +145,9 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
     expect(phase.calls.renderBlocks.count).toBe(1);
     expect(phase.events.some(event => event.name === 'convert:start')).toBe(false);
     if (index < 2) {
-      expect(phase.calls.paginate?.count ?? 0).toBe(0);
+      expect(phase.calls.parseHeaderFooterRegistry?.count ?? 0).toBe(0);
       await expect(page.locator('#pagination-container .page-box').first()).toHaveAttribute('data-benchmark-page', 'retained');
-    } else expect(phase.calls.paginate?.count ?? 0).toBe(1); // Footnote reserves need reflow.
+    } else expect(phase.calls.parseHeaderFooterRegistry?.count ?? 0).toBe(1); // Footnote reserves need reflow.
     phases.push(phase);
     const after = await page.evaluate(id => window.performanceTest.controller.read(s => s.getFormatting(id)!.runs.map(r => r.text).join('')), id);
     expect(after.replace(marker, '')).toBe(before);

@@ -39,10 +39,21 @@ Full reflow is still background work: the final wrap edit took 1.48–1.58 secon
 to obtain a current page map, including the 350 ms debounce. Cold opening,
 exports, large multi-step mutations, and slower devices are not covered by the
 150 ms result. An additional explicit-format typing benchmark still reached
-1,360 ms: native atomic transactions clone the package and generate a complete
+1,400 ms: native atomic transactions clone the package and generate a complete
 receipt/hash. Preserving atomic rollback and one-step undo for compound edits
 still carries that cost. These results do **not** establish an editor-wide
 150 ms maximum.
+
+A follow-up at `83263f0` removed the unnecessary outer transaction from a
+collapsed Enter, retaining native split/undo semantics. The extended benchmark
+measured 200 ms for Enter, down from 1,600 ms, and verified native one-step undo.
+The original five interaction phases stayed within target on this build's
+module and studio repeats (56 ms and 88 ms maxima respectively).
+It still exceeded the target: immediate paragraph rendering and style/revision
+refreshes accounted for most of the remaining task. Structural edits also need
+a full conversion and page-map validation afterward. Styled typing continues to
+need a real compound native edit; suppressing its rollback or receipt guarantees
+would change the API contract rather than solve that bottleneck.
 
 The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
@@ -157,6 +168,10 @@ one native write for a contiguous typing burst. Complete page maps and preserved
 text remain correctness requirements. Ordinary edits must use one native block
 batch and zero saved-package conversions; the two body edits retain their pages,
 while the footnote edit repaginates from updated source HTML.
+The full-flow count uses the native header/footer registry parser, called once
+at the start of both native and cooperative pagination. That helper's duration
+is not a measurement of the complete asynchronous flow; layout completion events
+provide the end-to-end timing.
 
 ## First pass
 

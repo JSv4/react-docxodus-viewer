@@ -388,6 +388,232 @@
   "limits": [
     "Chrome Event Timing is quantized and only events reaching the 16 ms threshold are reported; percentiles are not population INP.",
     "Full pagination can outlast input responses; these runs do not establish an editor-wide 150 ms maximum.",
-    "Explicitly formatted typing still uses native atomic transactions and reached 1360 ms in an additional boundary profile at 77d1441."
+    "Explicitly formatted typing still uses native atomic transactions and reached 1400 ms in the extended profile at 83263f0; collapsed Enter reached 200 ms."
+  ],
+  "additionalRuns": [
+    {
+      "mode": "module",
+      "profile": true,
+      "extended": true,
+      "build": "83263f0",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 65,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.160000011324883,
+            "p95": 16.890000000596046,
+            "max": 17.035000011324883
+          },
+          "eventTiming": {
+            "n": 79,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 151,
+          "lastEditToCurrentLayout": 1712.6950000077486
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.390000000596046,
+            "p95": 12.734999999403954,
+            "max": 16.29500000178814
+          },
+          "eventTiming": {
+            "n": 28,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.870000004768372,
+            "p95": 14.605000004172325,
+            "max": 17.035000011324883
+          },
+          "eventTiming": {
+            "n": 61,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 118,
+          "lastEditToCurrentLayout": 570.9749999940395
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 50.34000000357628,
+            "p95": 50.34000000357628,
+            "max": 52.310000002384186
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 56,
+            "p95": 56,
+            "max": 56
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": 142.96500000357628
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 5.969999998807907,
+            "p95": 14.42000000178814,
+            "max": 15.04500000178814
+          },
+          "eventTiming": {
+            "n": 34,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 140,
+          "lastEditToCurrentLayout": 1534.440000012517
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.92000000178814,
+            "p95": 16.814999997615814,
+            "max": 17.5
+          },
+          "eventTiming": {
+            "n": 56,
+            "p50": 16,
+            "p95": 24,
+            "max": 1400
+          },
+          "longestTask": 1528,
+          "lastEditToCurrentLayout": 2536.545000001788
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 193.46500000357628,
+            "p95": 193.46500000357628,
+            "max": 193.46500000357628
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 200,
+            "p95": 200,
+            "max": 200
+          },
+          "longestTask": 340,
+          "lastEditToCurrentLayout": 6895.335000008345
+        }
+      ]
+    },
+    {
+      "mode": "studio",
+      "profile": false,
+      "extended": false,
+      "build": "83263f0",
+      "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+      "pages": 52,
+      "errors": [],
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.435000002384186,
+            "p95": 15.474999994039536,
+            "max": 17.530000001192093
+          },
+          "eventTiming": {
+            "n": 96,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 112,
+          "lastEditToCurrentLayout": 1725.7699999958277
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 7.894999995827675,
+            "p95": 13.609999999403954,
+            "max": 14.909999996423721
+          },
+          "eventTiming": {
+            "n": 20,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.009999990463257,
+            "p95": 16.54000000655651,
+            "max": 17.469999998807907
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 40,
+            "max": 48
+          },
+          "longestTask": 97,
+          "lastEditToCurrentLayout": 481.52000001072884
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 80.98000000417233,
+            "p95": 80.98000000417233,
+            "max": 83.24500000476837
+          },
+          "eventTiming": {
+            "n": 4,
+            "p50": 24,
+            "p95": 88,
+            "max": 88
+          },
+          "longestTask": 80,
+          "lastEditToCurrentLayout": 206.54500000178814
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 11.17000000178814,
+            "p95": 17.265000000596046,
+            "max": 17.719999998807907
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 24,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 113,
+          "lastEditToCurrentLayout": 1519.515000000596
+        }
+      ]
+    }
   ]
 }
