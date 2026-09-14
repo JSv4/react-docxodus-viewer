@@ -50,6 +50,8 @@ function portable(map: PageMap, version: number, fingerprint?: string): boolean 
 }
 const ownership = (fragment: PageMap['fragments'][number]) => JSON.stringify([fragment.anchorId, fragment.story, fragment.inTableCell]);
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const validRequest = (value: PageCitationRequest) => value && typeof value === 'object' && Number.isSafeInteger(value.documentVersion) &&
+  typeof value.rendererFingerprint === 'string' && Object.keys(value).every(key => key === 'documentVersion' || key === 'rendererFingerprint');
 
 /**
  * Browser layout is derived data. Reuse native-validated anchor ownership while
@@ -85,6 +87,7 @@ export function cacheSessionPageMaps(session: DocxSession, canReuse: (version: n
     return result;
   };
   session.getPageMapStatus = (request): PageMapStatus => {
+    if (request && !validRequest(request)) return nativeStatus(request);
     const version = session.getVersion();
     if (!map || !browserLayout || inTransaction()) return nativeStatus(request);
     const common = { documentVersion: version, rendererFingerprint: map.rendererFingerprint, mode: map.mode };
@@ -94,7 +97,7 @@ export function cacheSessionPageMaps(session: DocxSession, canReuse: (version: n
     return { ...common, availability: 'available' };
   };
   session.getPageCitation = (anchorId, request): PageCitation => {
-    if (!map || !browserLayout || inTransaction() || typeof anchorId !== 'string' || !request) return nativeCitation(anchorId, request);
+    if (!map || !browserLayout || inTransaction() || typeof anchorId !== 'string' || !validRequest(request)) return nativeCitation(anchorId, request);
     const status = session.getPageMapStatus(request);
     const unavailable = (unavailableReason: PageCitation['unavailableReason'], documentVersion = status.documentVersion): PageCitation => ({
       anchorId, availability: 'unavailable', unavailableReason, documentVersion, rendererFingerprint: request.rendererFingerprint, pages: [], fragments: [],
@@ -118,11 +121,12 @@ export function cacheSessionPageMaps(session: DocxSession, canReuse: (version: n
       const request = args.flatMap(arg => arg && typeof arg === 'object' ? [arg, ...Object.values(arg)] : []).find(value => value && typeof value === 'object' &&
         'documentVersion' in value && 'rendererFingerprint' in value) as PageCitationRequest | undefined;
       if (!request) return result;
-      const project = (value: unknown): unknown => {
+      const project = (value: unknown, citations = false): unknown => {
         if (!value || typeof value !== 'object') return value;
-        if ('anchorId' in value && 'availability' in value && 'rendererFingerprint' in value && 'documentVersion' in value) return session.getPageCitation(String(value.anchorId), request);
-        if (Array.isArray(value)) return value.map(project);
-        return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, project(child)]));
+        if (citations && 'anchorId' in value && 'availability' in value && 'rendererFingerprint' in value && 'documentVersion' in value) return session.getPageCitation(String(value.anchorId), request);
+        if (Array.isArray(value)) return value.map(child => project(child, citations));
+        return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, project(child,
+          citations || key === 'citation' || key === 'citations' || key === 'pageCitations')]));
       };
       return project(result);
     });

@@ -6,6 +6,7 @@ import type { DocxSessionController } from '../session';
 import { useSessionQuery, useSessionState } from '../hooks/useDocxSession';
 import { useDocumentImages, useContentControls } from '../hooks/useSessionFeatures';
 import { Icon } from './Icon';
+import { visibleBlockText } from '../editing/text';
 
 export interface SessionEditorPanelProps { session: DocxSessionController; anchorId?: string; onAnchorSelect?: (anchorId: string) => void }
 
@@ -27,9 +28,9 @@ export function SessionEditorPanel({ session: controller, anchorId, onAnchorSele
   const anchors = Object.entries(inventory.data ?? {}).map(([id, value]) => ({ ...value, id }));
   const proposed = anchorId ?? picked;
   const anchor = anchors.some(value => value.id === proposed) ? proposed : anchors.find(value => value.kind === 'p')?.id ?? '';
-  const selectInfo = useCallback((session: DocxSession) => anchor ? session.getAnchorInfo(anchor) : null, [anchor]);
+  const selectInfo = useCallback((session: DocxSession) => anchor ? visibleBlockText(session, anchor) : null, [anchor]);
   const info = useSessionQuery(controller, selectInfo, { scope: 'document' });
-  const text = draft?.anchor === anchor ? draft.value : info.data?.visibleText ?? '';
+  const text = draft?.anchor === anchor ? draft.value : info.data ?? '';
   const setText = (value: string) => setDraft({ anchor, value });
   const apply = (operation: (session: DocxSession) => unknown, refreshContent = false) => {
     try {

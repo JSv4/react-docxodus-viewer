@@ -1,5 +1,19 @@
 import type { DocxSession, EditResult, FormattingInspection } from 'docxodus/core';
 
+/**
+ * ExactVisibleText in Docxodus 12.4.1 is descendant w:t text plus native list
+ * numbering for body paragraphs. Keep that contract without Markdown projection.
+ * Requires a canonical anchor; unknown XML retains the native metadata fallback.
+ */
+export function visibleBlockText(session: DocxSession, anchorId: string): string | null {
+  const xml = session.raw.getXml(anchorId);
+  const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+  if (parsed.querySelector('parsererror')) return session.getAnchorInfo(anchorId)?.visibleText ?? null;
+  const text = Array.from(parsed.documentElement.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't')).map(node => node.textContent ?? '').join('');
+  const prefix = /^(p|h|li):body:/.test(anchorId) ? session.getListMembership(anchorId)?.generatedLabel : undefined;
+  return prefix ? text ? `${prefix} ${text}` : prefix : text;
+}
+
 export function escapePattern(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 /** Native run offsets exclude generated numbering; AnchorInfo.visibleText includes it. */
@@ -84,11 +98,11 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const changes = textChanges(before, after);
   if (!changes.length) return [];
   if (!before.length) {
-    const live = session.getAnchorInfo(canonical);
-    if (!live) throw new Error('This paragraph changed. Reload its text before applying your draft.');
+    const visible = visibleBlockText(session, canonical);
+    if (visible === null) throw new Error('This paragraph changed. Reload its text before applying your draft.');
     // replaceText accepts Markdown. Escape literal typing into an empty paragraph.
     const literal = after.replace(/([\\`*_{}[\]()#+.!<>|~-])/g, '\\$1');
-    return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: live.visibleText }) }];
+    return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: visible }) }];
   }
   return changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const current = editableText(session.getFormatting(anchorId));

@@ -90,13 +90,17 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
     // accessor for hosts that need it without paying for it to move the caret.
     const version = session.getVersion();
     let metadata: ReturnType<DocxSession['getAnchorInfo']> | undefined;
-    return { get info() {
+    const result = { get info() {
       if (metadata === undefined) {
         if (controller.read(current => current) !== session || session.getVersion() !== version) throw new Error('Read current editor details before requesting paragraph metadata.');
         metadata = session.getAnchorInfo(selectedAnchorId);
       }
       return metadata!;
     }, formatting, text: editableText(formatting), list: session.getListMembership(selectedAnchorId) };
+    // React's development profiler inspects old props recursively. Enumeration
+    // must not force an obsolete native query (or a full Markdown projection).
+    Object.defineProperty(result, 'info', { enumerable: false });
+    return result;
   }, [controller, selectedAnchorId]);
   const details = useSessionQuery(controller, query, { scope: 'document' });
   const styles = useCallback(() => controller.getStyles().filter(style => style.type === 'paragraph'), [controller]);

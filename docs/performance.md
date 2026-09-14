@@ -11,17 +11,80 @@ projection for anchor metadata. Caret selection avoids repeated document scans.
 In a local Chromium production benchmark of the pinned NVCA document, selected-word
 Bold improved from about 1.3 seconds to 80 ms event-to-paint. Twenty-four arrow
 presses caused no additional native formatting queries (previously 72). These
-results do not yet meet the full responsiveness target: subsequent page-map
-registration and page-flow updates can still block the main thread for hundreds
-of milliseconds or longer. That layout work is the next stage of this campaign.
+first results still left page-map registration and page-flow updates blocking the
+main thread for hundreds of milliseconds or longer, motivating the cooperative
+layout work below.
+
+## Cooperative layout and reproducible interaction measurements
+
+The follow-up preserves Docxodus's page-flow decisions while yielding between
+blocks/pages and preparing incoming editable paragraphs in small chunks. The
+active canvas stays mounted during this work. Input, commit timers and React
+updates run ahead of background layout tasks; owner/version checks discard
+superseded layouts before handoff. Zoom changes during preparation trigger fresh
+measurements at the final scale.
+
+The adapter is generated from the pinned 12.4.1 pagination implementation by
+`node scripts/generate-cooperative-pagination.mjs`. It uses the same engine
+instance and native helpers, with asynchronous traversal calls and checkpoints.
+The generator verifies the upstream file's SHA-256; `npm run check:api` also
+verifies the generated output. A dependency upgrade requires reviewing this
+adapter and rerunning native page/fragment equivalence tests. There is no runtime
+code generation. Attribution is in [third-party-notices.md](third-party-notices.md).
+
+Page-map updates reuse previously native-validated anchor ownership only across
+journaled local text/run edits. Every new geometry/order/version constraint is
+checked again. Structural or unobserved changes, a changed renderer/mode, unknown
+fields, non-ASCII identifiers and table-comment presentations use full native
+validation. Native transactions and embedded search citations retain their native
+semantics. The inspector reads native XML text and list labels without triggering
+the full Markdown projection; native differential tests cover that text contract.
+
+Run a production build and preview, then the interaction benchmark in another
+terminal:
+
+```sh
+npm run build:demo
+npm run preview -- --host 127.0.0.1 --port 4191 --strictPort
+# In another terminal:
+npm run test:latency
+RDV_BENCH_MODE=studio npm run test:latency
+```
+
+The benchmark downloads/verifies the pinned NVCA fixture, or accepts
+`RDV_STRESS_DOCX=/path/to/NVCA.docx`. It waits for the active canvas's native owner,
+version and current page map, rather than treating the inert incoming pages as
+ready. It exercises steady typing, caret movement, pause/resume bursts,
+selected-word Bold and typing during forced reflow. Key counts, persisted text,
+untouched surrounding text and browser errors are checked.
+
+Reports and a screenshot go to `test-results/latency` (override with
+`RDV_BENCH_OUTPUT`). `RDV_BENCH_PROFILE=1` adds native/canvas call timings;
+`RDV_BENCH_CPU=1` independently adds CPU profiles. Use separate output directories
+for repeated runs. `RDV_BENCH_DOC=sample` selects the small sample, and
+`RDV_BENCH_URL` selects a deployed production build. Run browser benchmarks
+serially without concurrent builds or other CPU-heavy work.
+
+Key-handler-to-rAF timing excludes prior input queuing and measures a paint
+opportunity. Chrome Event Timing includes queuing, processing and presentation,
+uses quantized durations, and is collected with a 16 ms threshold. Its observed
+percentiles are not whole-population INP. Long Tasks separately measures main
+thread tasks of at least 50 ms, including layout after the final keystroke.
+`lastEditToCurrentLayout` separately records the wait for a current page map;
+it includes the typing debounce and background layout work. Full repagination
+can take longer than an individual input response while the canvas stays usable.
+`RDV_LATENCY_LIMIT_MS=150` optionally fails a run when an observed input response
+exceeds that threshold. Timing is hardware/workload dependent, so normal CI
+checks correctness and structural requirements rather than enforcing wall time.
 
 `useSessionQuery(controller, selector, { scope: 'document' })` opts a read into
 document/settings updates only. Its default still observes the full session,
 including page-map availability. The controller's shared formatting/styles reads
 must be treated as read-only. Unknown mutations, raw native version gaps, session
 replacement, and atomic shadow reads invalidate or bypass these caches. Enriched
-`editor.details.info` metadata is now evaluated only when accessed; hosts should
-read the current details object before requesting that metadata.
+`editor.details.info` metadata is now evaluated only when accessed and is
+non-enumerable so framework prop inspection cannot trigger a native query. Hosts
+should explicitly read it from the current details object when they need it.
 
 The reference workload is the 65-page October 2025 NVCA Model Certificate of
 Incorporation. Its 234 body paragraphs, 110 footnote paragraphs, fields, lists,

@@ -46,6 +46,7 @@ export class CanvasEditor {
   private applying = false;
   private detach: (() => void) | null = null;
   private scroll = { top: 0, left: 0 };
+  private preparedLayouts = new WeakMap<HTMLElement, { owner: DocxSession | null; version: number; readOnly?: boolean; baselines: Map<string, string> }>();
 
   constructor(controller: DocxSessionController) { this.controller = controller; }
   getSnapshot = () => this.state;
@@ -128,9 +129,9 @@ export class CanvasEditor {
       return { anchorId, span: { start: from, length: Math.max(0, to - from) } };
     });
   };
-  private prepareParagraphs(anchorId?: string) {
-    if (!this.root || !this.controller.getSnapshot().session) return;
-    const paragraphs = canvasParagraphs(this.root, anchorId);
+  private *prepareGroups(root: HTMLElement, owner: DocxSession | null, baselines: Map<string, string>, anchorId?: string) {
+    if (!this.controller.getSnapshot().session) return;
+    const paragraphs = canvasParagraphs(root, anchorId);
     const groups = new Map<string, HTMLElement[]>();
     for (const block of paragraphs) {
       const id = block.dataset.sourceAnchorId!;
@@ -139,7 +140,7 @@ export class CanvasEditor {
     const ids = [...groups.keys()].map(id => this.canonical(id)).filter((id): id is string => !!id);
     if (!anchorId) {
       const live = new Set(ids);
-      for (const id of this.baselines.keys()) if (!live.has(id)) this.baselines.delete(id);
+      for (const id of baselines.keys()) if (!live.has(id)) baselines.delete(id);
     }
     for (const [id, fragments] of groups) {
       try {
@@ -160,16 +161,43 @@ export class CanvasEditor {
           prepareCanvasHyphens(fragments, this.controller.read(session => session.raw.getXml(canonical)), text);
         }
         const supported = normalizedText(fragments.map(canvasText).join('')) === normalizedText(text);
-        if (supported) this.baselines.set(canonical, text);
+        if (supported) baselines.set(canonical, text);
         for (const block of fragments) {
-          const editable = supported && this.renderedOwner === this.controller.getSnapshot().session && !this.callbacks?.readOnly;
+          const editable = supported && owner === this.controller.getSnapshot().session && !this.callbacks?.readOnly;
           block.contentEditable = editable ? 'true' : 'false';
           block.dataset.rdvEditable = String(editable);
           if (editable) { block.setAttribute('role', 'textbox'); block.setAttribute('aria-label', 'Document paragraph'); block.setAttribute('aria-multiline', 'true'); block.spellcheck = true; }
           else { block.removeAttribute('role'); block.removeAttribute('aria-label'); block.removeAttribute('aria-multiline'); }
         }
       } catch { /* Generated or unsupported blocks stay read-only. */ }
+      yield;
     }
+  }
+  private prepareParagraphs(anchorId?: string) {
+    if (this.root) for (const _ of this.prepareGroups(this.root, this.renderedOwner, this.baselines, anchorId)) { void _; }
+  }
+  /** Prepare only the incoming DOM; active drafts and baselines remain untouched. */
+  async prepareLayout(root: HTMLElement, owner: DocxSession | null, version: number | undefined, pause: () => Promise<void>) {
+    this.addEditingStyle(root);
+    const baselines = new Map<string, string>();
+    const readOnly = this.callbacks?.readOnly;
+    let deadline = performance.now() + 8;
+    for (const _ of this.prepareGroups(root, owner, baselines)) {
+      void _;
+      if (performance.now() >= deadline) { await pause(); deadline = performance.now() + 8; }
+    }
+    if (this.acceptsLayout(owner, version) && readOnly === this.callbacks?.readOnly) {
+      this.preparedLayouts.set(root, { owner, version: this.controller.getSnapshot().version, readOnly, baselines });
+    }
+  }
+  private addEditingStyle(root: HTMLElement) {
+    const existing = root.querySelector<HTMLStyleElement>('style[data-rdv-canvas-style]');
+    if (existing) return existing;
+    const style = document.createElement('style');
+    style.dataset.rdvCanvasStyle = 'true';
+    style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }';
+    root.append(style);
+    return style;
   }
   private scheduleCommit() {
     this.clearTimer();
@@ -455,10 +483,11 @@ export class CanvasEditor {
     if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
     this.renderedOwner = owner;
     this.renderedVersion = this.controller.getSnapshot().version;
-    this.prepareParagraphs();
-    const style = document.createElement('style');
-    style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }';
-    root.append(style);
+    const prepared = this.preparedLayouts.get(root);
+    this.preparedLayouts.delete(root);
+    if (prepared && prepared.owner === owner && prepared.version === this.renderedVersion && prepared.readOnly === this.callbacks?.readOnly) this.baselines = prepared.baselines;
+    else this.prepareParagraphs();
+    const style = this.addEditingStyle(root);
     const viewport = (root.getRootNode() as ShadowRoot).host.closest<HTMLElement>('.rdv-pages');
     if (viewport) { viewport.scrollTop = this.scroll.top; viewport.scrollLeft = this.scroll.left; }
     this.restore();

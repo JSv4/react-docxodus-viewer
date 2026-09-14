@@ -64,6 +64,11 @@ test('cached layout registration matches native validation and every citation su
       const candidate = structuredClone(map); transform(candidate);
       results.push({ cached: attempt(() => s.registerPageMap(candidate, 'map-cache')), native: attempt(() => native.registerPageMap(candidate, 'map-cache')) });
     }
+    for (const invalid of [{ ...request, documentVersion: 0.5 }, { ...request, extra: true }, { ...request, rendererFingerprint: null }]) {
+      const input = invalid as unknown as typeof request;
+      results.push({ cached: attempt(() => s.getPageMapStatus(input)), native: attempt(() => native.getPageMapStatus(input)) });
+      results.push({ cached: attempt(() => s.getPageCitation(anchor, input)), native: attempt(() => native.getPageCitation(anchor, input)) });
+    }
     s.insertParagraph(anchor, 'after', 'A structural change.'); native.insertParagraph(anchor, 'after', 'A structural change.');
     map.documentVersion = s.getVersion(); calls = 0;
     const structural = s.registerPageMap(map, 'map-cache');

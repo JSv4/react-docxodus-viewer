@@ -65,12 +65,13 @@
     "sync:wasm": "node scripts/sync-wasm.mjs",
     "predev": "npm run sync:wasm",
     "test:browser": "playwright test",
-    "check:api": "node scripts/check-api.mjs",
+    "check:api": "node scripts/check-api.mjs && node scripts/generate-cooperative-pagination.mjs --check",
     "test:pdf": "node --test tests/node/export.test.mjs",
     "check": "npm run lint && npm test && npm run build && npm run check:api",
     "test:package": "npm run build:lib && node scripts/check-package.mjs",
     "test:stress": "node scripts/stress-editor.mjs",
-    "test:performance": "node scripts/stress-editor.mjs --benchmark"
+    "test:performance": "node scripts/stress-editor.mjs --benchmark",
+    "test:latency": "node scripts/benchmark-latency.mjs"
   },
   "repository": {
     "type": "git",
