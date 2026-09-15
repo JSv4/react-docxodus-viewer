@@ -1,5 +1,334 @@
 # Editor performance campaign
 
+## Published 12.6.0 results
+
+The integration uses the unmodified `docxodus@12.6.0` and matching export
+companion. Its public `replaceMatch(match, text, format)` handles contiguous
+replacements and run-boundary insertions without an outer batch. Styled drafts
+retain their original selection so identical spaces and repeated text cannot
+shift the formatting span. The existing live session, block rendering, and
+cooperative pagination remain in use.
+
+Three serial production runs on application revision `7a2bac5` covered the
+standalone module, full studio, and a module run with native-call profiling:
+
+| Maximum observed input response | Module | Studio | Module, profiled |
+| --- | ---: | ---: | ---: |
+| Five ordinary interaction phases | 48 ms | 32 ms | 56 ms |
+| Collapsed Enter | 80 ms | 56 ms | 64 ms |
+| Styled typing at a run boundary | 24 ms | 24 ms | 16 ms |
+| Original styled phase, inside an existing run | 1,184 ms | 376 ms | 376 ms |
+| Explicit middle-of-run styled typing | 400 ms | 384 ms | 384 ms |
+
+All text, formatting, surrounding-text, key-count, and Enter-undo checks passed.
+**The full 150 ms gate still fails in every run.** The native API accepts a
+zero-length insertion only at a run boundary. For an interior insertion, the
+editor must borrow a neighboring character for the text operation and apply
+formatting only to the new text. Those two operations retain the public atomic
+batch so existing formatting, rollback, and one-step undo remain correct.
+
+In the profiled run, the first interior insertion paid 95–115 ms for native
+page-map registration, 164–171 ms for `BeginTransaction`, and 169–170 ms for
+`GetPackageContentHash`. The next burst, now at a run boundary created by the
+first edit, used `ReplaceTextAtSpanWithFormat` in 26–28 ms. The unprofiled
+1,184 ms outlier was not individually profiled; it remains in the reported
+maximum. See the [compact 12.6.0 record](benchmarks/2026-09-15-latency.json).
+
+A direct probe against the published runtime confirms that an interior insertion
+returns `offset_out_of_range` without changing the native version, text, or run
+formatting. The [probe record](benchmarks/2026-09-15-native-insertion-contract.json)
+includes two fresh contexts and another native batch/formatted comparison.
+The supported-API follow-up is [Docxodus #799](https://github.com/JSv4/Docxodus/issues/799).
+
+These are quantized Chrome Event Timing samples on an Intel Core Ultra 7 258V,
+Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling. They are
+not population INP or an editor-wide latency guarantee. Full structural layout
+after Enter completed in 2.07–2.22 seconds in these runs, separately from the
+56–80 ms input response.
+
+Validation on this application revision: 82 unit tests and 50 browser contract
+tests passed in CI (two opt-in skips). The full NVCA integrity test passed with
+65 pages, 234 body paragraphs, 110 footnote paragraphs, 13 intentionally modified
+paragraphs, one added paragraph, and 31 native commits. It independently checked
+unrelated paragraph XML, fields, bookmarks, notes, sections, and package parts
+after save/reopen. Native/cooperative pagination also matched on the same NVCA
+fixture. See the [integrity report](benchmarks/2026-09-15-nvca-integrity.json).
+The built production pages also passed seven smoke tests (one source-only skip).
+Packed entry points, consumer types, runtime-copy verification, and the Node
+export API check passed. The PDF render test was skipped because this host denies
+the unprivileged user namespaces required by Chromium's process sandbox.
+
+## Earlier 12.4.1 measurements
+
+The initial follow-up targeted interaction responses under 150 ms. The first
+changes remove atomic batch/receipt overhead from single-paragraph formatting,
+share formatting and style reads across controls, preserve cached formatting
+only for anchors proven unchanged by the native edit journal, and keep page-map
+notifications from refreshing document-only queries. Normal typing now builds
+its verified native span from formatting instead of requesting a full Markdown
+projection for anchor metadata. Caret selection avoids repeated document scans.
+
+In a local Chromium production benchmark of the pinned NVCA document, selected-word
+Bold improved from about 1.3 seconds to 80 ms event-to-paint. Twenty-four arrow
+presses caused no additional native formatting queries (previously 72). These
+first results still left page-map registration and page-flow updates blocking the
+main thread for hundreds of milliseconds or longer, motivating the cooperative
+layout work below.
+
+## Repeated production results
+
+Four serial NVCA production runs on September 13, 2026 (commit `77d1441`)
+covered the standalone module and full studio twice each, once with native-call
+timers and once without. All native text, formatting and surrounding-text checks
+passed. The largest observed input response across these runs was **144 ms**.
+
+| Interaction | Worst input response across four runs |
+| --- | ---: |
+| Continuous typing | 24 ms |
+| Arrow-key caret movement | 24 ms |
+| Pause/resume typing | 144 ms |
+| Selected-word Bold | 80 ms |
+| Resuming typing during line wrapping | 128 ms |
+
+Selected-word Bold previously reached 1,344 ms in the local module. Line-wrap
+tasks previously blocked the main thread for 1.5–1.6 seconds; the longest task
+in these four runs was 160 ms. Continuous typing's key-handler-to-rAF p95 stayed
+at 15–17 ms. Native formatting reads during 24 arrow presses fell from 72 to zero.
+
+Full reflow is still background work: the final wrap edit took 1.48–1.58 seconds
+to obtain a current page map, including the 350 ms debounce. Cold opening,
+exports, large multi-step mutations, and slower devices are not covered by the
+150 ms result. An additional explicit-format typing benchmark still reached
+1,400 ms: native atomic transactions clone the package and generate a complete
+receipt/hash. Preserving atomic rollback and one-step undo for compound edits
+still carries that cost. These results do **not** establish an editor-wide
+150 ms maximum.
+
+A follow-up at `83263f0` removed the unnecessary outer transaction from a
+collapsed Enter, retaining native split/undo semantics. The extended benchmark
+measured 200 ms for Enter, down from 1,600 ms, and verified native one-step undo.
+The original five interaction phases stayed within target on this build's
+module and studio repeats (56 ms and 88 ms maxima respectively).
+It still exceeded the target: immediate paragraph rendering and style/revision
+refreshes accounted for most of the remaining task. Structural edits also need
+a full conversion and page-map validation afterward. Styled typing continues to
+need a real compound native edit; suppressing its rollback or receipt guarantees
+would change the API contract rather than solve that bottleneck.
+
+The subsequent `8f31e4c` module run measured Enter at 152 ms after retaining
+proven-unchanged style/empty-revision metadata across splits and removing empty
+selection deletion reads. The five ordinary phases peaked at 72 ms in this run;
+styled typing still reached 1,408 ms. These are single-run observations on that
+revision, not a repeated sub-150 ms result. Enter's structural reflow also took
+6.93 seconds to finish in the background. Its complete phase included a 351 ms
+long task after the input, so the input measurement does not establish a maximum
+for every later task.
+
+At `0dad65d`, structural edits switched from separate paragraph renders to the
+existing native batch renderer. Enter measured 136 ms in the module, but 280 ms
+with profiling and 320 ms without it in the studio. The studio trace identified
+another 125 ms spent generating the sidebar's full Markdown preview catalog
+during the keypress. This motivates deferring that optional catalog while keeping
+current native block identities and the selected paragraph's text immediately
+available. It also shows why module-only timing cannot establish studio latency.
+
+The `8fd41f7` follow-up uses React's deferred query value for sidebar previews.
+In the studio profile, the 126 ms Markdown projection moved after Enter's first
+frame instead of extending its input handler. Three serial production runs on
+that final application revision measured:
+
+| Interaction | Module, no profiling | Studio, no profiling | Studio, profiling |
+| --- | ---: | ---: | ---: |
+| Largest response in the five ordinary phases | 144 ms | 72 ms | 128 ms |
+| Enter response | 112 ms | 152 ms | 160 ms |
+| Explicitly styled typing response | 1,496 ms | 1,416 ms | 1,432 ms |
+
+All text, formatting and native Enter-undo checks passed. The full extended
+`RDV_LATENCY_LIMIT_MS=150` gate failed in every run: styled typing remains above
+target, as does Enter in the studio. Enter's complete structural layout took
+7.07–7.67 seconds, with later native validation/layout tasks reaching 372 ms.
+The module also recorded a 372 ms background task after continuous typing.
+These results improve response times without establishing a 150 ms editor-wide
+maximum. The remaining compound native transaction cost is tracked upstream below.
+
+The full NVCA integrity test also passed on `8fd41f7`: 65 pages, 234 body and
+110 footnote paragraphs editable, 13 intentionally modified paragraphs, one added
+paragraph, and 31 native commits. Independent package inspection confirmed
+unchanged paragraph XML, fields, bookmarks, notes, sections, and unrelated parts.
+The [integrity record](benchmarks/2026-09-13-nvca-integrity.json) includes the
+revision and assertions. Its source-harness timings use native default Markdown
+patches and are not the production input-response metric.
+
+The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
+143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
+65 pages; the studio's different profile rendered 52. Compact results are in
+[the benchmark record](benchmarks/2026-09-13-latency.json).
+
+## Native transaction reproduction and 12.6.0 API
+
+`npm run test:latency:native` isolates compound-edit costs from
+React, the editor canvas, rendering, and page-map registration. It imports the
+published `docxodus` core and WASM, opens the same NVCA fixture, replaces one word
+in a body paragraph, and applies Bold to the replacement. It compares the default
+atomic `executeBatch` (including its package receipt) against 12.6.0's supported
+`replaceMatch(match, text, format)`. `emitMarkdownPatch` is false.
+
+The script alternates batch/formatted/formatted/batch in fresh browser contexts.
+Each context measures its first edit and two repeats after undo/redo verification.
+Only the synchronous editing call's wall time is measured;
+fixture loading, projection, verification, undo and redo are outside that timer.
+Native bridge wrappers time the original calls without changing their behavior.
+Every attempt checks replacement text, Bold, a single version advancement, and
+text/formatting restoration through one undo and redo. These checks do not replace
+the full DOCX package integrity suite.
+
+On the published 12.6.0 package, twelve serial attempts on the same machine and
+Chromium configuration produced:
+
+| 12.6.0 editing API | First edit in each fresh context | Repeats after undo/redo |
+| --- | ---: | ---: |
+| `executeBatch` | 560.8–673.2 ms | 410.3–565.0 ms |
+| `replaceMatch(match, text, format)` | 52.9–53.0 ms | 24.3–28.0 ms |
+
+All twelve text, formatting, version, undo and redo checks passed, with no browser
+errors. The formatted path called `ReplaceTextAtSpanWithFormat` without
+`BeginTransaction` or `GetPackageContentHash` bridge calls; batches retained
+their receipt hashes. These are native-call timings, not browser input response
+times. See the [12.6.0 native record](benchmarks/2026-09-15-native-transactions.json)
+for exact measurements and fingerprints. Both paths in this comparison use the
+same 12.6.0 package; the older measurements below are historical context.
+
+Before 12.6.0, twelve serial batch attempts on the published packages reproduced
+the stall (the earlier harness compared versions rather than editing APIs):
+
+| Package | First batch in each fresh context | Repeats after undo/redo |
+| --- | ---: | ---: |
+| 12.4.1 | 1,161–1,168 ms | 991–1,018 ms |
+| 12.5.0 | 1,199–1,202 ms | 984–1,010 ms |
+
+Across these attempts, `BeginTransaction` took 379–501 ms and
+`GetPackageContentHash` took 458–496 ms. Together they took 837–969 ms per batch.
+The text replacement and formatting calls together took 46–79 ms. Source
+inspection identifies complete-package checkpoint serialization at transaction
+begin and again when producing the package equivalence hash. The dependency
+upgrade alone did not eliminate this workload's stall; these measurements do not
+assess other 12.5.0 improvements or unreleased upstream builds. All twelve text,
+formatting, version, undo and redo checks passed, with no browser errors.
+The [native benchmark record](benchmarks/2026-09-13-native-transactions.json)
+contains the unrounded measurements and package fingerprints. This is a small
+diagnostic sample, not a percentile or cross-device latency guarantee.
+
+```sh
+# From this repository, after npm ci and installing Playwright Chromium:
+curl --fail --location \
+  'https://nvca.org/wp-content/uploads/2025/10/NVCA-Model-COI-10-1-2025.docx' \
+  --output /tmp/NVCA-Model-COI-10-1-2025.docx
+RDV_STRESS_DOCX=/tmp/NVCA-Model-COI-10-1-2025.docx npm run test:latency:native
+```
+
+To use an older package for the batch baseline without changing dependencies, use
+`npm pack docxodus@12.4.1 --pack-destination /tmp`, extract its tarball to a separate
+directory, and set `RDV_NATIVE_COMPARE_ROOT` to the extracted `package` directory.
+The formatted operation always uses the installed package. With no comparison
+root, both paths use the installed 12.6.0 package.
+`RDV_NATIVE_BENCH_OUTPUT` overrides `test-results/native-transactions.json`.
+The report records the fixture, JavaScript and WASM SHA-256 hashes, package
+versions, browser, CPU, individual bridge calls and correctness checks. There is
+no build or preview server prerequisite for this native-only benchmark.
+
+[Docxodus #788](https://github.com/JSv4/Docxodus/issues/788) was resolved in the
+published 12.6.0 release. The canvas now uses its supported formatted replacement
+for contiguous replacements and run-boundary insertions. Interior insertions and
+disjoint drafts retain the public atomic batch to preserve neighboring formatting
+and one-step undo. See the [upgrade notes](12.6.0-upgrade.md). No native runtime
+patch or private editing primitive is integrated here.
+
+## Cooperative layout and reproducible interaction measurements
+
+The follow-up preserves Docxodus's page-flow decisions while yielding between
+blocks/pages and preparing incoming editable paragraphs in small chunks. The
+active canvas stays mounted during this work. Input, commit timers and React
+updates run ahead of background layout tasks; owner/version checks discard
+superseded layouts before handoff. Zoom changes during preparation trigger fresh
+measurements at the final scale.
+
+The adapter is generated from the pinned 12.4.1 pagination implementation by
+`node scripts/generate-cooperative-pagination.mjs`. It uses the same engine
+instance and native helpers, with asynchronous traversal calls and checkpoints.
+The generator verifies the upstream file's SHA-256; `npm run check:api` also
+verifies the generated output. A dependency upgrade requires reviewing this
+adapter and rerunning native page/fragment equivalence tests. There is no runtime
+code generation. Attribution is in [third-party-notices.md](third-party-notices.md).
+
+Page-map updates reuse previously native-validated anchor ownership only across
+journaled local text/run edits. Every new geometry/order/version constraint is
+checked again. Structural or unobserved changes, a changed renderer/mode, unknown
+fields, non-ASCII identifiers and table-comment presentations use full native
+validation. Native transactions and embedded search citations retain their native
+semantics. The inspector reads native XML text and list labels without triggering
+the full Markdown projection; native differential tests cover that text contract.
+
+Run a production build and preview, then the interaction benchmark in another
+terminal:
+
+```sh
+npm run build:demo
+npm run preview -- --host 127.0.0.1 --port 4191 --strictPort
+# In another terminal:
+npm run test:latency
+RDV_BENCH_MODE=studio npm run test:latency
+```
+
+The benchmark downloads/verifies the pinned NVCA fixture, or accepts
+`RDV_STRESS_DOCX=/path/to/NVCA.docx`. It waits for the active canvas's native owner,
+version and current page map, rather than treating the inert incoming pages as
+ready. It exercises steady typing, caret movement, pause/resume bursts,
+selected-word Bold and typing during forced reflow. Key counts, persisted text,
+untouched surrounding text and browser errors are checked.
+
+Reports and a screenshot go to `test-results/latency` (override with
+`RDV_BENCH_OUTPUT`). `RDV_BENCH_PROFILE=1` adds native/canvas call timings;
+`RDV_BENCH_CPU=1` independently adds CPU profiles. Use separate output directories
+for repeated runs. `RDV_BENCH_DOC=sample` selects the small sample, and
+`RDV_BENCH_URL` selects a deployed production build. Run browser benchmarks
+serially without concurrent builds or other CPU-heavy work.
+Set `RDV_BENCH_REVISION` to the actual served build revision; local workspace
+provenance is recorded separately and cannot establish a deployment's revision.
+`RDV_BENCH_EXTENDED=1` also measures explicitly formatted typing and Enter, then
+checks native formatting and one-step Enter undo. It preserves those historical
+phases and adds explicit run-boundary and interior insertion phases, with the
+original native caret position recorded. Interior styled typing currently
+exceeds the optional 150 ms gate on NVCA.
+
+Key-handler-to-rAF timing excludes prior input queuing and measures a paint
+opportunity. Chrome Event Timing includes queuing, processing and presentation,
+uses quantized durations, and is collected with a 16 ms threshold. Its observed
+percentiles are not whole-population INP. Long Tasks separately measures main
+thread tasks of at least 50 ms, including layout after the final keystroke.
+`lastEditToCurrentLayout` separately records the wait for a current page map;
+it includes the typing debounce and background layout work. Full repagination
+can take longer than an individual input response while the canvas stays usable.
+`RDV_LATENCY_LIMIT_MS=150` optionally fails a run when an observed input response
+exceeds that threshold. Timing is hardware/workload dependent, so normal CI
+checks correctness and structural requirements rather than enforcing wall time.
+
+`useSessionQuery(controller, selector, { scope: 'document' })` opts a read into
+document/settings updates only. Its default still observes the full session,
+including page-map availability. The controller's shared formatting/styles reads
+must be treated as read-only. Unknown mutations, raw native version gaps, session
+replacement, and atomic shadow reads invalidate or bypass these caches. Enriched
+`editor.details.info` metadata is now evaluated only when accessed and is
+non-enumerable so framework prop inspection cannot trigger a native query. Hosts
+should explicitly read it from the current details object when they need it.
+
+`useSessionQuery(controller, selector, { deferred: true })` lets React defer
+optional preview refreshes within the same document. Values may briefly lag
+edits; use current session identities and native validation for actions. Opening,
+closing, or replacing the owner immediately discards the prior owner's result.
+The sidebar opts its block-label catalog into this behavior while obtaining
+current selectable IDs from the lightweight native inventory. Queries remain
+synchronous by default, and the native editing API is unchanged.
+
 The reference workload is the 65-page October 2025 NVCA Model Certificate of
 Incorporation. Its 234 body paragraphs, 110 footnote paragraphs, fields, lists,
 bookmarks, and section changes exercise more than a short sample document.
@@ -32,6 +361,10 @@ one native write for a contiguous typing burst. Complete page maps and preserved
 text remain correctness requirements. Ordinary edits must use one native block
 batch and zero saved-package conversions; the two body edits retain their pages,
 while the footnote edit repaginates from updated source HTML.
+The full-flow count uses the native header/footer registry parser, called once
+at the start of both native and cooperative pagination. That helper's duration
+is not a measurement of the complete asynchronous flow; layout completion events
+provide the end-to-end timing.
 
 ## First pass
 

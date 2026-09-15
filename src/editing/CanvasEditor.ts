@@ -1,6 +1,6 @@
-import type { DocxSession, EditResult, FormatOp } from 'docxodus/core';
+import type { CharSpan, DocxSession, EditResult, FormatOp } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
-import { editableText, paragraphTextSteps, textChange } from './text';
+import { editableText, paragraphTextSteps, textChange, textChangeAtSelection } from './text';
 import { shadowSelection } from './selection';
 import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, prepareCanvasBreaks, prepareCanvasHyphens, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
@@ -13,7 +13,7 @@ interface CanvasCallbacks {
   onHistory: (direction: 'undo' | 'redo') => boolean;
   onFormat: (key: 'bold' | 'italic' | 'underline') => boolean;
 }
-interface Draft { owner: DocxSession; anchorId: string; before: string; format: FormatOp | null }
+interface Draft { owner: DocxSession; anchorId: string; before: string; format: FormatOp | null; selection?: CharSpan }
 const empty: CanvasEditorSnapshot = { suspended: false, pending: false, composing: false, conflict: false, format: null };
 const collapsed = (point: CanvasPoint): CanvasRange => ({ start: point, end: point, backward: false });
 function check<T>(result: T): T {
@@ -34,9 +34,6 @@ export class CanvasEditor {
   private listeners = new Set<() => void>();
   private selectionGuards = new Set<() => boolean>();
   private baselines = new Map<string, string>();
-  // Native formatting resolves style inheritance for every run. Keep only its
-  // plain text, keyed by the exact native subtree hash, across DOM replacements.
-  private preparedText = new Map<string, { hash: string; text: string }>();
   private anchorCache: { owner: DocxSession | null; version: number; ids: Map<string, string> } | null = null;
   private root: HTMLElement | null = null;
   private renderedOwner: DocxSession | null = null;
@@ -49,6 +46,7 @@ export class CanvasEditor {
   private applying = false;
   private detach: (() => void) | null = null;
   private scroll = { top: 0, left: 0 };
+  private preparedLayouts = new WeakMap<HTMLElement, { owner: DocxSession | null; version: number; readOnly?: boolean; baselines: Map<string, string> }>();
 
   constructor(controller: DocxSessionController) { this.controller = controller; }
   getSnapshot = () => this.state;
@@ -77,7 +75,7 @@ export class CanvasEditor {
     if (conflict) this.publish({ conflict: true, suspended: true });
     this.callbacks?.onError(error); return false;
   }
-  private text(anchorId: string) { return this.controller.read(session => editableText(session.getFormatting(anchorId))); }
+  private text(anchorId: string) { return editableText(this.controller.getFormatting(anchorId)); }
   private canonical(anchorId: string) {
     const { session: owner, version } = this.controller.getSnapshot();
     if (!this.anchorCache || this.anchorCache.owner !== owner || this.anchorCache.version !== version) {
@@ -119,6 +117,9 @@ export class CanvasEditor {
   selectedSpans = () => {
     if (!this.root || !this.range || this.renderedOwner !== this.controller.getSnapshot().session) return [];
     const { start, end } = this.range;
+    // Undo can remove a paragraph before the old page DOM has been replaced.
+    if (!this.canonical(start.anchorId) || !this.canonical(end.anchorId)) return [];
+    if (start.anchorId === end.anchorId) return [{ anchorId: this.canonical(start.anchorId)!, span: { start: start.offset, length: Math.max(0, end.offset - start.offset) } }];
     const ids = [...new Set(this.storyBlocks(start.anchorId).map(block => block.dataset.sourceAnchorId!))];
     const identity = (id: string) => id.slice(id.indexOf(':'));
     const first = ids.findIndex(id => identity(id) === identity(start.anchorId)), last = ids.findIndex(id => identity(id) === identity(end.anchorId));
@@ -130,29 +131,24 @@ export class CanvasEditor {
       return { anchorId, span: { start: from, length: Math.max(0, to - from) } };
     });
   };
-  private prepareParagraphs(anchorId?: string) {
-    if (!this.root || !this.controller.getSnapshot().session) return;
-    const paragraphs = canvasParagraphs(this.root, anchorId);
+  private *prepareGroups(root: HTMLElement, owner: DocxSession | null, baselines: Map<string, string>, anchorId?: string) {
+    if (!this.controller.getSnapshot().session) return;
+    const paragraphs = canvasParagraphs(root, anchorId);
     const groups = new Map<string, HTMLElement[]>();
     for (const block of paragraphs) {
       const id = block.dataset.sourceAnchorId!;
       const group = groups.get(id) ?? []; group.push(block); groups.set(id, group);
     }
     const ids = [...groups.keys()].map(id => this.canonical(id)).filter((id): id is string => !!id);
-    const info = this.controller.read(session => session.getAnchorInfos(ids));
     if (!anchorId) {
       const live = new Set(ids);
-      for (const id of this.preparedText.keys()) if (!live.has(id)) this.preparedText.delete(id);
-      for (const id of this.baselines.keys()) if (!live.has(id)) this.baselines.delete(id);
+      for (const id of baselines.keys()) if (!live.has(id)) baselines.delete(id);
     }
     for (const [id, fragments] of groups) {
       try {
         const canonical = this.canonical(id);
         if (!canonical) continue;
-        const hash = info[canonical]?.contentHash;
-        const cached = this.preparedText.get(canonical);
-        const text = hash && cached?.hash === hash ? cached.text : this.text(canonical);
-        if (hash) this.preparedText.set(canonical, { hash, text });
+        const text = this.text(canonical);
         for (const block of fragments) {
           block.dataset.sourceAnchorId = canonical;
           prepareCanvasBreaks(block);
@@ -167,16 +163,43 @@ export class CanvasEditor {
           prepareCanvasHyphens(fragments, this.controller.read(session => session.raw.getXml(canonical)), text);
         }
         const supported = normalizedText(fragments.map(canvasText).join('')) === normalizedText(text);
-        if (supported) this.baselines.set(canonical, text);
+        if (supported) baselines.set(canonical, text);
         for (const block of fragments) {
-          const editable = supported && this.renderedOwner === this.controller.getSnapshot().session && !this.callbacks?.readOnly;
+          const editable = supported && owner === this.controller.getSnapshot().session && !this.callbacks?.readOnly;
           block.contentEditable = editable ? 'true' : 'false';
           block.dataset.rdvEditable = String(editable);
           if (editable) { block.setAttribute('role', 'textbox'); block.setAttribute('aria-label', 'Document paragraph'); block.setAttribute('aria-multiline', 'true'); block.spellcheck = true; }
           else { block.removeAttribute('role'); block.removeAttribute('aria-label'); block.removeAttribute('aria-multiline'); }
         }
       } catch { /* Generated or unsupported blocks stay read-only. */ }
+      yield;
     }
+  }
+  private prepareParagraphs(anchorId?: string) {
+    if (this.root) for (const _ of this.prepareGroups(this.root, this.renderedOwner, this.baselines, anchorId)) { void _; }
+  }
+  /** Prepare only the incoming DOM; active drafts and baselines remain untouched. */
+  async prepareLayout(root: HTMLElement, owner: DocxSession | null, version: number | undefined, pause: () => Promise<void>) {
+    this.addEditingStyle(root);
+    const baselines = new Map<string, string>();
+    const readOnly = this.callbacks?.readOnly;
+    let deadline = performance.now() + 8;
+    for (const _ of this.prepareGroups(root, owner, baselines)) {
+      void _;
+      if (performance.now() >= deadline) { await pause(); deadline = performance.now() + 8; }
+    }
+    if (this.acceptsLayout(owner, version) && readOnly === this.callbacks?.readOnly) {
+      this.preparedLayouts.set(root, { owner, version: this.controller.getSnapshot().version, readOnly, baselines });
+    }
+  }
+  private addEditingStyle(root: HTMLElement) {
+    const existing = root.querySelector<HTMLStyleElement>('style[data-rdv-canvas-style]');
+    if (existing) return existing;
+    const style = document.createElement('style');
+    style.dataset.rdvCanvasStyle = 'true';
+    style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }';
+    root.append(style);
+    return style;
   }
   private scheduleCommit() {
     this.clearTimer();
@@ -191,7 +214,9 @@ export class CanvasEditor {
     const shown = this.root && canvasParagraphs(this.root, anchorId).map(canvasText).join('');
     if (shown === null || (afterInput ? this.baselines.get(anchorId) !== before : normalizedText(shown) !== normalizedText(before))) return this.fail('The paragraph changed. Wait for the page to refresh before typing.', afterInput);
     this.baselines.set(anchorId, before);
-    this.draft = { owner, anchorId, before, format: this.state.format };
+    const selection = !afterInput && this.range?.start.anchorId === anchorId && this.range.end.anchorId === anchorId
+      ? { start: this.range.start.offset, length: this.range.end.offset - this.range.start.offset } : undefined;
+    this.draft = { owner, anchorId, before, format: this.state.format, selection };
     this.publish({ pending: true, suspended: true });
     return true;
   }
@@ -208,15 +233,13 @@ export class CanvasEditor {
       const shown = canvasParagraphs(this.root, draft.anchorId).map(canvasText).join('');
       // The converter uses NBSP to preserve spaces between runs; retain native text
       // outside the actual typed span so those presentation spaces never leak into DOCX.
-      const delta = textChange(normalizedText(draft.before), normalizedText(shown), false);
+      const selected = draft.format && draft.selection ? textChangeAtSelection(normalizedText(draft.before), normalizedText(shown), draft.selection) : null;
+      const delta = selected ?? textChange(normalizedText(draft.before), normalizedText(shown), false);
       if (delta) {
         const after = draft.before.slice(0, delta.start) + delta.inserted + draft.before.slice(delta.start + delta.removed.length);
         this.applying = true;
         check(this.controller.run(session => {
-          const steps = [
-          ...paragraphTextSteps(session, draft.anchorId, draft.before, after),
-          ...(draft.format && delta.inserted.length ? [{ tool: 'CanvasEditor', action: 'typing format', mutation: () => session.applyFormat(draft.anchorId, { start: delta.start, length: delta.inserted.length }, draft.format!) }] : []),
-          ];
+          const steps = paragraphTextSteps(session, draft.anchorId, draft.before, after, draft.format ?? undefined, draft.selection);
           return steps.length === 1 ? steps[0].mutation() : session.executeBatch(steps);
         }));
       }
@@ -286,7 +309,7 @@ export class CanvasEditor {
   };
   private restore() {
     if (!this.root || !this.range || !this.restoreFocus) return;
-    if (!domPoint(this.root, this.range.start)) {
+    if (!this.canonical(this.range.start.anchorId) || !domPoint(this.root, this.range.start)) {
       const fallback = this.fallback && this.canonical(this.fallback.anchorId);
       const block = fallback ?? canvasParagraphs(this.root)[0]?.dataset.sourceAnchorId;
       if (block) this.range = collapsed({ anchorId: block, offset: Math.min(this.fallback?.offset ?? 0, this.text(block).length) });
@@ -306,36 +329,49 @@ export class CanvasEditor {
     }
   }
   private patch(anchorId: string, after?: string) {
+    this.patchMany([anchorId], after);
+  }
+  private patchMany(anchorIds: string[], after?: string) {
     if (!this.root) return;
-    const canonical = this.canonical(anchorId);
-    if (!canonical) return;
-    const old = canvasParagraphs(this.root).filter(block => block.dataset.sourceAnchorId!.slice(block.dataset.sourceAnchorId!.indexOf(':')) === anchorId.slice(anchorId.indexOf(':')));
-    const html = this.controller.read(session => session.renderBlock(canonical, { fabricateClasses: false }));
-    const parsed = new DOMParser().parseFromString(html, 'text/html');
-    const block = parsed.body.firstElementChild as HTMLElement | null;
-    if (!block) throw new Error('The edited paragraph could not be rendered.');
-    block.dataset.sourceAnchorId = canonical;
-    if (old[0]) { old[0].replaceWith(block); old.slice(1).forEach(fragment => fragment.remove()); }
-    else if (after) canvasParagraphs(this.root, after).at(-1)?.after(block);
-    this.prepareParagraphs(canonical);
+    const ids = [...new Set(anchorIds.map(id => this.canonical(id)).filter((id): id is string => !!id))];
+    // Enter and multiline paste change several paragraphs together. The native
+    // batch renderer shares its converter setup and keeps the single-block
+    // presentation profile; missing results retain the per-block fallback.
+    const rendered = ids.length > 1 ? this.controller.renderBlocks(ids, {
+      cssPrefix: 'docx-', fabricateClasses: false, comments: false, renderTrackedChanges: false,
+    }) : null;
+    const paragraphs = canvasParagraphs(this.root);
+    for (const canonical of ids) {
+      const identity = canonical.slice(canonical.indexOf(':'));
+      const old = paragraphs.filter(block => block.dataset.sourceAnchorId!.slice(block.dataset.sourceAnchorId!.indexOf(':')) === identity);
+      const html = rendered?.[canonical] ?? this.controller.read(session => session.renderBlock(canonical, { fabricateClasses: false }));
+      const parsed = new DOMParser().parseFromString(html, 'text/html');
+      const block = parsed.body.firstElementChild as HTMLElement | null;
+      if (!block) throw new Error('The edited paragraph could not be rendered.');
+      block.dataset.sourceAnchorId = canonical;
+      if (old[0]) { old[0].replaceWith(block); old.slice(1).forEach(fragment => fragment.remove()); }
+      else if (after) canvasParagraphs(this.root, after).at(-1)?.after(block);
+      this.prepareParagraphs(canonical);
+      after = canonical;
+    }
   }
 
   /** Execute structural edits as one undo step, then restore the editing caret. */
-  private mutate(action: string, operation: (session: DocxSession) => { results: EditResult[]; point: CanvasPoint; changed: string[]; removed?: string[] }) {
+  private mutate(action: string, operation: (session: DocxSession) => { results: EditResult[]; point: CanvasPoint; changed: string[]; removed?: string[] }, atomic = true) {
     if (this.callbacks?.readOnly || !this.beforeCommand()) return false;
     const before = this.range;
     try {
       this.applying = true;
       let outcome: ReturnType<typeof operation> | undefined;
-      check(this.controller.run(session => session.executeBatch([{ tool: 'CanvasEditor', action, mutation: () => {
-        outcome = operation(session); return outcome.results;
-      } }])));
+      check(this.controller.run(session => {
+        const mutation = () => { outcome = operation(session); return outcome.results; };
+        return atomic ? session.executeBatch([{ tool: 'CanvasEditor', action, mutation }]) : mutation();
+      }));
       if (!outcome) return false;
       this.fallback = before?.start ?? null;
       this.range = collapsed(outcome.point); this.restoreFocus = true;
       outcome.removed?.forEach(id => this.root && canvasParagraphs(this.root, id).forEach(block => block.remove()));
-      let previous: string | undefined;
-      for (const anchor of outcome.changed) { this.patch(anchor, previous); previous = anchor; }
+      this.patchMany(outcome.changed);
       this.restore(); this.notifySelection();
       return true;
     } catch (cause) { return this.fail(cause); }
@@ -363,6 +399,9 @@ export class CanvasEditor {
   }
   private removeRange(session: DocxSession, range: CanvasRange) {
     const { start, end } = range;
+    // A caret has no text to remove. The following native split/insertion
+    // validates its own anchor/span without two redundant formatting reads.
+    if (samePoint(start, end)) return { results: [] as EditResult[], removed: [] as string[] };
     if (start.anchorId === end.anchorId) return { results: this.replace(session, start.anchorId, start.offset, end.offset, ''), removed: [] as string[] };
     const blocks = [...new Set(this.storyBlocks(start.anchorId).map(block => block.dataset.sourceAnchorId!))];
     const first = blocks.indexOf(start.anchorId), last = blocks.indexOf(end.anchorId);
@@ -380,6 +419,9 @@ export class CanvasEditor {
   insertText = (value: string, paragraphBreak = false) => {
     const range = this.root && readCanvasRange(this.root) || this.range;
     if (!range) return false;
+    // A collapsed Enter is exactly one native split, which already owns an
+    // undo/version unit. Selections and pasted text still need atomic rollback.
+    const atomic = !(paragraphBreak && samePoint(range.start, range.end));
     return this.mutate(paragraphBreak ? 'split paragraph' : 'insert text', session => {
       const { results, removed } = this.removeRange(session, range);
       const lines = paragraphBreak ? ['', ''] : value.replace(/\r\n?/g, '\n').split('\n');
@@ -395,7 +437,7 @@ export class CanvasEditor {
         }
       }
       return { results, point: { anchorId: anchor, offset }, changed, removed };
-    });
+    }, atomic);
   };
   private merge(direction: -1 | 1) {
     const range = this.range;
@@ -459,13 +501,14 @@ export class CanvasEditor {
   attach(root: HTMLElement, owner: DocxSession | null) {
     this.detach?.();
     this.root = root;
-    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.preparedText.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
+    if (owner !== this.renderedOwner) { this.range = null; this.fallback = null; this.draft = null; this.baselines.clear(); this.restoreFocus = false; this.publish({ ...empty }); }
     this.renderedOwner = owner;
     this.renderedVersion = this.controller.getSnapshot().version;
-    this.prepareParagraphs();
-    const style = document.createElement('style');
-    style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }';
-    root.append(style);
+    const prepared = this.preparedLayouts.get(root);
+    this.preparedLayouts.delete(root);
+    if (prepared && prepared.owner === owner && prepared.version === this.renderedVersion && prepared.readOnly === this.callbacks?.readOnly) this.baselines = prepared.baselines;
+    else this.prepareParagraphs();
+    const style = this.addEditingStyle(root);
     const viewport = (root.getRootNode() as ShadowRoot).host.closest<HTMLElement>('.rdv-pages');
     if (viewport) { viewport.scrollTop = this.scroll.top; viewport.scrollLeft = this.scroll.left; }
     this.restore();

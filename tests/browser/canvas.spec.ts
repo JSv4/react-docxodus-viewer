@@ -68,6 +68,45 @@ test('Enter splits at the caret, Backspace joins, and undo/redo restore native p
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
+test('collapsed Enter uses one native undo unit and one batch render', async ({ page }) => {
+  await open(page, 'Hello world.');
+  await paragraphs(page).first().click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await page.evaluate(() => {
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge;
+    const original = bridge.BeginTransaction;
+    const renderOne = bridge.RenderBlockHtml;
+    const renderMany = bridge.RenderEditorBlocksHtml;
+    if (!renderMany) throw new Error('The pinned native batch renderer is unavailable');
+    Reflect.set(window, 'splitTransactions', 0);
+    Reflect.set(window, 'splitSingleRenders', 0);
+    Reflect.set(window, 'splitBatchRenders', 0);
+    bridge.BeginTransaction = handle => {
+      Reflect.set(window, 'splitTransactions', Reflect.get(window, 'splitTransactions') + 1);
+      return original(handle);
+    };
+    bridge.RenderBlockHtml = (...args) => {
+      Reflect.set(window, 'splitSingleRenders', Reflect.get(window, 'splitSingleRenders') + 1);
+      return renderOne(...args);
+    };
+    bridge.RenderEditorBlocksHtml = (...args) => {
+      Reflect.set(window, 'splitBatchRenders', Reflect.get(window, 'splitBatchRenders') + 1);
+      return renderMany(...args);
+    };
+  });
+  await page.keyboard.press('Enter');
+  await expect.poll(() => nativeText(page)).toEqual(['Hello ', 'world.']);
+  expect(await page.evaluate(() => Reflect.get(window, 'splitTransactions'))).toBe(0);
+  expect(await page.evaluate(() => Reflect.get(window, 'splitSingleRenders'))).toBe(0);
+  expect(await page.evaluate(() => Reflect.get(window, 'splitBatchRenders'))).toBe(1);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual(['Hello world.']);
+  await page.keyboard.press('Control+y');
+  await expect.poll(() => nativeText(page)).toEqual(['Hello ', 'world.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
 test('caret formatting applies to new typing and selected text formats only that range', async ({ page }) => {
   await open(page, 'Plain text.');
   await paragraphs(page).first().click();
@@ -82,9 +121,65 @@ test('caret formatting applies to new typing and selected text formats only that
   await page.waitForTimeout(1500);
   await page.keyboard.press('Home');
   for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.evaluate(() => {
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge;
+    const original = bridge.GetPackageContentHash!;
+    Reflect.set(window, 'formatBatchHashes', 0);
+    bridge.GetPackageContentHash = handle => {
+      Reflect.set(window, 'formatBatchHashes', Reflect.get(window, 'formatBatchHashes') + 1);
+      return original(handle);
+    };
+  });
   await page.getByRole('button', { name: 'Italic', exact: true }).click();
   const italic = await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs.filter(run => run.effective.italic).map(run => run.text).join('')));
   expect(italic).toBe('Plain');
+  expect(await page.evaluate(() => Reflect.get(window, 'formatBatchHashes'))).toBe(0);
+  await page.keyboard.press('Control+z');
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs.some(run => run.effective.italic)))).toBe(false);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+for (const sample of [
+  { name: 'paragraph end', text: 'Plain text.', offset: 11, fast: true },
+  { name: 'paragraph start', text: 'Plain text.', offset: 0, fast: true },
+  { name: 'empty paragraph', text: '', offset: 0, fast: true },
+  { name: 'inside a run', text: 'Plain text.', offset: 3, fast: false },
+  { name: 'before an identical space', text: 'Plain text.', offset: 5, fast: false },
+  { name: 'before identical text', text: ' *B* original', offset: 0, fast: true },
+]) test(`formatted typing at ${sample.name} preserves surrounding runs and one-step undo`, async ({ page }) => {
+  await open(page, sample.text.replace(/\*/g, '\\*'));
+  await paragraphs(page).first().click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < sample.offset; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Control+b');
+  const before = await page.evaluate(() => {
+    const controller = window.editorTest.controllers[0], s = controller.getSnapshot().session!;
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge;
+    const counts = { formatted: 0, transaction: 0, hash: 0 };
+    Reflect.set(window, 'typingCalls', counts);
+    const formatted = bridge.ReplaceTextAtSpanWithFormat!, transaction = bridge.BeginTransaction, hash = bridge.GetPackageContentHash!;
+    bridge.ReplaceTextAtSpanWithFormat = (...args) => { counts.formatted++; return formatted(...args); };
+    bridge.BeginTransaction = (...args) => { counts.transaction++; return transaction(...args); };
+    bridge.GetPackageContentHash = (...args) => { counts.hash++; return hash(...args); };
+    return { version: s.getVersion(), runs: s.getFormatting(window.editorTest.anchor)!.runs };
+  });
+  const typed = ' *B* ';
+  await page.keyboard.type(typed);
+  await expect.poll(() => nativeText(page)).toEqual([sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset)]);
+  const after = await page.evaluate(() => window.editorTest.controllers[0].read(s => ({
+    version: s.getVersion(), runs: s.getFormatting(window.editorTest.anchor)!.runs,
+  })));
+  expect(after.version).toBe(before.version + 1);
+  expect(after.runs.filter(run => run.effective.bold).map(run => run.text).join('')).toBe(typed);
+  expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(sample.text);
+  expect(await page.evaluate(() => Reflect.get(window, 'typingCalls'))).toEqual(sample.fast
+    ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 0, transaction: 1, hash: 1 });
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual([sample.text]);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(before.runs);
+  await page.keyboard.press('Control+y');
+  await expect.poll(() => nativeText(page)).toEqual([sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset)]);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(after.runs);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 

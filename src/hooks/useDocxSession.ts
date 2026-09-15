@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { DocxSession, DocxSessionSettings } from 'docxodus/core';
 import { DocxSessionController, EMPTY_SESSION_SNAPSHOT } from '../session';
 import type { DocumentSource } from '../session';
@@ -11,9 +11,14 @@ export function useSessionState(controller?: DocxSessionController | null) {
   return useSyncExternalStore(controller?.subscribe ?? noSubscribe, controller?.getSnapshot ?? emptySnapshot, emptySnapshot);
 }
 
-/** Reactive read-only projection over any native session query. */
-export function useSessionQuery<T>(controller: DocxSessionController | null | undefined, selector: (session: DocxSession) => T) {
-  const snapshot = useSessionState(controller);
+/** Reactive read-only query. Deferred previews may briefly lag edits within the same document. */
+export function useSessionQuery<T>(controller: DocxSessionController | null | undefined, selector: (session: DocxSession) => T, options: { scope?: 'session' | 'document'; deferred?: boolean } = {}) {
+  const getSnapshot = options.scope === 'document' ? controller?.getQuerySnapshot : controller?.getSnapshot;
+  const current = useSyncExternalStore(controller?.subscribe ?? noSubscribe, getSnapshot ?? emptySnapshot, emptySnapshot);
+  const deferred = useDeferredValue(options.deferred ? current : null);
+  // Defer optional previews within one owner. Opening/closing/replacing a
+  // document must immediately discard results belonging to the previous owner.
+  const snapshot = options.deferred && deferred?.session === current.session ? deferred : current;
   return useMemo(() => {
     if (!controller || !snapshot.session) return { data: null, error: null };
     try { return { data: controller.read(selector), error: null }; }

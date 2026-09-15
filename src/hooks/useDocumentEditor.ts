@@ -18,7 +18,6 @@ export interface EditorSelection {
   source?: 'canvas' | 'paragraph';
 }
 export interface UseDocumentEditorOptions { readOnly?: boolean; onError?: (error: Error) => void }
-const styles = (session: DocxSession) => session.listStyles().filter(style => style.type === 'paragraph');
 function assertResult(value: unknown) {
   for (const result of Array.isArray(value) ? value : [value]) {
     if (result && typeof result === 'object' && 'success' in result && !result.success) {
@@ -52,11 +51,16 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
     try {
       const snapshot = controller.getSnapshot();
       if (!snapshot.session) return false;
-      const info = controller.read(session => session.getAnchorInfo(anchorId));
+      const previous = selectionRef.current;
+      if (selectionOwner.current === snapshot.session && previous?.version === snapshot.version && previous.anchorId === anchorId && previous.source === source &&
+        previous.span?.start === span?.start && previous.span?.length === span?.length && !!previous.span === !!span) return true;
+      const index = controller.getAnchorIndex();
+      const id = index[anchorId] ? anchorId : Object.keys(index).find(id => index[id].unid === anchorId.split(':').at(-1));
+      const info = id ? index[id] : undefined;
       if (!info || !['p', 'h', 'li'].includes(info.kind)) throw new Error('Choose a paragraph or heading to edit.');
-      const text = controller.read(session => editableText(session.getFormatting(info.id)));
+      const text = editableText(controller.getFormatting(id!));
       if (span && (span.start < 0 || span.length < 0 || span.start + span.length > text.length)) throw new Error('Select text inside this paragraph.');
-      const next = { anchorId: info.id, span, text, version: snapshot.version, source };
+      const next = { anchorId: id!, span, text, version: snapshot.version, source };
       if (selectionOwner.current === snapshot.session && JSON.stringify(selectionRef.current) === JSON.stringify(next)) return true;
       selectionRef.current = next;
       selectionOwner.current = snapshot.session;
@@ -70,21 +74,37 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       selectionRef.current = null; setPicked(null); fail('The page is refreshing. Select the text again when it finishes.'); return;
     }
     try {
-      const text = controller.read(session => editableText(session.getFormatting(selected.anchorId)));
+      const text = editableText(controller.getFormatting(selected.anchorId));
       const spaces = (value: string) => value.replace(/\u00a0/g, ' ');
       if (spaces(text) !== spaces(selected.blockText)) throw new Error('This rendered selection includes generated content. Select the paragraph, or select its text in the text editor.');
       select(selected.anchorId, selected.span);
     } catch (cause) { selectionRef.current = null; setPicked(null); fail(cause); }
   }, [controller, select, fail]);
+  const selectedAnchorId = selection?.anchorId;
   const query = useCallback((session: DocxSession) => {
-    if (!selection) return null;
-    const info = session.getAnchorInfo(selection.anchorId);
+    if (!selectedAnchorId) return null;
+    const info = controller.getAnchorIndex()[selectedAnchorId];
     if (!info) return null;
-    const formatting = session.getFormatting(info.id);
-    return { info, formatting, text: editableText(formatting), list: session.getListMembership(info.id) };
-  }, [selection]);
-  const details = useSessionQuery(controller, query);
-  const availableStyles = useSessionQuery(controller, styles);
+    const formatting = controller.getFormatting(selectedAnchorId);
+    // Enriched metadata includes projection/hash work. Preserve the public detail
+    // accessor for hosts that need it without paying for it to move the caret.
+    const version = session.getVersion();
+    let metadata: ReturnType<DocxSession['getAnchorInfo']> | undefined;
+    const result = { get info() {
+      if (metadata === undefined) {
+        if (controller.read(current => current) !== session || session.getVersion() !== version) throw new Error('Read current editor details before requesting paragraph metadata.');
+        metadata = session.getAnchorInfo(selectedAnchorId);
+      }
+      return metadata!;
+    }, formatting, text: editableText(formatting), list: session.getListMembership(selectedAnchorId) };
+    // React's development profiler inspects old props recursively. Enumeration
+    // must not force an obsolete native query (or a full Markdown projection).
+    Object.defineProperty(result, 'info', { enumerable: false });
+    return result;
+  }, [controller, selectedAnchorId]);
+  const details = useSessionQuery(controller, query, { scope: 'document' });
+  const styles = useCallback(() => controller.getStyles().filter(style => style.type === 'paragraph'), [controller]);
+  const availableStyles = useSessionQuery(controller, styles, { scope: 'document' });
   const runs = useMemo(() => {
     const all = details.data?.formatting?.runs ?? [];
     const span = selection?.span;
@@ -108,7 +128,7 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       if (needsSelection) {
         if (!target) throw new Error('Select a paragraph or some text first.');
         if (selectionOwner.current !== snapshot.session || (target.version !== snapshot.version &&
-          controller.read(session => editableText(session.getFormatting(target.anchorId))) !== target.text)) {
+          editableText(controller.getFormatting(target.anchorId)) !== target.text)) {
           throw new Error('The document changed. Select the text again before editing it.');
         }
       }
@@ -124,7 +144,7 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
         const identity = target.anchorId.split(':').slice(1).join(':');
         const anchor = Object.keys(controller.getAnchorIndex()).find(id => id.split(':').slice(1).join(':') === identity);
         if (anchor) {
-          const text = controller.read(session => editableText(session.getFormatting(anchor)));
+          const text = editableText(controller.getFormatting(anchor));
           const span = target.span && target.span.start + target.span.length <= text.length ? target.span : null;
           select(anchor, span, target.source);
         } else { selectionRef.current = null; setPicked(null); }
@@ -136,18 +156,23 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
   }, [controller, fail, select, canvasEditor]);
   const format = (op: FormatOp) => selectionRef.current?.source === 'canvas' && !selectionRef.current.span?.length && canvasEditor.selectedSpans().length === 1
     ? canvasEditor.setTypingFormat(op)
-    : run((session, target) => target!.source === 'canvas' ? session.executeBatch(canvasEditor.selectedSpans().filter(({ span }) => span.length).map(({ anchorId, span }) => ({ tool: 'EditorToolbar', action: 'format selection', mutation: () => session.applyFormat(anchorId, span, op) }))) : session.applyFormat(target!.anchorId, target!.span?.length ? target!.span : null, op));
+    : run((session, target) => {
+      if (target!.source !== 'canvas') return session.applyFormat(target!.anchorId, target!.span?.length ? target!.span : null, op);
+      const spans = canvasEditor.selectedSpans().filter(({ span }) => span.length);
+      if (spans.length === 1) return session.applyFormat(spans[0].anchorId, spans[0].span, op);
+      return session.executeBatch(spans.map(({ anchorId, span }) => ({ tool: 'EditorToolbar', action: 'format selection', mutation: () => session.applyFormat(anchorId, span, op) })));
+    });
   const toggleFormat = (key: 'bold' | 'italic' | 'underline' | 'strike') => {
     if (!canvasEditor.beforeCommand()) return false;
     const target = selectionRef.current;
     if (target?.source === 'canvas' && !target.span?.length && canvasEditor.selectedSpans().length === 1) {
       const pending = canvasEditor.getSnapshot().format?.[key];
-      const runs = controller.read(session => session.getFormatting(target.anchorId)?.runs ?? []);
+      const runs = controller.getFormatting(target.anchorId)?.runs ?? [];
       const run = runs.find(run => run.span.start < target.span!.start && run.span.start + run.span.length >= target.span!.start) ?? runs[0];
       return format({ [key]: !(pending ?? run?.effective[key]) });
     }
     if (target?.source === 'canvas') {
-      const runs = controller.read(session => canvasEditor.selectedSpans().flatMap(({ anchorId, span }) => session.getFormatting(anchorId)?.runs.filter(run => run.span.start < span.start + span.length && run.span.start + run.span.length > span.start) ?? []));
+      const runs = canvasEditor.selectedSpans().flatMap(({ anchorId, span }) => controller.getFormatting(anchorId)?.runs.filter(run => run.span.start < span.start + span.length && run.span.start + run.span.length > span.start) ?? []);
       return format({ [key]: !runs.length || !runs.every(run => run.effective[key]) });
     }
     return run((session, target) => {
