@@ -144,8 +144,10 @@ for (const sample of [
   { name: 'paragraph start', text: 'Plain text.', offset: 0, fast: true },
   { name: 'empty paragraph', text: '', offset: 0, fast: true },
   { name: 'inside a run', text: 'Plain text.', offset: 3, fast: false },
+  { name: 'before an identical space', text: 'Plain text.', offset: 5, fast: false },
+  { name: 'before identical text', text: ' *B* original', offset: 0, fast: true },
 ]) test(`formatted typing at ${sample.name} preserves surrounding runs and one-step undo`, async ({ page }) => {
-  await open(page, sample.text);
+  await open(page, sample.text.replace(/\*/g, '\\*'));
   await paragraphs(page).first().click();
   await page.keyboard.press('Home');
   for (let i = 0; i < sample.offset; i++) await page.keyboard.press('ArrowRight');

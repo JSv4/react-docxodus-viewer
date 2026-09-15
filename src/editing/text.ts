@@ -1,4 +1,4 @@
-import type { DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
+import type { CharSpan, DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
 
 /**
  * ExactVisibleText in Docxodus 12.6.0 is descendant w:t text plus native list
@@ -27,6 +27,28 @@ export function editableText(formatting: FormattingInspection | null) {
   return text;
 }
 
+type TextChange = { start: number; removed: string; inserted: string };
+function borrowInsertion(before: string, change: TextChange): TextChange {
+  if (change.removed.length || !before.length) return change;
+  if (change.start) {
+    const neighbour = Array.from(before.slice(0, change.start)).at(-1)!;
+    return { start: change.start - neighbour.length, removed: neighbour, inserted: neighbour + change.inserted };
+  }
+  const neighbour = String.fromCodePoint(before.codePointAt(0)!);
+  return { start: 0, removed: neighbour, inserted: change.inserted + neighbour };
+}
+
+/** Keep the original selection when identical spaces/letters make a diff ambiguous. */
+export function textChangeAtSelection(before: string, after: string, span: CharSpan): TextChange | null {
+  const end = span.start + span.length;
+  if (!Number.isInteger(span.start) || !Number.isInteger(span.length) || span.start < 0 || span.length < 0 || end > before.length ||
+    (span.start > 0 && /[\uDC00-\uDFFF]/.test(before[span.start] ?? '')) || (end > 0 && /[\uDC00-\uDFFF]/.test(before[end] ?? ''))) return null;
+  const prefix = before.slice(0, span.start), suffix = before.slice(end);
+  if (after.length < prefix.length + suffix.length || !after.startsWith(prefix) || !after.endsWith(suffix)) return null;
+  const inserted = after.slice(prefix.length, after.length - suffix.length);
+  return !span.length && !inserted.length ? null : { start: span.start, removed: before.slice(span.start, end), inserted };
+}
+
 /** One changed span, expanded to a neighbouring character for pure insertions. */
 export function textChange(before: string, after: string, expandInsertion = true) {
   let start = 0;
@@ -37,11 +59,8 @@ export function textChange(before: string, after: string, expandInsertion = true
   let newEnd = after.length;
   while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
   if (oldEnd < before.length && /[\uDC00-\uDFFF]/.test(before[oldEnd])) { oldEnd++; newEnd++; }
-  if (expandInsertion && oldEnd === start && before.length) {
-    if (start > 0) { start--; if (/[\uDC00-\uDFFF]/.test(before[start])) start--; }
-    else { oldEnd += before.codePointAt(0)! > 0xffff ? 2 : 1; newEnd += oldEnd; }
-  }
-  return { start, removed: before.slice(start, oldEnd), inserted: after.slice(start, newEnd) };
+  const change = { start, removed: before.slice(start, oldEnd), inserted: after.slice(start, newEnd) };
+  return expandInsertion ? borrowInsertion(before, change) : change;
 }
 
 /** Keep unchanged words between separate edits intact, including their run formatting. */
@@ -73,31 +92,21 @@ export function textChanges(before: string, after: string) {
       else inserted += next[j++];
     }
     const local = textChange(removed, inserted)!;
-    let change = { ...local, start: start + local.start };
-    if (!change.removed.length && before.length) {
-      // Native text matches need a nonempty range. Borrow one adjacent code point.
-      if (change.start) {
-        const neighbour = Array.from(before.slice(0, change.start)).at(-1)!;
-        change = { start: change.start - neighbour.length, removed: neighbour, inserted: neighbour + change.inserted };
-      } else {
-        const neighbour = String.fromCodePoint(before.codePointAt(0)!);
-        change = { start: 0, removed: neighbour, inserted: change.inserted + neighbour };
-      }
-    }
-    changes.push(change);
+    changes.push(borrowInsertion(before, { ...local, start: start + local.start }));
   }
   return changes;
 }
 
 /** Preserve surrounding runs, links and paragraph formatting instead of rewriting a block. */
-export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp): Parameters<DocxSession['executeBatch']>[0] {
+export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp, selection?: CharSpan): Parameters<DocxSession['executeBatch']>[0] {
   const formatting = session.getFormatting(anchorId);
   if (!formatting || editableText(formatting) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
   const canonical = formatting.anchorId;
   const [kind, scope] = canonical.split(':');
-  const changes = textChanges(before, after);
+  const selected = typingFormat && selection ? textChangeAtSelection(before, after, selection) : null;
+  const changes = selected ? [borrowInsertion(before, selected)] : textChanges(before, after);
   if (!changes.length) return [];
-  const exact = textChange(before, after, false)!;
+  const exact = selected ?? textChange(before, after, false)!;
   const boundary = exact.start === 0 || formatting.runs.some(run => run.span.start + run.span.length === exact.start);
   // 12.6.0 formats exactly the replacement in one undo/version unit. A pure
   // insertion must be at a native run boundary; borrowing a neighbouring

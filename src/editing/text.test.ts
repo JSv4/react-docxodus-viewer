@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { escapePattern, textChange, textChanges } from './text';
+import { escapePattern, textChange, textChangeAtSelection, textChanges } from './text';
 
 describe('paragraph text changes', () => {
+  it.each([
+    ['Plain text.', 'Plain new text.', 5, 0, ' new'],
+    [' *B* original', ' *B*  *B* original', 0, 0, ' *B* '],
+    ['same text', 'same text', 0, 4, 'same'],
+    ['A 😀 word', 'A bold word', 2, 2, 'bold'],
+  ])('keeps the actual typed span for ambiguous text: %j', (before, after, start, length, inserted) => {
+    expect(textChangeAtSelection(before, after, { start, length })).toEqual({ start, removed: before.slice(start, start + length), inserted });
+  });
+  it('rejects an obsolete selection or a split surrogate pair', () => {
+    expect(textChangeAtSelection('before after', 'changed after', { start: 7, length: 0 })).toBeNull();
+    expect(textChangeAtSelection('😀', 'changed', { start: 1, length: 1 })).toBeNull();
+    expect(textChangeAtSelection('text', 'text', { start: 9, length: 0 })).toBeNull();
+  });
   it.each([
     ['alpha alpha', 'alpha bravo'], ['word', 'new word'], ['word', 'word new'],
     ['repeat repeat', 'repeat'], ['abcdef', 'abXYef'], ['old', ''], ['', 'plain *text*'],

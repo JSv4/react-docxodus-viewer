@@ -122,6 +122,22 @@ Every attempt checks replacement text, Bold, a single version advancement, and
 text/formatting restoration through one undo and redo. These checks do not replace
 the full DOCX package integrity suite.
 
+On the published 12.6.0 package, twelve serial attempts on the same machine and
+Chromium configuration produced:
+
+| 12.6.0 editing API | First edit in each fresh context | Repeats after undo/redo |
+| --- | ---: | ---: |
+| `executeBatch` | 560.8–673.2 ms | 410.3–565.0 ms |
+| `replaceMatch(match, text, format)` | 52.9–53.0 ms | 24.3–28.0 ms |
+
+All twelve text, formatting, version, undo and redo checks passed, with no browser
+errors. The formatted path called `ReplaceTextAtSpanWithFormat` without
+`BeginTransaction` or `GetPackageContentHash` bridge calls; batches retained
+their receipt hashes. These are native-call timings, not browser input response
+times. See the [12.6.0 native record](benchmarks/2026-09-15-native-transactions.json)
+for exact measurements and fingerprints. Both paths in this comparison use the
+same 12.6.0 package; the older measurements below are historical context.
+
 Before 12.6.0, twelve serial batch attempts on the published packages reproduced
 the stall (the earlier harness compared versions rather than editing APIs):
 

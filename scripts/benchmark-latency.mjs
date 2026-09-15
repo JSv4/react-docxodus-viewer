@@ -189,11 +189,17 @@ try {
     const beforeStyled = phases.at(-1).after;
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Control+b');
+    const styledSetup = await page.evaluate(() => {
+      const s = window.latency, offset = s.canvas.range.start.offset;
+      const runs = s.native.getFormatting(s.target).runs;
+      return { offset, runBoundary: offset === 0 || runs.some(run => run.span.start + run.span.length === offset) };
+    });
     await runPhase('styled_pause_resume', async () => {
       await page.keyboard.type(' Styled text.', {delay:65});
       await page.waitForTimeout(420);
       await page.keyboard.type(' More style.', {delay:65});
     });
+    phases.at(-1).setup = styledSetup;
     const styled = phases.at(-1).after;
     if (!styled.includes(' Styled text. More style.') || styled.replace(' Styled text. More style.', '') !== beforeStyled) errors.push('Styled typing changed surrounding text');
     const styledFormat = await page.evaluate(() => {
@@ -208,6 +214,43 @@ try {
     const undone = await page.evaluate(() => window.latency.native.getFormatting(window.latency.target).runs.map(run=>run.text).join(''));
     if (undone !== styled) errors.push('Enter did not undo as one native edit');
     await page.waitForFunction(() => window.latency.native.getPageMapStatus().availability === 'available');
+    // Keep the historical phases above intact. Explicitly exercise both sides
+    // of the public 12.6.0 insertion contract instead of assuming a caret sits
+    // at a run boundary after the preceding wrapping and selection operations.
+    for (const placement of ['boundary', 'interior']) {
+      const setup = await page.evaluate(placement => {
+        const s = window.latency, runs = s.native.getFormatting(s.target).runs;
+        const before = runs.map(run => run.text).join('');
+        const run = placement === 'boundary' ? runs.at(-1) : runs.find(run => run.text.length >= 12 && /^[\x20-\x7e]+$/.test(run.text));
+        if (!run) throw new Error('No suitable native text run for the styled typing benchmark');
+        const offset = placement === 'boundary' ? before.length : run.span.start + Math.floor(run.span.length / 2);
+        const point = { anchorId: s.target, offset };
+        s.canvas.range = { start: point, end: point, backward: false };
+        s.canvas.focus();
+        return { before, offset, runBoundary: placement === 'boundary', boldBefore: run.effective.bold === true };
+      }, placement);
+      await page.waitForTimeout(80);
+      await page.keyboard.press('Control+b');
+      const bold = await page.evaluate(() => window.latency.canvas.getSnapshot().format.bold === true);
+      const first = placement === 'boundary' ? ' Boundary text.' : ' Interior text.';
+      const second = placement === 'boundary' ? ' More boundary.' : ' More inside.';
+      const added = first + second;
+      await runPhase(`styled_${placement}_pause_resume`, async () => {
+        await page.keyboard.type(first, {delay:65});
+        await page.waitForTimeout(420);
+        await page.keyboard.type(second, {delay:65});
+      });
+      const phase = phases.at(-1);
+      phase.setup = setup;
+      if (phase.after !== setup.before.slice(0, setup.offset) + added + setup.before.slice(setup.offset)) errors.push(`${placement} styled typing changed surrounding text`);
+      if (phase.events.filter(event => event.type === 'keydown').length !== added.length) errors.push(`Unexpected key count for ${placement} styled typing`);
+      const formatted = await page.evaluate(({start, length, bold}) => {
+        const runs = window.latency.native.getFormatting(window.latency.target).runs
+          .filter(run => run.span.start < start + length && run.span.start + run.span.length > start);
+        return runs.length > 0 && runs.every(run => (run.effective.bold === true) === bold);
+      }, { start: setup.offset, length: added.length, bold });
+      if (!formatted) errors.push(`${placement} styled typing did not retain its native Bold setting`);
+    }
   }
   if(await page.getByRole('alert').count()) errors.push('Visible editor alert');
   await page.screenshot({path:`${directory}/${label}.png`});

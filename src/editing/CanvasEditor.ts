@@ -1,6 +1,6 @@
-import type { DocxSession, EditResult, FormatOp } from 'docxodus/core';
+import type { CharSpan, DocxSession, EditResult, FormatOp } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
-import { editableText, paragraphTextSteps, textChange } from './text';
+import { editableText, paragraphTextSteps, textChange, textChangeAtSelection } from './text';
 import { shadowSelection } from './selection';
 import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, prepareCanvasBreaks, prepareCanvasHyphens, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
@@ -13,7 +13,7 @@ interface CanvasCallbacks {
   onHistory: (direction: 'undo' | 'redo') => boolean;
   onFormat: (key: 'bold' | 'italic' | 'underline') => boolean;
 }
-interface Draft { owner: DocxSession; anchorId: string; before: string; format: FormatOp | null }
+interface Draft { owner: DocxSession; anchorId: string; before: string; format: FormatOp | null; selection?: CharSpan }
 const empty: CanvasEditorSnapshot = { suspended: false, pending: false, composing: false, conflict: false, format: null };
 const collapsed = (point: CanvasPoint): CanvasRange => ({ start: point, end: point, backward: false });
 function check<T>(result: T): T {
@@ -214,7 +214,9 @@ export class CanvasEditor {
     const shown = this.root && canvasParagraphs(this.root, anchorId).map(canvasText).join('');
     if (shown === null || (afterInput ? this.baselines.get(anchorId) !== before : normalizedText(shown) !== normalizedText(before))) return this.fail('The paragraph changed. Wait for the page to refresh before typing.', afterInput);
     this.baselines.set(anchorId, before);
-    this.draft = { owner, anchorId, before, format: this.state.format };
+    const selection = !afterInput && this.range?.start.anchorId === anchorId && this.range.end.anchorId === anchorId
+      ? { start: this.range.start.offset, length: this.range.end.offset - this.range.start.offset } : undefined;
+    this.draft = { owner, anchorId, before, format: this.state.format, selection };
     this.publish({ pending: true, suspended: true });
     return true;
   }
@@ -231,12 +233,13 @@ export class CanvasEditor {
       const shown = canvasParagraphs(this.root, draft.anchorId).map(canvasText).join('');
       // The converter uses NBSP to preserve spaces between runs; retain native text
       // outside the actual typed span so those presentation spaces never leak into DOCX.
-      const delta = textChange(normalizedText(draft.before), normalizedText(shown), false);
+      const selected = draft.format && draft.selection ? textChangeAtSelection(normalizedText(draft.before), normalizedText(shown), draft.selection) : null;
+      const delta = selected ?? textChange(normalizedText(draft.before), normalizedText(shown), false);
       if (delta) {
         const after = draft.before.slice(0, delta.start) + delta.inserted + draft.before.slice(delta.start + delta.removed.length);
         this.applying = true;
         check(this.controller.run(session => {
-          const steps = paragraphTextSteps(session, draft.anchorId, draft.before, after, draft.format ?? undefined);
+          const steps = paragraphTextSteps(session, draft.anchorId, draft.before, after, draft.format ?? undefined, draft.selection);
           return steps.length === 1 ? steps[0].mutation() : session.executeBatch(steps);
         }));
       }
