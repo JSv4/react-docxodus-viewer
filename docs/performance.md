@@ -1,6 +1,48 @@
 # Editor performance campaign
 
-The current follow-up targets interaction responses under 150 ms. The first
+## Published 12.6.0 results
+
+The integration uses the unmodified `docxodus@12.6.0` and matching export
+companion. Its public `replaceMatch(match, text, format)` handles contiguous
+replacements and run-boundary insertions without an outer batch. Styled drafts
+retain their original selection so identical spaces and repeated text cannot
+shift the formatting span. The existing live session, block rendering, and
+cooperative pagination remain in use.
+
+Three serial production runs on application revision `7a2bac5` covered the
+standalone module, full studio, and a module run with native-call profiling:
+
+| Maximum observed input response | Module | Studio | Module, profiled |
+| --- | ---: | ---: | ---: |
+| Five ordinary interaction phases | 48 ms | 32 ms | 56 ms |
+| Collapsed Enter | 80 ms | 56 ms | 64 ms |
+| Styled typing at a run boundary | 24 ms | 24 ms | 16 ms |
+| Original styled phase, inside an existing run | 1,184 ms | 376 ms | 376 ms |
+| Explicit middle-of-run styled typing | 400 ms | 384 ms | 384 ms |
+
+All text, formatting, surrounding-text, key-count, and Enter-undo checks passed.
+**The full 150 ms gate still fails in every run.** The native API accepts a
+zero-length insertion only at a run boundary. For an interior insertion, the
+editor must borrow a neighboring character for the text operation and apply
+formatting only to the new text. Those two operations retain the public atomic
+batch so existing formatting, rollback, and one-step undo remain correct.
+
+In the profiled run, the first interior insertion paid 95–115 ms for native
+page-map registration, 164–171 ms for `BeginTransaction`, and 169–170 ms for
+`GetPackageContentHash`. The next burst, now at a run boundary created by the
+first edit, used `ReplaceTextAtSpanWithFormat` in 26–28 ms. The unprofiled
+1,184 ms outlier was not individually profiled; it remains in the reported
+maximum. See the [compact 12.6.0 record](benchmarks/2026-09-15-latency.json).
+
+These are quantized Chrome Event Timing samples on an Intel Core Ultra 7 258V,
+Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling. They are
+not population INP or an editor-wide latency guarantee. Full structural layout
+after Enter completed in 2.07–2.22 seconds in these runs, separately from the
+56–80 ms input response.
+
+## Earlier 12.4.1 measurements
+
+The initial follow-up targeted interaction responses under 150 ms. The first
 changes remove atomic batch/receipt overhead from single-paragraph formatting,
 share formatting and style reads across controls, preserve cached formatting
 only for anchors proven unchanged by the native edit journal, and keep page-map
@@ -235,8 +277,10 @@ serially without concurrent builds or other CPU-heavy work.
 Set `RDV_BENCH_REVISION` to the actual served build revision; local workspace
 provenance is recorded separately and cannot establish a deployment's revision.
 `RDV_BENCH_EXTENDED=1` also measures explicitly formatted typing and Enter, then
-checks native formatting and one-step Enter undo. The formatted-typing phase
-currently exceeds the optional 150 ms gate on NVCA.
+checks native formatting and one-step Enter undo. It preserves those historical
+phases and adds explicit run-boundary and interior insertion phases, with the
+original native caret position recorded. Interior styled typing currently
+exceeds the optional 150 ms gate on NVCA.
 
 Key-handler-to-rAF timing excludes prior input queuing and measures a paint
 opportunity. Chrome Event Timing includes queuing, processing and presentation,

@@ -103,8 +103,19 @@ try {
         attempts.push({iteration, ms, calls:measuredCalls, hashPresent:!!edit.packageHash,
           checks:{text:true, bold:true, oneVersion:true, undo:true, redo:true}});
       }
+      // Outside the timed replacement workload, probe the insertion contract
+      // needed by a caret in the middle of an existing Word run.
+      let interiorInsertion;
+      if (label === 'formatted') {
+        const offset = at + 4, versionBefore = s.getVersion();
+        if (!beforeRuns.some(run => run.span.start < offset && run.span.start + run.span.length > offset)) throw new Error('Probe requires a strict interior run offset');
+        const edit = s.replaceMatch({...match, text:'', span:{start:offset,length:0}}, ' inserted ', {bold:true});
+        const unchanged = s.getVersion() === versionBefore && JSON.stringify(formatting()) === JSON.stringify(beforeRuns);
+        if (!edit.success && !unchanged) throw new Error('Rejected interior insertion changed the document');
+        interiorInsertion = {offset, supported:edit.success, error:edit.error, unchanged};
+      }
       s.close();
-      return {version,attempts,crossOriginIsolated};
+      return {version,attempts,interiorInsertion,crossOriginIsolated};
     }, {label, root, version: packages[root].version});
     runs.push({label,root,...result,errors}); console.log(JSON.stringify({label,root,...result,errors}));
     await context.close();
