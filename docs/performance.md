@@ -34,11 +34,29 @@ first edit, used `ReplaceTextAtSpanWithFormat` in 26–28 ms. The unprofiled
 1,184 ms outlier was not individually profiled; it remains in the reported
 maximum. See the [compact 12.6.0 record](benchmarks/2026-09-15-latency.json).
 
+A direct probe against the published runtime confirms that an interior insertion
+returns `offset_out_of_range` without changing the native version, text, or run
+formatting. The [probe record](benchmarks/2026-09-15-native-insertion-contract.json)
+includes two fresh contexts and another native batch/formatted comparison.
+The supported-API follow-up is [Docxodus #799](https://github.com/JSv4/Docxodus/issues/799).
+
 These are quantized Chrome Event Timing samples on an Intel Core Ultra 7 258V,
 Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling. They are
 not population INP or an editor-wide latency guarantee. Full structural layout
 after Enter completed in 2.07–2.22 seconds in these runs, separately from the
 56–80 ms input response.
+
+Validation on this application revision: 82 unit tests and 50 browser contract
+tests passed in CI (two opt-in skips). The full NVCA integrity test passed with
+65 pages, 234 body paragraphs, 110 footnote paragraphs, 13 intentionally modified
+paragraphs, one added paragraph, and 31 native commits. It independently checked
+unrelated paragraph XML, fields, bookmarks, notes, sections, and package parts
+after save/reopen. Native/cooperative pagination also matched on the same NVCA
+fixture. See the [integrity report](benchmarks/2026-09-15-nvca-integrity.json).
+The built production pages also passed seven smoke tests (one source-only skip).
+Packed entry points, consumer types, runtime-copy verification, and the Node
+export API check passed. The PDF render test was skipped because this host denies
+the unprivileged user namespaces required by Chromium's process sandbox.
 
 ## Earlier 12.4.1 measurements
 
