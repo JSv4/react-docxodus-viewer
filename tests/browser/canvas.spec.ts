@@ -139,6 +139,48 @@ test('caret formatting applies to new typing and selected text formats only that
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
+for (const sample of [
+  { name: 'paragraph end', text: 'Plain text.', offset: 11, fast: true },
+  { name: 'paragraph start', text: 'Plain text.', offset: 0, fast: true },
+  { name: 'empty paragraph', text: '', offset: 0, fast: true },
+  { name: 'inside a run', text: 'Plain text.', offset: 3, fast: false },
+]) test(`formatted typing at ${sample.name} preserves surrounding runs and one-step undo`, async ({ page }) => {
+  await open(page, sample.text);
+  await paragraphs(page).first().click();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < sample.offset; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Control+b');
+  const before = await page.evaluate(() => {
+    const controller = window.editorTest.controllers[0], s = controller.getSnapshot().session!;
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge;
+    const counts = { formatted: 0, transaction: 0, hash: 0 };
+    Reflect.set(window, 'typingCalls', counts);
+    const formatted = bridge.ReplaceTextAtSpanWithFormat!, transaction = bridge.BeginTransaction, hash = bridge.GetPackageContentHash!;
+    bridge.ReplaceTextAtSpanWithFormat = (...args) => { counts.formatted++; return formatted(...args); };
+    bridge.BeginTransaction = (...args) => { counts.transaction++; return transaction(...args); };
+    bridge.GetPackageContentHash = (...args) => { counts.hash++; return hash(...args); };
+    return { version: s.getVersion(), runs: s.getFormatting(window.editorTest.anchor)!.runs };
+  });
+  const typed = ' *B* ';
+  await page.keyboard.type(typed);
+  await expect.poll(() => nativeText(page)).toEqual([sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset)]);
+  const after = await page.evaluate(() => window.editorTest.controllers[0].read(s => ({
+    version: s.getVersion(), runs: s.getFormatting(window.editorTest.anchor)!.runs,
+  })));
+  expect(after.version).toBe(before.version + 1);
+  expect(after.runs.filter(run => run.effective.bold).map(run => run.text).join('')).toBe(typed);
+  expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(sample.text);
+  expect(await page.evaluate(() => Reflect.get(window, 'typingCalls'))).toEqual(sample.fast
+    ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 0, transaction: 1, hash: 1 });
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual([sample.text]);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(before.runs);
+  await page.keyboard.press('Control+y');
+  await expect.poll(() => nativeText(page)).toEqual([sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset)]);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(after.runs);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
 test('blank documents accept literal typing and viewer blocks remain read only', async ({ page }) => {
   await open(page, '');
   await paragraphs(page).first().click();

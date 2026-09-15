@@ -1,13 +1,13 @@
-# Docxodus 12.4.1 runtime deployment
+# Docxodus 12.6.0 runtime deployment
 
 Deploy runtime files from the same package version as the JavaScript engine. The
-React package pins 12.4.1; earlier .NET 8 assets cannot be mixed with its .NET 10
+React package pins 12.6.0; earlier .NET 8 assets cannot be mixed with its .NET 10
 runtime. This document supersedes the older 3.x CDN workarounds.
 
 ## Copy verified static assets
 
 ```sh
-npm install docxodus@12.4.1
+npm install docxodus@12.6.0
 npx rdv-copy-runtime public/docxodus
 ```
 
@@ -42,7 +42,7 @@ available for custom hosting layouts.
 
 ## Export bundles must remain byte-identical
 
-The 12.4.1 browser materializer fetches its own module and verifies its length and
+The 12.6.0 browser materializer fetches its own module and verifies its length and
 SHA-256 against `export-assets.json`. Rebundling, minifying, rewriting imports or
 appending a source-map comment changes those bytes and causes an explicit runtime
 verification failure. Runtime WASM and worker files are also verified.
@@ -94,7 +94,7 @@ Check the actual response headers, requested URLs and matching package version.
 
 ## Node/PDF export
 
-Install `@docxodus/export@12.4.1` and import `/server` only in Node. The companion
+Install `@docxodus/export@12.6.0` and import `/server` only in Node. The companion
 owns its runtime deployment and browser materialization pipeline. It requires a
 non-root host with Chromium's sandbox and, on Linux, permitted user namespaces.
 `checkExportEnvironment()` reports deployment findings without rendering a file.

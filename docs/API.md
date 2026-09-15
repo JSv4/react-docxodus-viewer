@@ -54,7 +54,7 @@ const result = commands.replaceText(anchorId, '**Revised clause**');
 if (!result.success) console.error(result.error?.code, result.error?.message);
 ```
 
-`session` exposes all 140 public native methods. Calls through that session or
+`session` exposes every public native method. Calls through that session or
 `controller.run()` observe mutations and notify subscribers. `useSessionCommands`
 returns any requested subset with the original signatures. `useSessionQuery`
 executes a read-only selector again when the session changes. Its optional
@@ -292,7 +292,7 @@ Render errors retain structured diagnostics and any failed render report.
 That callback is host-owned; the browser package never imports Node PDF tooling.
 
 ```ts
-// Node ESM: install @docxodus/export@12.4.1
+// Node ESM: install @docxodus/export@12.6.0
 import { checkExportEnvironment, convertDocxToPdf, renderDocxArtifacts,
   renderDocxFile } from 'react-docxodus-viewer/server';
 const environment = await checkExportEnvironment();

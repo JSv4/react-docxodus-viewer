@@ -251,7 +251,8 @@ export class DocxSessionController {
       const result = operation();
       const to = this.native?.getVersion() ?? from;
       const edit = result as EditResult | undefined;
-      const local = (name === 'replaceMatch' || (name === 'applyFormat' && localCharacterFormat(args[2]))) && edit?.success &&
+      const local = ((name === 'replaceMatch' && (args[2] === undefined || localCharacterFormat(args[2]))) ||
+        (name === 'applyFormat' && localCharacterFormat(args[2]))) && edit?.success &&
         edit.created?.length === 0 && edit.removed?.length === 0 && edit.modified?.length &&
         edit.modified.every(ref => /^(p|h|li):(body|fn|en):/.test(ref.id));
       const split = name === 'splitParagraph' && edit?.success && edit.created?.length === 1 &&

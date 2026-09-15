@@ -13,6 +13,12 @@ const roots = {
   installed: resolve('node_modules/docxodus'),
   ...(process.env.RDV_NATIVE_COMPARE_ROOT ? { candidate: resolve(process.env.RDV_NATIVE_COMPARE_ROOT) } : {}),
 };
+// The optional comparison package supplies the legacy batch baseline. The
+// installed 12.6.0 package always supplies the public formatted replacement.
+const workloads = [
+  { label: 'batch', root: roots.candidate ? 'candidate' : 'installed' },
+  { label: 'formatted', root: 'installed' },
+];
 if (!process.env.RDV_STRESS_DOCX) throw new Error('Set RDV_STRESS_DOCX to the pinned NVCA fixture.');
 const fixture = await readFile(process.env.RDV_STRESS_DOCX);
 const sha256 = createHash('sha256').update(fixture).digest('hex');
@@ -44,16 +50,16 @@ const browser = await chromium.launch({headless:true});
 const runs = [];
 const startedAt = new Date().toISOString();
 try {
-  // Alternate versions, in fresh contexts, with no parallel browser workload.
-  for (const label of [...Object.keys(roots), ...Object.keys(roots).reverse()]) {
+  // Alternate paths ABBA, in fresh contexts, with no parallel browser workload.
+  for (const {label, root} of [...workloads, ...workloads.toReversed()]) {
     const context = await browser.newContext();
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base);
-    const result = await page.evaluate(async ({label, version}) => {
-      const api = await import(`/${label}/dist/core.js`);
-      await api.initialize(`/${label}/dist/wasm/`);
+    const result = await page.evaluate(async ({label, root, version}) => {
+      const api = await import(`/${root}/dist/core.js`);
+      await api.initialize(`/${root}/dist/wasm/`);
       const bytes = new Uint8Array(await (await fetch('/fixture.docx')).arrayBuffer());
       const s = api.openDocxSession(bytes, {emitMarkdownPatch:false, persistAnchorIds:true});
       const anchor = Object.entries(s.project().anchorIndex).find(([,item]) => item.scope==='body' && item.textPreview.startsWith('The Certificate of Incorporation'))[0];
@@ -64,8 +70,9 @@ try {
       if (at<0) throw new Error('Fixture paragraph did not match');
       const bridge = api.getWasmExports().DocxSessionBridge;
       const calls = [];
-      for (const name of ['BeginTransaction','GetPackageContentHash','ReplaceTextAtSpan','ApplyFormat','ListRevisions']) {
+      for (const name of ['BeginTransaction','GetPackageContentHash','ReplaceTextAtSpan','ReplaceTextAtSpanWithFormat','ApplyFormat','ListRevisions']) {
         const original=bridge[name];
+        if (!original) continue;
         bridge[name]=function(...args) { const start=performance.now(); try {return original.apply(this,args);} finally {calls.push({name,ms:performance.now()-start});} };
       }
       const match = {text:'document', enclosingAnchor:{id:anchor,kind:'p',scope:'body',unid:anchor.split(':').at(-1)},span:{start:at,length:8},fragments:[],contextBefore:'',contextAfter:'',groups:[]};
@@ -75,14 +82,16 @@ try {
         const versionBefore = s.getVersion();
         calls.length = 0;
         const start=performance.now();
-        const batch=s.executeBatch([
+        const edit=label === 'formatted' ? s.replaceMatch(match,'new document',{bold:true}) : s.executeBatch([
           {tool:'benchmark',action:'text',mutation:()=>s.replaceMatch(match,'new document')},
           {tool:'benchmark',action:'format',mutation:()=>s.applyFormat(anchor,{start:at,length:12},{bold:true})},
         ]);
         const ms=performance.now()-start;
         const measuredCalls = [...calls];
-        if(!batch.success) throw new Error(JSON.stringify(batch));
-        if(s.getVersion() !== versionBefore + 1) throw new Error('Batch must advance the native version once');
+        if(!edit.success) throw new Error(JSON.stringify(edit));
+        if(s.getVersion() !== versionBefore + 1) throw new Error('Edit must advance the native version once');
+        if(label === 'batch' && !edit.packageHash) throw new Error('Legacy batch must retain its package receipt');
+        if(label === 'formatted' && (edit.packageHash || measuredCalls.some(call=>['BeginTransaction','GetPackageContentHash'].includes(call.name)))) throw new Error('Formatted replacement must avoid package checkpoints and receipts');
         const afterRuns = formatting();
         if(afterRuns.map(run=>run.text).join('')!==before.slice(0,at)+'new document'+before.slice(at+8)) throw new Error('Text mismatch');
         const formatted = afterRuns.filter(run=>run.span.start<at+12 && run.span.start+run.span.length>at);
@@ -91,19 +100,19 @@ try {
         if(!s.undo() || !restored()) throw new Error('Native undo must restore text and formatting together');
         if(!s.redo() || JSON.stringify(formatting()) !== JSON.stringify(afterRuns)) throw new Error('Native redo mismatch');
         if(!s.undo() || !restored()) throw new Error('Native undo after redo mismatch');
-        attempts.push({iteration, ms, calls:measuredCalls, hashPresent:!!batch.packageHash,
+        attempts.push({iteration, ms, calls:measuredCalls, hashPresent:!!edit.packageHash,
           checks:{text:true, bold:true, oneVersion:true, undo:true, redo:true}});
       }
       s.close();
       return {version,attempts,crossOriginIsolated};
-    }, {label, version: packages[label].version});
-    runs.push({label,...result,errors}); console.log(JSON.stringify({label,...result,errors}));
+    }, {label, root, version: packages[root].version});
+    runs.push({label,root,...result,errors}); console.log(JSON.stringify({label,root,...result,errors}));
     await context.close();
   }
   const output=process.env.RDV_NATIVE_BENCH_OUTPUT || 'test-results/native-transactions.json';
   await mkdir(dirname(output), {recursive:true});
   await writeFile(output,JSON.stringify({startedAt,sha256,packages,browser:browser.version(),
     machine:{cpu:cpus()[0]?.model, logicalCpus:cpus().length, platform:platform(), arch:arch()},
-    workload:'One text-plus-Bold atomic batch; first attempt and two repeats after undo/redo, in fresh ABBA browser contexts.',
+    workload:'The same text-plus-Bold edit via executeBatch and replaceMatch(match, text, format); first attempt and two repeats after undo/redo, in fresh batch/formatted/formatted/batch browser contexts.',
     cpuThrottling:false,runs},null,2)+'\n');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}

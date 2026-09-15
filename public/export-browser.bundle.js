@@ -3177,6 +3177,37 @@ var PaginationEngine = class {
   }
 };
 
+// src/verification-request.ts
+function serializeVerificationRequest(request) {
+  if (request === null || typeof request !== "object" || Array.isArray(request)) {
+    throw new RangeError("a verification request must be an object");
+  }
+  const { companionArtifacts, ...rest } = request;
+  const wire = { ...rest };
+  if (companionArtifacts !== void 0) {
+    wire.companionArtifacts = companionArtifacts.map(encodeCompanion);
+  }
+  return JSON.stringify(wire);
+}
+function encodeCompanion(artifact) {
+  const { bytes, ...rest } = artifact;
+  const wire = { ...rest };
+  if (bytes !== void 0) wire.bytesB64 = bytesToBase64(bytes);
+  return wire;
+}
+function bytesToBase64(bytes) {
+  if (typeof btoa === "function") {
+    let binary = "";
+    const chunkSize = 32768;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk);
+    }
+    return btoa(binary);
+  }
+  return Buffer.from(bytes).toString("base64");
+}
+
 // src/worker-proxy.ts
 var WorkerOperationError = class extends Error {
   constructor(message, code) {
@@ -3302,7 +3333,7 @@ async function createWorkerDocxodus(options) {
       );
       return response.manifest;
     },
-    async verifyDeliverable(document2, baseline) {
+    async verifyDeliverable(document2, baseline, request) {
       const bytes = await toBytes(document2);
       const baselineBytes = baseline === void 0 ? void 0 : await toBytes(baseline);
       const transfer = [bytes.buffer];
@@ -3312,7 +3343,8 @@ async function createWorkerDocxodus(options) {
           id: generateId(),
           type: "verifyDeliverable",
           documentBytes: bytes,
-          baselineBytes
+          baselineBytes,
+          requestJson: request === void 0 ? void 0 : serializeVerificationRequest(request)
         },
         transfer
       );
@@ -3354,6 +3386,70 @@ async function createWorkerDocxodus(options) {
         [leftBytes.buffer, rightBytes.buffer]
       );
       return response.semanticChanges;
+    },
+    async createExternalAnnotationSet(document2, documentId) {
+      const bytes = await toBytes(document2);
+      const response = await sendRequest(
+        { id: generateId(), type: "createExternalAnnotationSet", documentBytes: bytes, documentId },
+        [bytes.buffer]
+      );
+      if (!response.success || !response.annotationSet) {
+        throw new Error(response.error ?? "createExternalAnnotationSet failed");
+      }
+      return response.annotationSet;
+    },
+    async validateExternalAnnotations(document2, annotationSet) {
+      const bytes = await toBytes(document2);
+      const response = await sendRequest(
+        { id: generateId(), type: "validateExternalAnnotations", documentBytes: bytes, annotationSet },
+        [bytes.buffer]
+      );
+      if (!response.success || !response.validation) {
+        throw new Error(response.error ?? "validateExternalAnnotations failed");
+      }
+      return response.validation;
+    },
+    async projectAnnotationsOntoHtml(html, annotationSet, projectionOptions) {
+      const response = await sendRequest({
+        id: generateId(),
+        type: "projectAnnotationsOntoHtml",
+        html,
+        annotationSet,
+        projectionOptions
+      });
+      if (!response.success || response.html === void 0) {
+        throw new Error(response.error ?? "projectAnnotationsOntoHtml failed");
+      }
+      return response.html;
+    },
+    async convertDocxToHtmlWithExternalAnnotations(document2, annotationSet, conversionOptions2, projectionOptions) {
+      const bytes = await toBytes(document2);
+      const response = await sendRequest(
+        {
+          id: generateId(),
+          type: "convertDocxToHtmlWithExternalAnnotations",
+          documentBytes: bytes,
+          annotationSet,
+          conversionOptions: conversionOptions2,
+          projectionOptions
+        },
+        [bytes.buffer]
+      );
+      if (!response.success || response.html === void 0) {
+        throw new Error(response.error ?? "convertDocxToHtmlWithExternalAnnotations failed");
+      }
+      return response.html;
+    },
+    async exportToOpenContract(document2) {
+      const bytes = await toBytes(document2);
+      const response = await sendRequest(
+        { id: generateId(), type: "exportToOpenContract", documentBytes: bytes },
+        [bytes.buffer]
+      );
+      if (!response.success || !response.export) {
+        throw new Error(response.error ?? "exportToOpenContract failed");
+      }
+      return response.export;
     },
     async generatePackageManifestJson(document2, limits) {
       const bytes = await toBytes(document2);
@@ -3445,6 +3541,14 @@ async function createWorkerDocxodus(options) {
       );
       return response.revisions;
     },
+    async getComments(document2) {
+      const bytes = await toBytes(document2);
+      const response = await sendRequest(
+        { id: generateId(), type: "getComments", documentBytes: bytes },
+        [bytes.buffer]
+      );
+      return response.comments;
+    },
     async getDocumentMetadata(document2) {
       const bytes = await toBytes(document2);
       const response = await sendRequest(
@@ -3518,11 +3622,12 @@ async function createWorkerDocxodus(options) {
           }
           return res.semanticChanges;
         },
-        async verifyDeliverable() {
+        async verifyDeliverable(request) {
           const res = await sendRequest({
             id: generateId(),
             type: "sessionVerifyDeliverable",
-            handle
+            handle,
+            requestJson: request === void 0 ? void 0 : serializeVerificationRequest(request)
           });
           if (!res.success || !res.verification) {
             throw new Error(res.error ?? "sessionVerifyDeliverable failed");

@@ -104,25 +104,26 @@ The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 65 pages; the studio's different profile rendered 52. Compact results are in
 [the benchmark record](benchmarks/2026-09-13-latency.json).
 
-## Native transaction reproduction
+## Native transaction reproduction and 12.6.0 API
 
-`npm run test:latency:native` isolates the remaining compound-edit stall from
+`npm run test:latency:native` isolates compound-edit costs from
 React, the editor canvas, rendering, and page-map registration. It imports the
 published `docxodus` core and WASM, opens the same NVCA fixture, replaces one word
-in a body paragraph, and applies Bold to the replacement in one `executeBatch`.
-`emitMarkdownPatch` is false. The batch uses the default atomic mode and retains
-its package hash and receipt behavior.
+in a body paragraph, and applies Bold to the replacement. It compares the default
+atomic `executeBatch` (including its package receipt) against 12.6.0's supported
+`replaceMatch(match, text, format)`. `emitMarkdownPatch` is false.
 
-The script alternates installed/candidate versions in fresh browser contexts
-(ABBA). Each context measures its first transaction and two repeats after
-undo/redo verification. Only synchronous `executeBatch` wall time is measured;
+The script alternates batch/formatted/formatted/batch in fresh browser contexts.
+Each context measures its first edit and two repeats after undo/redo verification.
+Only the synchronous editing call's wall time is measured;
 fixture loading, projection, verification, undo and redo are outside that timer.
 Native bridge wrappers time the original calls without changing their behavior.
 Every attempt checks replacement text, Bold, a single version advancement, and
 text/formatting restoration through one undo and redo. These checks do not replace
 the full DOCX package integrity suite.
 
-Twelve serial attempts on the published packages reproduced the stall:
+Before 12.6.0, twelve serial batch attempts on the published packages reproduced
+the stall (the earlier harness compared versions rather than editing APIs):
 
 | Package | First batch in each fresh context | Repeats after undo/redo |
 | --- | ---: | ---: |
@@ -149,17 +150,22 @@ curl --fail --location \
 RDV_STRESS_DOCX=/tmp/NVCA-Model-COI-10-1-2025.docx npm run test:latency:native
 ```
 
-To compare another published package without changing dependencies, use `npm pack
-docxodus@12.5.0 --pack-destination /tmp`, extract its tarball to a separate
+To use an older package for the batch baseline without changing dependencies, use
+`npm pack docxodus@12.4.1 --pack-destination /tmp`, extract its tarball to a separate
 directory, and set `RDV_NATIVE_COMPARE_ROOT` to the extracted `package` directory.
+The formatted operation always uses the installed package. With no comparison
+root, both paths use the installed 12.6.0 package.
 `RDV_NATIVE_BENCH_OUTPUT` overrides `test-results/native-transactions.json`.
 The report records the fixture, JavaScript and WASM SHA-256 hashes, package
 versions, browser, CPU, individual bridge calls and correctness checks. There is
 no build or preview server prerequisite for this native-only benchmark.
 
-The native dependency remains on the supported 12.4.1 API. The remaining
-transaction work is tracked in [Docxodus #788](https://github.com/JSv4/Docxodus/issues/788);
-no native runtime patch or private editing primitive is integrated here.
+[Docxodus #788](https://github.com/JSv4/Docxodus/issues/788) was resolved in the
+published 12.6.0 release. The canvas now uses its supported formatted replacement
+for contiguous replacements and run-boundary insertions. Interior insertions and
+disjoint drafts retain the public atomic batch to preserve neighboring formatting
+and one-step undo. See the [upgrade notes](12.6.0-upgrade.md). No native runtime
+patch or private editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements
 

@@ -236,10 +236,7 @@ export class CanvasEditor {
         const after = draft.before.slice(0, delta.start) + delta.inserted + draft.before.slice(delta.start + delta.removed.length);
         this.applying = true;
         check(this.controller.run(session => {
-          const steps = [
-          ...paragraphTextSteps(session, draft.anchorId, draft.before, after),
-          ...(draft.format && delta.inserted.length ? [{ tool: 'CanvasEditor', action: 'typing format', mutation: () => session.applyFormat(draft.anchorId, { start: delta.start, length: delta.inserted.length }, draft.format!) }] : []),
-          ];
+          const steps = paragraphTextSteps(session, draft.anchorId, draft.before, after, draft.format ?? undefined);
           return steps.length === 1 ? steps[0].mutation() : session.executeBatch(steps);
         }));
       }

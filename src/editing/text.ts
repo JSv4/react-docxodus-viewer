@@ -1,7 +1,7 @@
-import type { DocxSession, EditResult, FormattingInspection } from 'docxodus/core';
+import type { DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
 
 /**
- * ExactVisibleText in Docxodus 12.4.1 is descendant w:t text plus native list
+ * ExactVisibleText in Docxodus 12.6.0 is descendant w:t text plus native list
  * numbering for body paragraphs. Keep that contract without Markdown projection.
  * Requires a canonical anchor; unknown XML retains the native metadata fallback.
  */
@@ -90,24 +90,32 @@ export function textChanges(before: string, after: string) {
 }
 
 /** Preserve surrounding runs, links and paragraph formatting instead of rewriting a block. */
-export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string): Parameters<DocxSession['executeBatch']>[0] {
+export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp): Parameters<DocxSession['executeBatch']>[0] {
   const formatting = session.getFormatting(anchorId);
   if (!formatting || editableText(formatting) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
   const canonical = formatting.anchorId;
   const [kind, scope] = canonical.split(':');
   const changes = textChanges(before, after);
   if (!changes.length) return [];
-  if (!before.length) {
+  const exact = textChange(before, after, false)!;
+  const boundary = exact.start === 0 || formatting.runs.some(run => run.span.start + run.span.length === exact.start);
+  // 12.6.0 formats exactly the replacement in one undo/version unit. A pure
+  // insertion must be at a native run boundary; borrowing a neighbouring
+  // character here would incorrectly apply the typing format to existing text.
+  const atomicFormat = typingFormat && exact.inserted.length && changes.length === 1 && (exact.removed.length || boundary)
+    ? typingFormat : undefined;
+  if (atomicFormat) changes.splice(0, changes.length, exact);
+  if (!before.length && !atomicFormat) {
     const visible = visibleBlockText(session, canonical);
     if (visible === null) throw new Error('This paragraph changed. Reload its text before applying your draft.');
     // replaceText accepts Markdown. Escape literal typing into an empty paragraph.
     const literal = after.replace(/([\\`*_{}[\]()#+.!<>|~-])/g, '\\$1');
     return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: visible }) }];
   }
-  return changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
+  const steps: Array<Parameters<DocxSession['executeBatch']>[0][number]> = changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const current = editableText(session.getFormatting(anchorId));
     if (current.slice(change.start, change.start + change.removed.length) !== change.removed) throw new Error('This text changed before the edit could be applied.');
-    // 12.4.1 replaceMatch addresses only enclosingAnchor.id + span (its
+    // 12.6.0 replaceMatch addresses only enclosingAnchor.id + span (its
     // ReplaceTextAtSpan bridge). We already have those verified native offsets.
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.
@@ -115,8 +123,13 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
       enclosingAnchor: { id: canonical, kind, scope, unid: canonical.split(':').at(-1)! },
       span: { start: change.start, length: change.removed.length }, fragments: [],
       contextBefore: current.slice(0, change.start), contextAfter: current.slice(change.start + change.removed.length), groups: [change.removed],
-    }, change.inserted);
+    }, change.inserted, atomicFormat);
   } }));
+  // Interior insertions and disjoint drafts retain the public atomic batch path.
+  // Format only the actual new span, excluding any borrowed boundary character.
+  if (typingFormat && exact.inserted.length && !atomicFormat) steps.push({ tool: 'ParagraphEditor', action: 'typing format',
+    mutation: () => session.applyFormat(canonical, { start: exact.start, length: exact.inserted.length }, typingFormat) });
+  return steps;
 }
 
 export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | readonly EditResult[] | ReturnType<DocxSession['executeBatch']> | null {
