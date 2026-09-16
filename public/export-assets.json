@@ -1,7 +1,7 @@
 {
   "schema": "https://docxodus.dev/schemas/export/export-assets/v1",
   "schemaVersion": 1,
-  "packageVersion": "12.6.0",
+  "packageVersion": "12.6.1",
   "assets": [
     {
       "path": "./docxodus.worker.js",
@@ -48,14 +48,14 @@
     {
       "path": "./wasm/_framework/Docxodus.wasm",
       "mediaType": "application/wasm",
-      "byteLength": 4630809,
-      "sha256": "15007cc698bdb84b51eeaef8cebc5ab3488960acabc7186c472a5a1d8a7d3e62"
+      "byteLength": 4631833,
+      "sha256": "91cc7688e1a45faf3b265242298b531da39ab1d6833127df256a9f0c2adb69f7"
     },
     {
       "path": "./wasm/_framework/DocxodusWasm.wasm",
       "mediaType": "application/wasm",
       "byteLength": 522517,
-      "sha256": "086d315ffd021e094757fc9c2ce2d321e3024654098e8f6d7d274b7bbb4c1e03"
+      "sha256": "f9e82ed508f63a18c0fe1f30bd10a8f46b9173e11266c9c0dfbbe66f5b02d51f"
     },
     {
       "path": "./wasm/_framework/System.Collections.Concurrent.wasm",
@@ -247,7 +247,7 @@
       "path": "./wasm/_framework/dotnet.boot.js",
       "mediaType": "text/javascript",
       "byteLength": 9374,
-      "sha256": "eb2586582d2a2342fc7a4a423907c6ec1850f0c9c4b27919f81e5e6bf6b21d53"
+      "sha256": "e9a546938f1d4bb4382e094660fe106e99fc55cd9f3230e96e2dfebed2e8b8bf"
     },
     {
       "path": "./wasm/_framework/dotnet.js",
@@ -264,8 +264,8 @@
     {
       "path": "./wasm/_framework/dotnet.native.wasm",
       "mediaType": "application/wasm",
-      "byteLength": 10303384,
-      "sha256": "70d41425a65bdd580befbbf166562ddfdbbf739ca96c81a1573212be065beae3"
+      "byteLength": 10303358,
+      "sha256": "2dfbb9db9c3beff32b92979c77307c19239b176b81f7f117d5b5db46557495c1"
     },
     {
       "path": "./wasm/_framework/dotnet.runtime.js",

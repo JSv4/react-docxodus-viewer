@@ -1,7 +1,7 @@
 export const config = /*json-start*/{
   "mainAssemblyName": "DocxodusWasm.dll",
   "resources": {
-    "hash": "sha256-loQOL84fvpHKOVzD/4sWan3WLnvMwQkuEtX2arxBO1Q=",
+    "hash": "sha256-TveNFCgwYY9A9avm8YUPXalgu4dVMxR0DM/Iy5y36Vc=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.js"
@@ -15,7 +15,7 @@ export const config = /*json-start*/{
     "wasmNative": [
       {
         "name": "dotnet.native.wasm",
-        "hash": "sha256-cNQUJaZb3VgL77vxZlYt39u/c5ypbIGhVzISvgZb6uM="
+        "hash": "sha256-Lfu525w77/MrkpecdzB8GSObF2uB9/EX1bXbRlV0lcE="
       }
     ],
     "coreAssembly": [
@@ -32,12 +32,12 @@ export const config = /*json-start*/{
       {
         "virtualPath": "Docxodus.wasm",
         "name": "Docxodus.wasm",
-        "hash": "sha256-FQB8xpi9uEtR7q74zrxas0iJYKyrxxhsRypaHYp9PmI="
+        "hash": "sha256-kcx2iOGkX687JlJCKYtTHaOasdaDMSffJWqfDCrbafc="
       },
       {
         "virtualPath": "DocxodusWasm.wasm",
         "name": "DocxodusWasm.wasm",
-        "hash": "sha256-CG0xX/0CHglHV/ycLOLTIeMCRlQJjo9tfSdLe7tMHgM="
+        "hash": "sha256-+egu1Qj2OhjA/h8wvRCo9GuRc+ESZsnA37vmb1sC1R8="
       },
       {
         "virtualPath": "System.Collections.Concurrent.wasm",

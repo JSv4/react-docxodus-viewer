@@ -13,6 +13,8 @@ const base = process.env.RDV_BENCH_URL || 'http://127.0.0.1:4191/';
 const fixture = process.env.RDV_STRESS_DOCX || join(tmpdir(), 'rdv-stress-fixtures', 'NVCA-Model-COI-10-1-2025.docx');
 const mode = process.env.RDV_BENCH_MODE || 'module';
 const doc = process.env.RDV_BENCH_DOC || 'nvca';
+const targetRegion = process.env.RDV_BENCH_TARGET || 'default';
+if (!['default', 'late-body', 'footnote'].includes(targetRegion)) throw new Error('RDV_BENCH_TARGET must be default, late-body, or footnote');
 if (doc === 'nvca') {
   let bytes = await readFile(fixture).catch(() => null);
   if (!bytes && !process.env.RDV_STRESS_DOCX) {
@@ -29,7 +31,7 @@ const cpu = process.env.RDV_BENCH_CPU === '1';
 const formatting = process.env.RDV_BENCH_FORMAT !== '0';
 const wrapping = process.env.RDV_BENCH_WRAP !== '0';
 const extended = process.env.RDV_BENCH_EXTENDED === '1';
-const label = `${base.includes('github.io') ? 'pages' : 'local'}-${mode}-${doc}${instrument ? '-profile' : ''}`;
+const label = `${base.includes('github.io') ? 'pages' : 'local'}-${mode}-${doc}${targetRegion === 'default' ? '' : `-${targetRegion}`}${instrument ? '-profile' : ''}`;
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1480, height: 1050 } });
 page.setDefaultTimeout(90000);
@@ -63,7 +65,7 @@ try {
       snapshot.session.getPageMapStatus().availability === 'available' && !canvas.getSnapshot().suspended;
   });
   await page.waitForTimeout(200);
-  const info = await page.evaluate(async instrument => {
+  const info = await page.evaluate(async ({instrument, targetRegion}) => {
     const toolbar = document.querySelector('.rdv-format-toolbar');
     let fiber = toolbar[Object.keys(toolbar).find(k=>k.startsWith('__reactFiber'))];
     while (fiber && !fiber.memoizedProps?.editor) fiber = fiber.return;
@@ -106,12 +108,16 @@ try {
       for (const name of Object.keys(bridge).filter(name=> name !== 'GetVersion')) wrap(bridge,name,'native');
       for (const name of ['renderBlocks','getAnchorIndex','run','publish']) wrap(controller,name,'controller');
     }
-    const paragraphs = Array.from(root.querySelectorAll('[data-rdv-editable="true"]')).filter(el=>el.dataset.sourceAnchorId?.includes(':body:'));
-    const target = paragraphs.find(el=>el.textContent.startsWith('Build a quieter')) || paragraphs.find(el=>el.textContent.trim().length>180) || paragraphs[0];
+    const scope = targetRegion === 'footnote' ? ':fn:' : ':body:';
+    const paragraphs = Array.from(root.querySelectorAll('[data-rdv-editable="true"]')).filter(el=>el.dataset.sourceAnchorId?.includes(scope));
+    const target = targetRegion === 'default'
+      ? paragraphs.find(el=>el.textContent.startsWith('Build a quieter')) || paragraphs.find(el=>el.textContent.trim().length>180) || paragraphs[0]
+      : paragraphs.filter(el=>el.textContent.trim().length>180).at(-1);
+    if (!target) throw new Error(`No suitable paragraph in ${targetRegion}`);
     state.target = target.dataset.sourceAnchorId;
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',controller.originalBytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
-    return {target:state.target,text:target.textContent.slice(0,100), nativeText:native.getFormatting(state.target).runs.map(run=>run.text).join(''), hash, pages:root.querySelectorAll('.page-box').length, version:controller.getSnapshot().version, crossOriginIsolated, userAgent:navigator.userAgent, hardwareConcurrency:navigator.hardwareConcurrency};
-  }, instrument);
+    return {target:state.target,targetRegion,text:target.textContent.slice(0,100), nativeText:native.getFormatting(state.target).runs.map(run=>run.text).join(''), hash, pages:root.querySelectorAll('.page-box').length, version:controller.getSnapshot().version, crossOriginIsolated, userAgent:navigator.userAgent, hardwareConcurrency:navigator.hardwareConcurrency};
+  }, {instrument, targetRegion});
   if(doc==='nvca' && info.hash!=='d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29') throw new Error(`Wrong NVCA document: ${info.hash}`);
   const block = () => page.locator(`#pagination-container [data-source-anchor-id="${info.target}"][data-rdv-editable="true"]`).last();
   await block().click(); await page.keyboard.press('End'); await page.waitForTimeout(700);
@@ -215,7 +221,7 @@ try {
     if (undone !== styled) errors.push('Enter did not undo as one native edit');
     await page.waitForFunction(() => window.latency.native.getPageMapStatus().availability === 'available');
     // Keep the historical phases above intact. Explicitly exercise both sides
-    // of the public 12.6.0 insertion contract instead of assuming a caret sits
+    // of the native insertion contract instead of assuming a caret sits
     // at a run boundary after the preceding wrapping and selection operations.
     for (const placement of ['boundary', 'interior']) {
       const setup = await page.evaluate(placement => {

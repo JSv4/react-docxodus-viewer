@@ -1,7 +1,7 @@
 # Docxodus
 
 The portable page-map checks and generated cooperative pagination adapter are
-derived from Docxodus 12.6.0, under the following license.
+derived from Docxodus 12.6.1, under the following license.
 
 The MIT License (MIT)
 

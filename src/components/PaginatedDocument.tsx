@@ -273,7 +273,7 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       // The converter supplies its own default canvas color inside the ShadowRoot.
       // Apply the host's theme to the canvas without changing the document pages.
       container.style.backgroundColor = backgroundColor;
-      // Docxodus 12.6.0 measures note/header reserves while creating pages. Zooming
+      // Docxodus 12.6.1 measures note/header reserves while creating pages. Zooming
       // those pages during measurement mixes scaled pixels with document points,
       // clipping body paragraphs in documents with substantial footnotes.
       const engine = new PaginationEngine(staging, container, {

@@ -1,7 +1,7 @@
 # react-docxodus-viewer
 
 React components and hooks for viewing, editing, reviewing, comparing, verifying,
-and exporting Word documents with **Docxodus 12.6.0**. The viewer uses the core
+and exporting Word documents with **Docxodus 12.6.1**. The viewer uses the core
 engine and a React-owned pagination component; it does not load the upstream
 browser editor or ribbon.
 
@@ -14,7 +14,7 @@ browser editor or ribbon.
 Requires React 18+ and an ESM-capable application bundler.
 
 ```sh
-npm install react-docxodus-viewer docxodus@12.6.0
+npm install react-docxodus-viewer docxodus@12.6.1
 npx rdv-copy-runtime public/docxodus
 ```
 
@@ -159,7 +159,7 @@ continue to style the viewer controls and panels.
 - `/export-browser`: complete upstream browser export contracts/helpers. Keep the
   materializer bundle static; use `loadBrowserExporter()` for actual bundled apps.
 - `/server`: complete `@docxodus/export` Node/PDF API. Install the optional companion
-  with `npm install @docxodus/export@12.6.0`.
+  with `npm install @docxodus/export@12.6.1`.
 - `/assets`: Node build helper `copyDocxodusRuntime(directory)`.
 - `/styles.css`: viewer, editor, and feature-panel styles.
 
@@ -192,7 +192,7 @@ for each opened file. Downloads retain the document name.
 npm install
 npm run dev              # sync verified assets, then start Vite
 npm run check            # lint, unit tests, types, library/demo builds, API audit
-npm run test:browser     # actual 12.6.0 WASM workflows
+npm run test:browser     # actual 12.6.1 WASM workflows
 npm run test:performance # NVCA opening, zoom, typing and layout benchmark
 npm run test:stress      # NVCA editing and independent DOCX integrity checks
 npm run test:package     # packed consumer imports, types and runtime-copy command
@@ -203,7 +203,7 @@ Set `DOCXODUS_REQUIRE_PDF=1` to make an unavailable PDF environment fail that te
 Set `RDV_TEST_PORT` to run browser checks on a different local port. Use
 `RDV_TEST_PREVIEW=1` after building to exercise the production demo. This runs the
 studio and module examples; source-only API harness tests remain development checks.
-The API audit compares every published export against the installed 12.6.0
+The API audit compares every published export against the installed 12.6.1
 TypeScript declarations and checks identity of the built runtime exports.
 See the [performance campaign](docs/performance.md) for measurements, regression
 guards, and the next optimization targets.

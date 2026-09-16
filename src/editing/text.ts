@@ -1,7 +1,7 @@
 import type { CharSpan, DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
 
 /**
- * ExactVisibleText in Docxodus 12.6.0 is descendant w:t text plus native list
+ * ExactVisibleText in Docxodus 12.6.1 is descendant w:t text plus native list
  * numbering for body paragraphs. Keep that contract without Markdown projection.
  * Requires a canonical anchor; unknown XML retains the native metadata fallback.
  */
@@ -98,7 +98,7 @@ export function textChanges(before: string, after: string) {
 }
 
 /** Preserve surrounding runs, links and paragraph formatting instead of rewriting a block. */
-export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp, selection?: CharSpan): Parameters<DocxSession['executeBatch']>[0] {
+export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp, selection?: CharSpan, atomicTyping = true): Parameters<DocxSession['executeBatch']>[0] {
   const formatting = session.getFormatting(anchorId);
   if (!formatting || editableText(formatting) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
   const canonical = formatting.anchorId;
@@ -107,11 +107,10 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const changes = selected ? [borrowInsertion(before, selected)] : textChanges(before, after);
   if (!changes.length) return [];
   const exact = selected ?? textChange(before, after, false)!;
-  const boundary = exact.start === 0 || formatting.runs.some(run => run.span.start + run.span.length === exact.start);
-  // 12.6.0 formats exactly the replacement in one undo/version unit. A pure
-  // insertion must be at a native run boundary; borrowing a neighbouring
-  // character here would incorrectly apply the typing format to existing text.
-  const atomicFormat = typingFormat && exact.inserted.length && changes.length === 1 && (exact.removed.length || boundary)
+  // 12.6.1 inserts inside ordinary text runs and formats exactly the replacement
+  // in one undo/version unit. Let native code decide whether a particular run's
+  // field/container structure allows this operation.
+  const atomicFormat = atomicTyping && typingFormat && exact.inserted.length && changes.length === 1
     ? typingFormat : undefined;
   if (atomicFormat) changes.splice(0, changes.length, exact);
   if (!before.length && !atomicFormat) {
@@ -124,7 +123,7 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const steps: Array<Parameters<DocxSession['executeBatch']>[0][number]> = changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const current = editableText(session.getFormatting(anchorId));
     if (current.slice(change.start, change.start + change.removed.length) !== change.removed) throw new Error('This text changed before the edit could be applied.');
-    // 12.6.0 replaceMatch addresses only enclosingAnchor.id + span (its
+    // 12.6.1 replaceMatch addresses only enclosingAnchor.id + span (its
     // ReplaceTextAtSpan bridge). We already have those verified native offsets.
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.
@@ -134,14 +133,27 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
       contextBefore: current.slice(0, change.start), contextAfter: current.slice(change.start + change.removed.length), groups: [change.removed],
     }, change.inserted, atomicFormat);
   } }));
-  // Interior insertions and disjoint drafts retain the public atomic batch path.
+  // Unsupported inline structures and disjoint drafts retain the atomic batch.
   // Format only the actual new span, excluding any borrowed boundary character.
   if (typingFormat && exact.inserted.length && !atomicFormat) steps.push({ tool: 'ParagraphEditor', action: 'typing format',
     mutation: () => session.applyFormat(canonical, { start: exact.start, length: exact.inserted.length }, typingFormat) });
   return steps;
 }
 
-export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | readonly EditResult[] | ReturnType<DocxSession['executeBatch']> | null {
-  const steps = paragraphTextSteps(session, anchorId, before, after);
-  return steps.length === 1 ? steps[0].mutation() : steps.length ? session.executeBatch(steps) : null;
+export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp, selection?: CharSpan): EditResult | readonly EditResult[] | ReturnType<DocxSession['executeBatch']> | null {
+  const steps = paragraphTextSteps(session, anchorId, before, after, typingFormat, selection);
+  if (steps.length !== 1) return steps.length ? session.executeBatch(steps) : null;
+  const version = session.getVersion();
+  const result = steps[0].mutation();
+  // Native refuses interior insertions in fields, hyperlinks and mixed-content
+  // runs before mutation. Preserve the previous surgical text+format batch for
+  // these cases; never retry a changed version or an unrelated format failure.
+  if (typingFormat && 'success' in result && !result.success &&
+    result.error?.code === 'offset_out_of_range' && session.getVersion() === version) {
+    const exact = (selection && textChangeAtSelection(before, after, selection)) || textChange(before, after, false);
+    if (exact && !exact.removed.length && exact.inserted.length) {
+      return session.executeBatch(paragraphTextSteps(session, anchorId, before, after, typingFormat, selection, false));
+    }
+  }
+  return result;
 }

@@ -14,7 +14,7 @@ const roots = {
   ...(process.env.RDV_NATIVE_COMPARE_ROOT ? { candidate: resolve(process.env.RDV_NATIVE_COMPARE_ROOT) } : {}),
 };
 // The optional comparison package supplies the legacy batch baseline. The
-// installed 12.6.0 package always supplies the public formatted replacement.
+// installed package always supplies the public formatted replacement.
 const workloads = [
   { label: 'batch', root: roots.candidate ? 'candidate' : 'installed' },
   { label: 'formatted', root: 'installed' },
@@ -27,6 +27,7 @@ const packages = Object.fromEntries(await Promise.all(Object.entries(roots).map(
   version: JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')).version,
   sessionHash: createHash('sha256').update(await readFile(resolve(root, 'dist/session.js'))).digest('hex'),
   runtimeHash: createHash('sha256').update(await readFile(resolve(root, 'dist/wasm/_framework/DocxodusWasm.wasm'))).digest('hex'),
+  engineRuntimeHash: createHash('sha256').update(await readFile(resolve(root, 'dist/wasm/_framework/Docxodus.wasm'))).digest('hex'),
 }])));
 const server = createServer(async (req, res) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
@@ -103,16 +104,36 @@ try {
         attempts.push({iteration, ms, calls:measuredCalls, hashPresent:!!edit.packageHash,
           checks:{text:true, bold:true, oneVersion:true, undo:true, redo:true}});
       }
-      // Outside the timed replacement workload, probe the insertion contract
-      // needed by a caret in the middle of an existing Word run.
+      // After the replacement workload, measure a warm interior insertion and
+      // verify its formatting, neighboring text, and atomic undo/redo contract.
       let interiorInsertion;
       if (label === 'formatted') {
         const offset = at + 4, versionBefore = s.getVersion();
         if (!beforeRuns.some(run => run.span.start < offset && run.span.start + run.span.length > offset)) throw new Error('Probe requires a strict interior run offset');
-        const edit = s.replaceMatch({...match, text:'', span:{start:offset,length:0}}, ' inserted ', {bold:true});
+        const inserted = ' inserted ';
+        calls.length = 0;
+        const start = performance.now();
+        const edit = s.replaceMatch({...match, text:'', span:{start:offset,length:0}}, inserted, {bold:true});
+        const ms = performance.now() - start, measuredCalls = [...calls];
         const unchanged = s.getVersion() === versionBefore && JSON.stringify(formatting()) === JSON.stringify(beforeRuns);
         if (!edit.success && !unchanged) throw new Error('Rejected interior insertion changed the document');
-        interiorInsertion = {offset, supported:edit.success, error:edit.error, unchanged};
+        let checks;
+        if (edit.success) {
+          if (s.getVersion() !== versionBefore + 1) throw new Error('Interior insertion must advance the native version once');
+          if (measuredCalls.some(call => ['BeginTransaction','GetPackageContentHash'].includes(call.name))) throw new Error('Interior insertion used a full-package checkpoint or receipt');
+          const afterRuns = formatting();
+          if (afterRuns.map(run => run.text).join('') !== before.slice(0, offset) + inserted + before.slice(offset)) throw new Error('Interior text mismatch');
+          const characters = runs => runs.flatMap(run => run.text.split('').map(text => ({text, effective:run.effective})));
+          const afterCharacters = characters(afterRuns);
+          if (!afterCharacters.slice(offset, offset + inserted.length).every(char => char.effective.bold)) throw new Error('Interior formatting mismatch');
+          if (JSON.stringify([...afterCharacters.slice(0, offset), ...afterCharacters.slice(offset + inserted.length)]) !== JSON.stringify(characters(beforeRuns))) throw new Error('Interior insertion changed neighboring formatting');
+          const restored = () => JSON.stringify(formatting()) === JSON.stringify(beforeRuns);
+          if (!s.undo() || !restored()) throw new Error('Interior undo must restore text and formatting together');
+          if (!s.redo() || JSON.stringify(formatting()) !== JSON.stringify(afterRuns)) throw new Error('Interior redo mismatch');
+          if (!s.undo() || !restored()) throw new Error('Interior undo after redo mismatch');
+          checks = {text:true, bold:true, surroundingFormatting:true, oneVersion:true, undo:true, redo:true};
+        }
+        interiorInsertion = {offset, supported:edit.success, error:edit.error, unchanged, ms, calls:measuredCalls, checks};
       }
       s.close();
       return {version,attempts,interiorInsertion,crossOriginIsolated};
@@ -124,6 +145,6 @@ try {
   await mkdir(dirname(output), {recursive:true});
   await writeFile(output,JSON.stringify({startedAt,sha256,packages,browser:browser.version(),
     machine:{cpu:cpus()[0]?.model, logicalCpus:cpus().length, platform:platform(), arch:arch()},
-    workload:'The same text-plus-Bold edit via executeBatch and replaceMatch(match, text, format); first attempt and two repeats after undo/redo, in fresh batch/formatted/formatted/batch browser contexts.',
+    workload:'The same text-plus-Bold edit via executeBatch and replaceMatch(match, text, format); first attempt and two repeats after undo/redo, in fresh batch/formatted/formatted/batch browser contexts. Each formatted context then measures a warm interior insertion and verifies neighboring formatting and undo/redo.',
     cpuThrottling:false,runs},null,2)+'\n');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}

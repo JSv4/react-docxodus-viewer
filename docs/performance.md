@@ -1,8 +1,17 @@
 # Editor performance campaign
 
-## Published 12.6.0 results
+## Published 12.6.1 integration
 
-The integration uses the unmodified `docxodus@12.6.0` and matching export
+The integration now pins the unmodified `docxodus@12.6.1` and matching export
+companion. The supported atomic text-plus-format operation now handles interior
+insertion in ordinary text runs, resolving
+[Docxodus #799](https://github.com/JSv4/Docxodus/issues/799). Excluded structures
+retain the public atomic batch. See the [12.6.1 upgrade notes](12.6.1-upgrade.md)
+for the fallback contract and runtime compatibility.
+
+## Historical 12.6.0 results
+
+The preceding integration used the unmodified `docxodus@12.6.0` and matching export
 companion. Its public `replaceMatch(match, text, format)` handles contiguous
 replacements and run-boundary insertions without an outer batch. Styled drafts
 retain their original selection so identical spaces and repeated text cannot
@@ -164,13 +173,13 @@ The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 65 pages; the studio's different profile rendered 52. Compact results are in
 [the benchmark record](benchmarks/2026-09-13-latency.json).
 
-## Native transaction reproduction and 12.6.0 API
+## Native transaction reproduction
 
 `npm run test:latency:native` isolates compound-edit costs from
 React, the editor canvas, rendering, and page-map registration. It imports the
 published `docxodus` core and WASM, opens the same NVCA fixture, replaces one word
 in a body paragraph, and applies Bold to the replacement. It compares the default
-atomic `executeBatch` (including its package receipt) against 12.6.0's supported
+atomic `executeBatch` (including its package receipt) against the supported
 `replaceMatch(match, text, format)`. `emitMarkdownPatch` is false.
 
 The script alternates batch/formatted/formatted/batch in fresh browser contexts.
@@ -230,17 +239,21 @@ To use an older package for the batch baseline without changing dependencies, us
 `npm pack docxodus@12.4.1 --pack-destination /tmp`, extract its tarball to a separate
 directory, and set `RDV_NATIVE_COMPARE_ROOT` to the extracted `package` directory.
 The formatted operation always uses the installed package. With no comparison
-root, both paths use the installed 12.6.0 package.
+root, both paths use the installed package.
 `RDV_NATIVE_BENCH_OUTPUT` overrides `test-results/native-transactions.json`.
 The report records the fixture, JavaScript and WASM SHA-256 hashes, package
 versions, browser, CPU, individual bridge calls and correctness checks. There is
 no build or preview server prerequisite for this native-only benchmark.
+After the timed replacement attempts, each formatted context measures a warm
+interior insertion. Successful insertions must preserve surrounding formatting,
+advance the version once, and restore text and runs through one undo and redo.
+Rejected insertions must leave the native version and formatting unchanged.
 
 [Docxodus #788](https://github.com/JSv4/Docxodus/issues/788) was resolved in the
-published 12.6.0 release. The canvas now uses its supported formatted replacement
-for contiguous replacements and run-boundary insertions. Interior insertions and
-disjoint drafts retain the public atomic batch to preserve neighboring formatting
-and one-step undo. See the [upgrade notes](12.6.0-upgrade.md). No native runtime
+published 12.6.0 release, and [#799](https://github.com/JSv4/Docxodus/issues/799)
+extends that operation to ordinary interior insertions in 12.6.1. Excluded
+structures and disjoint drafts retain the public atomic batch to preserve
+neighboring formatting and one-step undo. See the [upgrade notes](12.6.1-upgrade.md). No native runtime
 patch or private editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements
@@ -297,8 +310,11 @@ provenance is recorded separately and cannot establish a deployment's revision.
 `RDV_BENCH_EXTENDED=1` also measures explicitly formatted typing and Enter, then
 checks native formatting and one-step Enter undo. It preserves those historical
 phases and adds explicit run-boundary and interior insertion phases, with the
-original native caret position recorded. Interior styled typing currently
-exceeds the optional 150 ms gate on NVCA.
+original native caret position recorded. `RDV_BENCH_TARGET=late-body` or
+`RDV_BENCH_TARGET=footnote` runs the same phases in the last sufficiently long
+body or footnote paragraph; the default target remains the original paragraph.
+The report records the actual anchor and native text, and filenames distinguish
+these additional locations.
 
 Key-handler-to-rAF timing excludes prior input queuing and measures a paint
 opportunity. Chrome Event Timing includes queuing, processing and presentation,

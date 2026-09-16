@@ -143,11 +143,12 @@ for (const sample of [
   { name: 'paragraph end', text: 'Plain text.', offset: 11, fast: true },
   { name: 'paragraph start', text: 'Plain text.', offset: 0, fast: true },
   { name: 'empty paragraph', text: '', offset: 0, fast: true },
-  { name: 'inside a run', text: 'Plain text.', offset: 3, fast: false },
-  { name: 'before an identical space', text: 'Plain text.', offset: 5, fast: false },
+  { name: 'inside a run', text: 'Plain text.', offset: 3, fast: true },
+  { name: 'before an identical space', text: 'Plain text.', offset: 5, fast: true },
   { name: 'before identical text', text: ' *B* original', offset: 0, fast: true },
+  { name: 'inside a hyperlink', text: 'Plain link text.', markdown: 'Plain [link text.](https://example.com)', offset: 8, fast: false },
 ]) test(`formatted typing at ${sample.name} preserves surrounding runs and one-step undo`, async ({ page }) => {
-  await open(page, sample.text.replace(/\*/g, '\\*'));
+  await open(page, sample.markdown ?? sample.text.replace(/\*/g, '\\*'));
   await paragraphs(page).first().click();
   await page.keyboard.press('Home');
   for (let i = 0; i < sample.offset; i++) await page.keyboard.press('ArrowRight');
@@ -173,7 +174,8 @@ for (const sample of [
   expect(after.runs.filter(run => run.effective.bold).map(run => run.text).join('')).toBe(typed);
   expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(sample.text);
   expect(await page.evaluate(() => Reflect.get(window, 'typingCalls'))).toEqual(sample.fast
-    ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 0, transaction: 1, hash: 1 });
+    ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 1, transaction: 1, hash: 1 });
+  if (sample.markdown) expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.listHyperlinks()))).toMatchObject([{ target: 'https://example.com/' }]);
   await page.keyboard.press('Control+z');
   await expect.poll(() => nativeText(page)).toEqual([sample.text]);
   expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(before.runs);

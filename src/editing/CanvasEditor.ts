@@ -1,6 +1,6 @@
 import type { CharSpan, DocxSession, EditResult, FormatOp } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
-import { editableText, paragraphTextSteps, textChange, textChangeAtSelection } from './text';
+import { editableText, paragraphTextSteps, replaceParagraphText, textChange, textChangeAtSelection } from './text';
 import { shadowSelection } from './selection';
 import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, prepareCanvasBreaks, prepareCanvasHyphens, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
@@ -238,10 +238,7 @@ export class CanvasEditor {
       if (delta) {
         const after = draft.before.slice(0, delta.start) + delta.inserted + draft.before.slice(delta.start + delta.removed.length);
         this.applying = true;
-        check(this.controller.run(session => {
-          const steps = paragraphTextSteps(session, draft.anchorId, draft.before, after, draft.format ?? undefined, draft.selection);
-          return steps.length === 1 ? steps[0].mutation() : session.executeBatch(steps);
-        }));
+        check(this.controller.run(session => replaceParagraphText(session, draft.anchorId, draft.before, after, draft.format ?? undefined, draft.selection)));
       }
       this.draft = null;
       this.baselines.set(draft.anchorId, this.text(draft.anchorId));
