@@ -474,7 +474,13 @@ untouched surrounding text and browser errors are checked.
 
 Reports and a screenshot go to `test-results/latency` (override with
 `RDV_BENCH_OUTPUT`). `RDV_BENCH_PROFILE=1` adds native/canvas call timings;
-`RDV_BENCH_CPU=1` independently adds CPU profiles. Use separate output directories
+`RDV_BENCH_CPU=1` independently adds CPU profiles. `RDV_BENCH_TRACE=1` records
+compressed Chrome traces per phase, including browser tasks, layout, GC, script
+samples and a clock-alignment marker. It also records Long Animation Frame
+attribution when supported. Traced runs are diagnostic: their instrumentation
+and between-phase trace export can affect timings. The report records trace
+filenames and data-loss status; lost trace data fails diagnostic validation.
+Use separate output directories
 for repeated runs. `RDV_BENCH_DOC=sample` selects the small sample, and
 `RDV_BENCH_URL` selects a deployed production build. Run browser benchmarks
 serially without concurrent builds or other CPU-heavy work.
