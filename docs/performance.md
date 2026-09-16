@@ -1,5 +1,10 @@
 # Editor performance campaign
 
+Generated benchmark JSON and trace files stay outside version control. The
+scripts below write to ignored `test-results/` paths by default; local archives
+use the ignored `benchmark-results/` directory. This document retains the
+measurement summaries, including failed runs, and reproduction commands.
+
 ## Current 12.6.2 results
 
 All five final production NVCA runs at application revision `af634f9` pass the
@@ -40,12 +45,11 @@ work found after the upgrade:
   frame; the final profiled module Enter windows also contain none. Other
   studio controls still use the inventory where needed.
 
-The [follow-up latency record](benchmarks/2026-09-16-12.6.2-ui-latency.json)
-retains all fourteen runs: four diagnostic traces, five runs after the preparation
-change, and five final runs after the anchor lookup change. Both intermediate
-152 ms Enter failures remain recorded. The
-[setup trace excerpts](benchmarks/2026-09-16-12.6.2-setup-trace.json) include
-verified source callsites, task CPU/wall time, layout events, and trace digests.
+The follow-up included fourteen runs: four diagnostic traces, five runs after
+the preparation change, and five final runs after the anchor lookup change.
+Both intermediate 152 ms Enter failures remain part of these results. Local
+setup trace excerpts include verified source callsites, task CPU/wall time,
+layout events, and trace digests.
 The two original 184 ms events below were not captured again, and their exact
 causes remain unproven. These later findings do not retroactively attribute them.
 
@@ -63,8 +67,7 @@ The full NVCA integrity test and native/cooperative pagination differential both
 pass: 65 pages, 234 body paragraphs, 110 footnote paragraphs, 13 intentionally
 modified paragraphs, one added paragraph, and 31 native commits. Save/reopen
 preserves unrelated paragraph XML, fields, bookmarks, notes, sections, and
-package parts. See the
-[final integrity record](benchmarks/2026-09-16-12.6.2-ui-integrity.json).
+package parts.
 Production studio/module smoke tests pass (seven tests, one source-only skip).
 Packed consumer imports, types, runtime-copy verification, and the Node export
 API pass. PDF rendering is skipped because this host denies the unprivileged
@@ -128,8 +131,7 @@ measurement. No application code changed:
 The outliers did not reproduce in these repeats, so their internal cause remains
 unproven. The repeats do not replace the failures: **five of all seven runs
 pass**. An after-run observation of other host CPU activity is insufficient to
-attribute either delay to contention. The
-[compact latency record](benchmarks/2026-09-16-12.6.2-latency.json) retains every
+attribute either delay to contention. Local diagnostic records retain every
 phase, both failed event windows, native call summaries, and source/profile
 digests. These are quantized Chrome Event Timing samples on one Intel Core Ultra
 7 258V, Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling;
@@ -147,8 +149,7 @@ now succeeds in **29.5–32.7 ms**, compared with the 600.2–621.9 ms fallback 
 also pass ordinary body insertion (67.9–69.9 ms), exact typed formatting,
 surrounding formatting, tab/reference count/order/attributes/text positions,
 one-version atomicity, and one-step undo/redo. Undo restores XML after equivalent
-namespace prefixes are normalized. See the
-[native insertion record](benchmarks/2026-09-16-12.6.2-native-insertions.json).
+namespace prefixes are normalized.
 
 ### Validation
 
@@ -163,8 +164,7 @@ The full NVCA integrity test passes with 65 pages, 234 body paragraphs, 110
 footnote paragraphs, 13 intentionally modified paragraphs, one added paragraph,
 and 31 native commits. Save/reopen preserves unrelated paragraph XML, fields,
 bookmarks, notes, sections, and package parts. Native and cooperative pagination
-match for pages, HTML, and fragment maps on the same fixture. See the
-[integrity record](benchmarks/2026-09-16-12.6.2-nvca-integrity.json).
+match for pages, HTML, and fragment maps on the same fixture.
 The production studio and module pages pass seven smoke tests with one
 source-only skip. Packed consumer imports, types, runtime-copy verification,
 and the Node export API pass. PDF rendering is skipped because this host denies
@@ -208,8 +208,8 @@ preserves editing semantics and incurs 199.6 ms for native page-map registration
 The resumed key waited about 809 ms. Follow-up:
 [Docxodus #802](https://github.com/JSv4/Docxodus/issues/802).
 
-The [compact latency record](benchmarks/2026-09-16-latency.json) retains all five
-runs, actual target anchors/text, native call summaries, and the overlapping
+Local diagnostic records retain all five runs, actual target anchors/text,
+native call summaries, and the overlapping
 calls for failed gates. These are quantized Chrome Event Timing observations on
 one Intel Core Ultra 7 258V, Linux x64, Chromium 143.0.7499.4, at 1480×1050 with
 no CPU throttling. Full structural layout after Enter still takes seconds,
@@ -223,8 +223,7 @@ A serial batch/formatted/formatted/batch comparison measured the supported
 formatted replacement at 56.0–56.4 ms for the first edit and 26.6–29.8 ms on
 repeats. Ordinary warm interior insertion took 28.7–29.1 ms. The legacy batch
 took 624.3–625.8 ms initially and 523.7–526.9 ms on repeats. All twelve replacement
-checks and both insertion checks passed, including one-step undo/redo. See the
-[native comparison](benchmarks/2026-09-16-native-transactions.json).
+checks and both insertion checks passed, including one-step undo/redo.
 
 Two additional fresh native contexts isolated the real footnote structure.
 Ordinary interior insertion succeeded in 64.6–68.5 ms. Insertion into the
@@ -232,8 +231,7 @@ tab/text run was refused in 6.8–6.9 ms without changing its version, XML, or
 formatting. Its atomic fallback took 600.2–621.9 ms even without React, rendering,
 or a page map. Text, surrounding formatting, one-version atomicity, and undo/redo
 passed; undo restored the XML with equivalent namespace-prefix spellings
-normalized. See the [insertion contract record](benchmarks/2026-09-16-native-insertion-contract.json).
-A subsequent [marker integrity check](benchmarks/2026-09-16-native-marker-integrity.json)
+normalized. A subsequent marker integrity check
 also verified that the edited XML retains the tab and footnote-reference count,
 order, attributes, and positions relative to the text in both fresh contexts.
 
@@ -247,8 +245,7 @@ The full NVCA integrity test passed with 65 pages, 234 body paragraphs, 110
 footnote paragraphs, 13 intentionally modified paragraphs, one added paragraph,
 and 31 native commits. Save/reopen checks preserved unrelated paragraph XML,
 fields, bookmarks, notes, sections, and package parts. Native and cooperative
-pages, HTML, and fragment maps matched on the same fixture. See the
-[integrity record](benchmarks/2026-09-16-nvca-integrity.json).
+pages, HTML, and fragment maps matched on the same fixture.
 The built production studio and module pages passed seven smoke tests, with one
 source-only skip.
 Packed consumer imports, types, runtime-copy verification, and the Node export
@@ -287,12 +284,12 @@ page-map registration, 164–171 ms for `BeginTransaction`, and 169–170 ms for
 `GetPackageContentHash`. The next burst, now at a run boundary created by the
 first edit, used `ReplaceTextAtSpanWithFormat` in 26–28 ms. The unprofiled
 1,184 ms outlier was not individually profiled; it remains in the reported
-maximum. See the [compact 12.6.0 record](benchmarks/2026-09-15-latency.json).
+maximum.
 
 A direct probe against the published runtime confirms that an interior insertion
 returns `offset_out_of_range` without changing the native version, text, or run
-formatting. The [probe record](benchmarks/2026-09-15-native-insertion-contract.json)
-includes two fresh contexts and another native batch/formatted comparison.
+formatting. The probe used two fresh contexts and another native
+batch/formatted comparison.
 The supported-API follow-up is [Docxodus #799](https://github.com/JSv4/Docxodus/issues/799).
 
 These are quantized Chrome Event Timing samples on an Intel Core Ultra 7 258V,
@@ -307,7 +304,7 @@ tests passed in CI (two opt-in skips). The full NVCA integrity test passed with
 paragraphs, one added paragraph, and 31 native commits. It independently checked
 unrelated paragraph XML, fields, bookmarks, notes, sections, and package parts
 after save/reopen. Native/cooperative pagination also matched on the same NVCA
-fixture. See the [integrity report](benchmarks/2026-09-15-nvca-integrity.json).
+fixture.
 The built production pages also passed seven smoke tests (one source-only skip).
 Packed entry points, consumer types, runtime-copy verification, and the Node
 export API check passed. The PDF render test was skipped because this host denies
@@ -410,14 +407,12 @@ The full NVCA integrity test also passed on `8fd41f7`: 65 pages, 234 body and
 110 footnote paragraphs editable, 13 intentionally modified paragraphs, one added
 paragraph, and 31 native commits. Independent package inspection confirmed
 unchanged paragraph XML, fields, bookmarks, notes, sections, and unrelated parts.
-The [integrity record](benchmarks/2026-09-13-nvca-integrity.json) includes the
-revision and assertions. Its source-harness timings use native default Markdown
+The source-harness timings use native default Markdown
 patches and are not the production input-response metric.
 
 The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
-65 pages; the studio's different profile rendered 52. Compact results are in
-[the benchmark record](benchmarks/2026-09-13-latency.json).
+65 pages; the studio's different profile rendered 52.
 
 ## Native transaction reproduction
 
@@ -449,8 +444,7 @@ All twelve text, formatting, version, undo and redo checks passed, with no brows
 errors. The formatted path called `ReplaceTextAtSpanWithFormat` without
 `BeginTransaction` or `GetPackageContentHash` bridge calls; batches retained
 their receipt hashes. These are native-call timings, not browser input response
-times. See the [12.6.0 native record](benchmarks/2026-09-15-native-transactions.json)
-for exact measurements and fingerprints. Both paths in this comparison use the
+times. Both paths in this comparison use the
 same 12.6.0 package; the older measurements below are historical context.
 
 Before 12.6.0, twelve serial batch attempts on the published packages reproduced
@@ -469,9 +463,9 @@ begin and again when producing the package equivalence hash. The dependency
 upgrade alone did not eliminate this workload's stall; these measurements do not
 assess other 12.5.0 improvements or unreleased upstream builds. All twelve text,
 formatting, version, undo and redo checks passed, with no browser errors.
-The [native benchmark record](benchmarks/2026-09-13-native-transactions.json)
-contains the unrounded measurements and package fingerprints. This is a small
-diagnostic sample, not a percentile or cross-device latency guarantee.
+The local native benchmark reports contain the unrounded measurements and
+package fingerprints. This is a small diagnostic sample, not a percentile or
+cross-device latency guarantee.
 
 ```sh
 # From this repository, after npm ci and installing Playwright Chromium:
