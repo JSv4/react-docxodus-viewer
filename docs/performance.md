@@ -1,8 +1,88 @@
 # Editor performance campaign
 
-## Published 12.6.2 integration
+## Current 12.6.2 results
 
-The integration now pins the unmodified `docxodus@12.6.2` and matching export
+All five final production NVCA runs at application revision `af634f9` pass the
+strict **150 ms input-response gate across all nine phases**. The largest
+observed response is **144 ms**. The module, studio, profiled studio, late-body,
+and footnote workloads retain their original targets and editing assertions.
+Runs were serial, with other local work paused and no application changes within
+the five-run matrix.
+
+| Maximum observed input response | Module | Studio | Studio, profiled | Late body, profiled | Footnote, profiled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Five ordinary interaction phases | 96 ms | 72 ms | 64 ms | 96 ms | 144 ms |
+| Collapsed Enter | 104 ms | 120 ms | 136 ms | 96 ms | 80 ms |
+| Original styled pause/resume phase | 24 ms | 48 ms | 24 ms | 40 ms | 32 ms |
+| Explicit run-boundary styled typing | 24 ms | 48 ms | 48 ms | 48 ms | 32 ms |
+| Explicit interior styled typing | 24 ms | 104 ms | 48 ms | 24 ms | 32 ms |
+| Full 150 ms gate | Pass | Pass | Pass | Pass | Pass |
+
+The unmodified `docxodus@12.6.2` and matching export companion resolve the
+leading-tab formatted-insertion exclusion through the supported atomic API.
+The previously blocked footnote interior phase falls from **816 ms on 12.6.1 to
+32 ms in the final run**. Two React-side changes address additional blocking
+work found after the upgrade:
+
+- Incoming document parsing and sanitization wait for idle input, yield during
+  traversal, and discard superseded preparation. Width readiness uses a delivered
+  ResizeObserver measurement, avoiding a forced full-document layout inside the
+  setup task. Pagination resumes in a separate browser task. In the traced
+  footnote pause/resume comparison, all incoming setup tasks shrink from
+  **55.5–80.9 ms to 15.5–20.5 ms**, with no style/layout events inside the new
+  setup tasks. Layout still occurs separately.
+- Canvas anchor resolution reuses the native formatting read instead of scanning
+  every document anchor after a version change. Canonical formatting aliases
+  share cached results and invalidate together; story identity and native
+  transaction guards remain enforced. A preceding 152 ms Enter trace included
+  13.3 ms scanning anchors and 86.2 ms rendering changed blocks. The minimal
+  canvas contract now performs zero full anchor scans before Enter's first
+  frame; the final profiled module Enter windows also contain none. Other
+  studio controls still use the inventory where needed.
+
+The [follow-up latency record](benchmarks/2026-09-16-12.6.2-ui-latency.json)
+retains all fourteen runs: four diagnostic traces, five runs after the preparation
+change, and five final runs after the anchor lookup change. Both intermediate
+152 ms Enter failures remain recorded. The
+[setup trace excerpts](benchmarks/2026-09-16-12.6.2-setup-trace.json) include
+verified source callsites, task CPU/wall time, layout events, and trace digests.
+The two original 184 ms events below were not captured again, and their exact
+causes remain unproven. These later findings do not retroactively attribute them.
+
+### Current validation and limits
+
+Lint, types, library/demo builds, the complete API identity audit, and generated
+pagination checks pass. All **82 unit tests and 55 browser contracts** pass,
+with two opt-in browser skips; the final application revision's
+[CI is green](https://github.com/JSv4/react-docxodus-viewer/actions/runs/35067742366).
+Regression coverage includes leading tabs, formatting alias invalidation, and
+incoming-layout cancellation during real IME composition, preserving text,
+caret, native versions, and undo behavior.
+
+The full NVCA integrity test and native/cooperative pagination differential both
+pass: 65 pages, 234 body paragraphs, 110 footnote paragraphs, 13 intentionally
+modified paragraphs, one added paragraph, and 31 native commits. Save/reopen
+preserves unrelated paragraph XML, fields, bookmarks, notes, sections, and
+package parts. See the
+[final integrity record](benchmarks/2026-09-16-12.6.2-ui-integrity.json).
+Production studio/module smoke tests pass (seven tests, one source-only skip).
+Packed consumer imports, types, runtime-copy verification, and the Node export
+API pass. PDF rendering is skipped because this host denies the unprivileged
+user namespaces required by Chromium's process sandbox.
+
+These are quantized Chrome Event Timing samples on one Intel Core Ultra 7 258V,
+Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling, collected
+with a 16 ms reporting threshold. They do not establish population INP or an
+editor-wide maximum. A native call intersecting the rounded event window may
+begin after the actual paint; an overlap alone does not establish causality.
+Individual native calls and background layout can exceed 150 ms when no sampled
+input overlaps them. Structural layout after Enter still takes seconds.
+Excluded native structures, compound edits, opening, export, and slower devices
+remain outside the measured 150 ms result.
+
+## Initial 12.6.2 upgrade results
+
+The initial upgrade pinned the unmodified `docxodus@12.6.2` and matching export
 companion. [Upstream #802](https://github.com/JSv4/Docxodus/issues/802) extends the
 supported atomic formatted operation to runs with leading tabs, including the
 NVCA footnote that caused the remaining 816 ms stall. The full historical
@@ -27,7 +107,7 @@ Its two formatted native calls took 53.8 and 41.6 ms, with no transaction setup,
 package hash, or native page-map registration in that phase. The supported
 operation preserves the tab and original text formatting.
 
-**The strict 150 ms gate still fails in two of the five original runs.** Both
+**The strict 150 ms gate failed in two of the five original runs.** Both
 184 ms observations are primarily time queued before the key handler. The late
 body keyup waited 172.2 ms before the first native commit in that phase; no
 instrumented native call or recorded Long Task overlaps its delay. The footnote
@@ -115,7 +195,7 @@ Enter-undo checks.
 | Full 150 ms gate | Pass | Fail | Fail | Pass | Fail |
 
 The original unprofiled interior typing cases improved from 384–400 ms on 12.6.0
-to 40–48 ms. **The broader 150 ms goal is still unmet.** Both 152 ms observations
+to 40–48 ms. **The broader 150 ms goal was unmet at that revision.** Both 152 ms observations
 remain in the results; the profiled studio outlier overlapped a 189.2 ms native
 formatted operation. That measurement does not isolate the native internal
 cause of its variability.
@@ -196,7 +276,7 @@ standalone module, full studio, and a module run with native-call profiling:
 | Explicit middle-of-run styled typing | 400 ms | 384 ms | 384 ms |
 
 All text, formatting, surrounding-text, key-count, and Enter-undo checks passed.
-**The full 150 ms gate still fails in every run.** The native API accepts a
+**The full 150 ms gate failed in every run at that revision.** The native API accepts a
 zero-length insertion only at a run boundary. For an interior insertion, the
 editor must borrow a neighboring character for the text operation and apply
 formatting only to the new text. Those two operations retain the public atomic
@@ -438,7 +518,7 @@ updates run ahead of background layout tasks; owner/version checks discard
 superseded layouts before handoff. Zoom changes during preparation trigger fresh
 measurements at the final scale.
 
-The adapter is generated from the pinned 12.4.1 pagination implementation by
+The adapter is generated from the pinned 12.6.2 pagination implementation by
 `node scripts/generate-cooperative-pagination.mjs`. It uses the same engine
 instance and native helpers, with asynchronous traversal calls and checkpoints.
 The generator verifies the upstream file's SHA-256; `npm run check:api` also

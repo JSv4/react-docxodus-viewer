@@ -1,0 +1,6566 @@
+{
+  "date": "2026-09-16",
+  "engine": "12.6.2",
+  "finalApplicationRevision": "af634f9001b1afb7ac79b104816b06b11fb9eea5",
+  "machine": "Intel Core Ultra 7 258V, 8 logical CPUs, Linux x64",
+  "viewport": {
+    "width": 1480,
+    "height": 1050
+  },
+  "cpuThrottling": false,
+  "latencyLimitMs": 150,
+  "timeCoordinates": "Diagnostic at values are milliseconds relative to phase start; summary values are milliseconds.",
+  "earlierEngineUpgradeRuns": "2026-09-16-12.6.2-latency.json",
+  "runs": [
+    {
+      "cohort": "before-preparation-trace",
+      "label": "local-module-nvca-footnote-profile",
+      "buildRevision": "357c8b6",
+      "workspaceCommit": "ed7daee5f889fd1cbd88d2bd31c725689e60ad63",
+      "workspaceDirty": false,
+      "sourceReportSha256": "5fcf4de8af35d0e2e7f6e5e394e668115c769aae92799deb55f351aac24f21ea",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": true,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "targetRegion": "footnote",
+        "text": "Consider adding other exceptions as provided in\u00a0Section 9\u00a0of the model Indemnification Agreement. Re",
+        "nativeText": "Consider adding other exceptions as provided in Section 9 of the model Indemnification Agreement. Recent provisions may also include exceptions for conduct found to be in violation of the Corporation\u2019s Code of Conduct.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 12.63,
+            "p95": 16.275,
+            "max": 16.435
+          },
+          "eventTiming": {
+            "n": 105,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 124,
+          "lastEditToCurrentLayout": 1455.085,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 33.535,
+              "maxMs": 17.795
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 74.045,
+              "maxMs": 74.045
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.54,
+              "maxMs": 0.54
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 1.51,
+              "maxMs": 1.51
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.315,
+              "maxMs": 1.315
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 117.97,
+              "maxMs": 117.97
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.68,
+              "maxMs": 0.75
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-continuous.trace.json.gz",
+            "marker": "rdv-latency:continuous",
+            "dataLossOccurred": false,
+            "sha256": "91829dfbf8a9f6b0982ff0346bbc17247d8ea190b8c3c6e8bc9073dedb053306"
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.865,
+            "p95": 14.48,
+            "max": 16.165
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {},
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-caret.trace.json.gz",
+            "marker": "rdv-latency:caret",
+            "dataLossOccurred": false,
+            "sha256": "fd9cf33161891b2d621c98bbcbc290573cf492d49d65f02a4ff630b1b77924c4"
+          }
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.68,
+            "p95": 16.615,
+            "max": 64.83
+          },
+          "eventTiming": {
+            "n": 72,
+            "p50": 16,
+            "p95": 32,
+            "max": 88
+          },
+          "longestTask": 114,
+          "lastEditToCurrentLayout": 1264.525,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 218.84,
+              "maxMs": 25.81
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 142.085,
+              "maxMs": 64.885
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 10.025,
+              "maxMs": 2.7
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 5.785,
+              "maxMs": 1.27
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 46.43,
+              "maxMs": 13.575
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.685,
+              "maxMs": 0.75
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-pause_resume.trace.json.gz",
+            "marker": "rdv-latency:pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "6d8c95bc8ed3da31dac9d08d3f04d4cf0cfc59799bd9bae91d937d1eb16c1c20"
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 39.55,
+            "p95": 39.55,
+            "max": 41.225
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 40,
+            "p95": 40,
+            "max": 48
+          },
+          "longestTask": 54,
+          "lastEditToCurrentLayout": 796.305,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 14.775,
+              "maxMs": 14.775
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 7.935,
+              "maxMs": 7.935
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 7.865,
+              "maxMs": 7.865
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.42,
+              "maxMs": 0.42
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 5.49,
+              "maxMs": 5.49
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.715,
+              "maxMs": 0.805
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-bold.trace.json.gz",
+            "marker": "rdv-latency:bold",
+            "dataLossOccurred": false,
+            "sha256": "84e92c28a6a274f3d6c5353256d5e669196a765de02d29ee6377ed0e2f295110"
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.98,
+            "p95": 9.81,
+            "max": 14.835
+          },
+          "eventTiming": {
+            "n": 38,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 1263.705,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 119.575,
+              "maxMs": 65.13
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 32.89,
+              "maxMs": 20.57
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.995,
+              "maxMs": 1.75
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.84,
+              "maxMs": 1.505
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 11.305,
+              "maxMs": 11.305
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.675,
+              "maxMs": 0.8
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-wrap_resume.trace.json.gz",
+            "marker": "rdv-latency:wrap_resume",
+            "dataLossOccurred": false,
+            "sha256": "302af88e47f6ee2df755b280a1be14d4a76b8fd6bc29a4321516f956b0986649"
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 10.135,
+            "p95": 16.665,
+            "max": 17.325
+          },
+          "eventTiming": {
+            "n": 56,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 149,
+          "lastEditToCurrentLayout": 1382.21,
+          "setup": {
+            "offset": 807,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 62.315,
+              "maxMs": 21.34
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 204.05,
+              "maxMs": 119.6
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.95,
+              "maxMs": 1.33
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.655,
+              "maxMs": 1.27
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 5.16,
+              "maxMs": 5.16
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.655,
+              "maxMs": 0.765
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-styled_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "4ce72e730b618ded1f3f5c71751d885dbb95fcae7a4cdcd1718e4703955c6140"
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 38.025,
+            "p95": 38.025,
+            "max": 38.025
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 48,
+            "p95": 48,
+            "max": 48
+          },
+          "longestTask": 179,
+          "lastEditToCurrentLayout": 3776.385,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 7.025,
+              "maxMs": 7.025
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 5.84,
+              "maxMs": 5.84
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 9.395,
+              "maxMs": 9.395
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1118.9,
+              "maxMs": 22.31
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.4,
+              "maxMs": 0.4
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 91.97,
+              "maxMs": 91.97
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.345,
+              "maxMs": 0.585
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 148.88,
+              "maxMs": 148.88
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.26,
+              "maxMs": 0.225
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 6335,
+            "at": 1.43,
+            "duration": 48,
+            "delay": 0.205,
+            "processing": 0.225
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 3.485,
+              "depth": 1,
+              "ms": 7.025
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 10.99,
+              "depth": 3,
+              "ms": 5.84
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 17.32,
+              "depth": 2,
+              "ms": 9.395
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 29.37,
+              "depth": 3,
+              "ms": 3.24
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 33.855,
+              "depth": 3,
+              "ms": 1.475
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 37.335,
+              "depth": 0,
+              "ms": 0.4
+            },
+            {
+              "name": "native.Save",
+              "at": 43.525,
+              "depth": 0,
+              "ms": 91.97
+            }
+          ],
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-enter.trace.json.gz",
+            "marker": "rdv-latency:enter",
+            "dataLossOccurred": false,
+            "sha256": "12392d4565ef152ce3f85181b9e4ad308e174dcb277acda9b7cc6b5de7e291c9"
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 10.025,
+            "p95": 16.22,
+            "max": 17.33
+          },
+          "eventTiming": {
+            "n": 79,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 114,
+          "lastEditToCurrentLayout": 1307.42,
+          "setup": {
+            "offset": 944,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 64.56,
+              "maxMs": 17.865
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 145.62,
+              "maxMs": 82.385
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.16,
+              "maxMs": 0.12
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.925,
+              "maxMs": 1.305
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.465,
+              "maxMs": 1.06
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 47.09,
+              "maxMs": 41.855
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.585,
+              "maxMs": 0.705
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-styled_boundary_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_boundary_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "469fa7b346c1ce68d044c6a913f7633695352e572eb9e104ff0b8869bd96c5e8"
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 7.98,
+            "p95": 13.225,
+            "max": 16.165
+          },
+          "eventTiming": {
+            "n": 70,
+            "p50": 16,
+            "p95": 24,
+            "max": 96
+          },
+          "longestTask": 228,
+          "lastEditToCurrentLayout": 1196.59,
+          "setup": {
+            "offset": 24,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 139.22,
+              "maxMs": 80.53
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 161.535,
+              "maxMs": 114.055
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.43,
+              "maxMs": 0.795
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.91,
+              "maxMs": 0.5
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 5.08,
+              "maxMs": 5.08
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.58,
+              "maxMs": 0.73
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-styled_interior_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_interior_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "e72145a2e83d422046669d741083769f185262c723d419a316a2b2ab7d9004cf"
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "before-preparation-trace",
+      "label": "local-module-nvca-late-body-profile",
+      "buildRevision": "357c8b6",
+      "workspaceCommit": "ed7daee5f889fd1cbd88d2bd31c725689e60ad63",
+      "workspaceDirty": false,
+      "sourceReportSha256": "ecd7663be01e7430df1c61469823149b8e26c9b07b8bbccee51f3cf92a3c3058",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": true,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "li:body:b7c300ea7e2ace0785b708e947cf9c6f",
+        "targetRegion": "late-body",
+        "text": "9.Amendment or Repeal.\u00a0Any repeal or modification of the foregoing provisions of this\u00a0Article\u00a0Tenth\u00a0",
+        "nativeText": "Amendment or Repeal. Any repeal or modification of the foregoing provisions of this Article Tenth shall not adversely affect any right or protection hereunder of any person in respect of any act or omission occurring prior to the time of such repeal or modification. The rights provided hereunder shall inure to the benefit of any Indemnified Person and such person\u2019s heirs, executors and administrators.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": false,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 7.645,
+            "p95": 16.09,
+            "max": 16.665
+          },
+          "eventTiming": {
+            "n": 112,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 114,
+          "lastEditToCurrentLayout": 636.405,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 41.235,
+              "maxMs": 21.17
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 54.155,
+              "maxMs": 54.155
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.815,
+              "maxMs": 0.815
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 2.055,
+              "maxMs": 2.055
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 2.355,
+              "maxMs": 2.355
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 114.165,
+              "maxMs": 114.165
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-continuous.trace.json.gz",
+            "marker": "rdv-latency:continuous",
+            "dataLossOccurred": false,
+            "sha256": "258ccdcc24339f59d9a00221fd696ee8e1e8b21515b4436e7b587610fc15714d"
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.8,
+            "p95": 14.105,
+            "max": 15.65
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {},
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-caret.trace.json.gz",
+            "marker": "rdv-latency:caret",
+            "dataLossOccurred": false,
+            "sha256": "b62557eb0ca52ab37bf0f7ce5636c073fe59eb8a3a85d99b8432c0c516845528"
+          }
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 10.48,
+            "p95": 15.935,
+            "max": 16.485
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 92,
+          "lastEditToCurrentLayout": 527.125,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 299.52,
+              "maxMs": 57.675
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 82.815,
+              "maxMs": 18.585
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 9.155,
+              "maxMs": 2.16
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 15.785,
+              "maxMs": 4.365
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 153.105,
+              "maxMs": 39.065
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-pause_resume.trace.json.gz",
+            "marker": "rdv-latency:pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "8826629a5a908d6dcb68cabd9c65980ee5ff36cce43dcb2ceadd3056eeb40793"
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 46.41,
+            "p95": 46.41,
+            "max": 48.285
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 48,
+            "p95": 48,
+            "max": 48
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": 108.79,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 15.715,
+              "maxMs": 15.715
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 16.555,
+              "maxMs": 16.555
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 4.485,
+              "maxMs": 4.485
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.035,
+              "maxMs": 1.035
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 14.8,
+              "maxMs": 14.8
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-bold.trace.json.gz",
+            "marker": "rdv-latency:bold",
+            "dataLossOccurred": false,
+            "sha256": "142654ae66e1f06e93da75a88550fd80929aa1115bd13816ad37714772d5d37b"
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 10.155,
+            "p95": 16.185,
+            "max": 16.435
+          },
+          "eventTiming": {
+            "n": 36,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 1339.51,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 107.43,
+              "maxMs": 50.845
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 30.71,
+              "maxMs": 15.885
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.335,
+              "maxMs": 1.29
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 4.325,
+              "maxMs": 2.345
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 27.265,
+              "maxMs": 27.265
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.635,
+              "maxMs": 0.735
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-wrap_resume.trace.json.gz",
+            "marker": "rdv-latency:wrap_resume",
+            "dataLossOccurred": false,
+            "sha256": "d14867a2680ad595aa4c9506736748d58214cc0e629507a90a9284a275631ca7"
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.485,
+            "p95": 15.755,
+            "max": 16.355
+          },
+          "eventTiming": {
+            "n": 58,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 153,
+          "lastEditToCurrentLayout": 595.815,
+          "setup": {
+            "offset": 989,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 79.09,
+              "maxMs": 20.635
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 205.06,
+              "maxMs": 117.95
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.15,
+              "maxMs": 1.42
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 3.17,
+              "maxMs": 2.13
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 36.92,
+              "maxMs": 36.92
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-styled_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "c279fb957a33e18c476f863bf050baca8aafb4a22051bfc39ba73dc87a120a94"
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 146.49,
+            "p95": 146.49,
+            "max": 146.49
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 152,
+            "p95": 152,
+            "max": 152
+          },
+          "longestTask": 176,
+          "lastEditToCurrentLayout": 4134.515,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 11.18,
+              "maxMs": 11.18
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 13.325,
+              "maxMs": 13.325
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 86.235,
+              "maxMs": 86.235
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1120.83,
+              "maxMs": 23.73
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.46,
+              "maxMs": 1.46
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 130.9,
+              "maxMs": 130.9
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.39,
+              "maxMs": 0.585
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 146.41,
+              "maxMs": 146.41
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.21,
+              "maxMs": 0.16
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 10112,
+            "at": 1.525,
+            "duration": 152,
+            "delay": 0.205,
+            "processing": 0.34
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 4.71,
+              "depth": 1,
+              "ms": 11.18
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 17.295,
+              "depth": 3,
+              "ms": 13.325
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 31.66,
+              "depth": 2,
+              "ms": 86.235
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 123.065,
+              "depth": 3,
+              "ms": 10.325
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 136.62,
+              "depth": 3,
+              "ms": 3.515
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 144.135,
+              "depth": 0,
+              "ms": 1.46
+            }
+          ],
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-enter.trace.json.gz",
+            "marker": "rdv-latency:enter",
+            "dataLossOccurred": false,
+            "sha256": "930ceb1d7c5f0221391aae96dee14462118ded2772ed5f24c8688a741019dd5a"
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.665,
+            "p95": 16.45,
+            "max": 18.155
+          },
+          "eventTiming": {
+            "n": 76,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 94,
+          "lastEditToCurrentLayout": 503.98,
+          "setup": {
+            "offset": 1130,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 70.265,
+              "maxMs": 16.2
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 104.725,
+              "maxMs": 53.39
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.15,
+              "maxMs": 0.08
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.24,
+              "maxMs": 0.625
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.295,
+              "maxMs": 1.18
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 78.435,
+              "maxMs": 64.075
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-styled_boundary_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_boundary_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "c24a63a0fb2849175d99f7522541f14a92422f17211b3a4632e9bb7e8dde765e"
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 10,
+            "p95": 15.75,
+            "max": 16.935
+          },
+          "eventTiming": {
+            "n": 66,
+            "p50": 24,
+            "p95": 24,
+            "max": 56
+          },
+          "longestTask": 208,
+          "lastEditToCurrentLayout": 1414.6,
+          "setup": {
+            "offset": 9,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 77.945,
+              "maxMs": 17.24
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 218.95,
+              "maxMs": 154.93
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.4,
+              "maxMs": 0.83
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.08,
+              "maxMs": 1.055
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 31.125,
+              "maxMs": 15.675
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.55,
+              "maxMs": 0.66
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-styled_interior_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_interior_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "5ef959e8f55360dd4c6a6f14dd5bfe00f6ef835e6a97ec7b4a25ed976418c35f"
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-trace",
+      "label": "local-module-nvca-footnote-profile",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "8293d9e9d5dbccee321abb1091577a68e06d4404e5cc260d1d70e4d3d2320506",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": true,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "targetRegion": "footnote",
+        "text": "Consider adding other exceptions as provided in\u00a0Section 9\u00a0of the model Indemnification Agreement. Re",
+        "nativeText": "Consider adding other exceptions as provided in Section 9 of the model Indemnification Agreement. Recent provisions may also include exceptions for conduct found to be in violation of the Corporation\u2019s Code of Conduct.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 10.12,
+            "p95": 15.78,
+            "max": 16.965
+          },
+          "eventTiming": {
+            "n": 117,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 97,
+          "lastEditToCurrentLayout": 1296.655,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 25.085,
+              "maxMs": 14.495
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 60.96,
+              "maxMs": 60.96
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.56,
+              "maxMs": 0.56
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 1.21,
+              "maxMs": 1.21
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.67,
+              "maxMs": 0.67
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 66.58,
+              "maxMs": 66.58
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.59,
+              "maxMs": 0.735
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-continuous.trace.json.gz",
+            "marker": "rdv-latency:continuous",
+            "dataLossOccurred": false,
+            "sha256": "5dbfa8f288d4b12c14c6c92f43dbcfdfe261f88f047bd9215111e62d61845f9d"
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 7.98,
+            "p95": 13.085,
+            "max": 16.3
+          },
+          "eventTiming": {
+            "n": 25,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {},
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-caret.trace.json.gz",
+            "marker": "rdv-latency:caret",
+            "dataLossOccurred": false,
+            "sha256": "4f3dace0e60cf6f7482ef491d79612dcd6d8ec77b8cd7ec1fa7ac2d46757cbb6"
+          }
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.34,
+            "p95": 16.285,
+            "max": 16.92
+          },
+          "eventTiming": {
+            "n": 72,
+            "p50": 16,
+            "p95": 32,
+            "max": 80
+          },
+          "longestTask": 111,
+          "lastEditToCurrentLayout": 1269.72,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 198.11,
+              "maxMs": 23.035
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 143.63,
+              "maxMs": 64.5
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 17.94,
+              "maxMs": 10.775
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 6.47,
+              "maxMs": 1.36
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 5,
+              "totalMs": 55.33,
+              "maxMs": 19.3
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.875,
+              "maxMs": 0.905
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-pause_resume.trace.json.gz",
+            "marker": "rdv-latency:pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "8ba3ef713b85fcaaee14b5ffc42be6d184a4b3f3cf964bed675a7d5e3d95157d"
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 39.28,
+            "p95": 39.28,
+            "max": 40.995
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 40,
+            "p95": 40,
+            "max": 48
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": 840.94,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 14.405,
+              "maxMs": 14.405
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 7.26,
+              "maxMs": 7.26
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 7.995,
+              "maxMs": 7.995
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.5,
+              "maxMs": 0.5
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 4.86,
+              "maxMs": 4.86
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.72,
+              "maxMs": 0.8
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-bold.trace.json.gz",
+            "marker": "rdv-latency:bold",
+            "dataLossOccurred": false,
+            "sha256": "4cc4d8bbeac56416d5a48e6ab60cd2d220ebff13cc321bb008a7ac8f401d99b1"
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 13.08,
+            "p95": 14.355,
+            "max": 16.335
+          },
+          "eventTiming": {
+            "n": 36,
+            "p50": 24,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 1177.35,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 112.805,
+              "maxMs": 61.245
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 28.86,
+              "maxMs": 16.37
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.665,
+              "maxMs": 1.45
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.735,
+              "maxMs": 1.04
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 9.035,
+              "maxMs": 9.035
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.61,
+              "maxMs": 0.79
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-wrap_resume.trace.json.gz",
+            "marker": "rdv-latency:wrap_resume",
+            "dataLossOccurred": false,
+            "sha256": "bcfeffbc8f7f51cea79911f5f8e926711060860cfeaf181c9a40754444fcfabd"
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.015,
+            "p95": 13.93,
+            "max": 16.275
+          },
+          "eventTiming": {
+            "n": 66,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 208,
+          "lastEditToCurrentLayout": 1397.985,
+          "setup": {
+            "offset": 807,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 69.155,
+              "maxMs": 20.535
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 247.74,
+              "maxMs": 159.935
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.185,
+              "maxMs": 1.135
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.435,
+              "maxMs": 0.78
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 18.02,
+              "maxMs": 9.845
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.535,
+              "maxMs": 0.7
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-styled_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "6561f979b31146d097a9e60e4066344308a8aaf6494c8a790d63e8af39314a28"
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 70.22,
+            "p95": 70.22,
+            "max": 70.22
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 80,
+            "p95": 80,
+            "max": 80
+          },
+          "longestTask": 178,
+          "lastEditToCurrentLayout": 3951.49,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 9.74,
+              "maxMs": 9.74
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 19.355,
+              "maxMs": 19.355
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 11.025,
+              "maxMs": 11.025
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1119.185,
+              "maxMs": 22.22
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.81,
+              "maxMs": 0.81
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 94.605,
+              "maxMs": 94.605
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.375,
+              "maxMs": 0.57
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 146.905,
+              "maxMs": 146.905
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.225,
+              "maxMs": 0.19
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 5497,
+            "at": 1.215,
+            "duration": 80,
+            "delay": 0.205,
+            "processing": 0.325
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 3.595,
+              "depth": 1,
+              "ms": 9.74
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 14.605,
+              "depth": 3,
+              "ms": 19.355
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 35.175,
+              "depth": 2,
+              "ms": 11.025
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 51.49,
+              "depth": 3,
+              "ms": 6.275
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 60.38,
+              "depth": 3,
+              "ms": 2.745
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 67.035,
+              "depth": 0,
+              "ms": 0.81
+            },
+            {
+              "name": "native.Save",
+              "at": 78.155,
+              "depth": 0,
+              "ms": 94.605
+            }
+          ],
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-enter.trace.json.gz",
+            "marker": "rdv-latency:enter",
+            "dataLossOccurred": false,
+            "sha256": "d75acf398678252ce449b9734adce0b38defa82f7d5f919bddf09ae073c80683"
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.485,
+            "p95": 15.785,
+            "max": 16.355
+          },
+          "eventTiming": {
+            "n": 72,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 127,
+          "lastEditToCurrentLayout": 1189.43,
+          "setup": {
+            "offset": 944,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 53.175,
+              "maxMs": 11.91
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 152.495,
+              "maxMs": 98.515
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.115,
+              "maxMs": 0.08
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.435,
+              "maxMs": 0.74
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.84,
+              "maxMs": 0.45
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 46.56,
+              "maxMs": 41.58
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.61,
+              "maxMs": 0.735
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-styled_boundary_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_boundary_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "4a97abb714b0670134b0c88c4f98caab06dc8e818f5df1351c3fc52ba7d54ca7"
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 8.41,
+            "p95": 16.225,
+            "max": 16.61
+          },
+          "eventTiming": {
+            "n": 64,
+            "p50": 16,
+            "p95": 24,
+            "max": 64
+          },
+          "longestTask": 198,
+          "lastEditToCurrentLayout": 1301.645,
+          "setup": {
+            "offset": 24,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 134.43,
+              "maxMs": 73.185
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 158.485,
+              "maxMs": 103.68
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.915,
+              "maxMs": 1.24
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.55,
+              "maxMs": 1.06
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 5.485,
+              "maxMs": 5.485
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.5,
+              "maxMs": 0.66
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-footnote-profile-styled_interior_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_interior_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "40bf9ac46b3367cc2b90dfba1daf1321680e4dc81f427705c82e1ccbe1e7c2b4"
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-trace",
+      "label": "local-module-nvca-late-body-profile",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "d9ccdf3bbedeaea1e720aa272ffcd16ee7dda77f5b27b6ca5e2a4934e7294aae",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": true,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "li:body:b7c300ea7e2ace0785b708e947cf9c6f",
+        "targetRegion": "late-body",
+        "text": "9.Amendment or Repeal.\u00a0Any repeal or modification of the foregoing provisions of this\u00a0Article\u00a0Tenth\u00a0",
+        "nativeText": "Amendment or Repeal. Any repeal or modification of the foregoing provisions of this Article Tenth shall not adversely affect any right or protection hereunder of any person in respect of any act or omission occurring prior to the time of such repeal or modification. The rights provided hereunder shall inure to the benefit of any Indemnified Person and such person\u2019s heirs, executors and administrators.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.885,
+            "p95": 15.82,
+            "max": 16.45
+          },
+          "eventTiming": {
+            "n": 104,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 90,
+          "lastEditToCurrentLayout": 575.435,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 29.49,
+              "maxMs": 11.145
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 50.56,
+              "maxMs": 50.56
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.635,
+              "maxMs": 0.635
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 0.855,
+              "maxMs": 0.855
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.115,
+              "maxMs": 1.115
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 85.125,
+              "maxMs": 85.125
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-continuous.trace.json.gz",
+            "marker": "rdv-latency:continuous",
+            "dataLossOccurred": false,
+            "sha256": "59ddbf35ca80efbce6f121243e6362c4548770c564dd13fe93ae5aa838b0ce7d"
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 9.285,
+            "p95": 14.48,
+            "max": 15.73
+          },
+          "eventTiming": {
+            "n": 24,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {},
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-caret.trace.json.gz",
+            "marker": "rdv-latency:caret",
+            "dataLossOccurred": false,
+            "sha256": "cfdcf843e18e69b4f4e62731e8058ce93922c36e7be83420a0fe9e041fb3bd8e"
+          }
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.025,
+            "p95": 16.15,
+            "max": 16.49
+          },
+          "eventTiming": {
+            "n": 64,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 121,
+          "lastEditToCurrentLayout": 469.065,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 272.21,
+              "maxMs": 73.69
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 84.155,
+              "maxMs": 25.065
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 8.24,
+              "maxMs": 1.755
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 12.26,
+              "maxMs": 2.75
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 127.03,
+              "maxMs": 33.065
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-pause_resume.trace.json.gz",
+            "marker": "rdv-latency:pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "164939944129f30ed8d623a203ac7e09d33ceb3b807f1d472d5a5b2809c741e2"
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 75.59,
+            "p95": 75.59,
+            "max": 77.64
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 80,
+            "p95": 80,
+            "max": 80
+          },
+          "longestTask": 70,
+          "lastEditToCurrentLayout": 165.225,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 18.735,
+              "maxMs": 18.735
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 20.965,
+              "maxMs": 20.965
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 11.43,
+              "maxMs": 11.43
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 3.355,
+              "maxMs": 3.355
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 28.16,
+              "maxMs": 28.16
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-bold.trace.json.gz",
+            "marker": "rdv-latency:bold",
+            "dataLossOccurred": false,
+            "sha256": "d5fa4d827dfa6b970cb9b2e5b0d99c474898ed5d774cb9890df070c57907bb92"
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 8.9,
+            "p95": 14.105,
+            "max": 15.39
+          },
+          "eventTiming": {
+            "n": 34,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 84,
+          "lastEditToCurrentLayout": 1383.095,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 102.665,
+              "maxMs": 46.285
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 30.54,
+              "maxMs": 18.895
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.745,
+              "maxMs": 1.655
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 3.99,
+              "maxMs": 2.265
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 32.15,
+              "maxMs": 32.15
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.66,
+              "maxMs": 0.745
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-wrap_resume.trace.json.gz",
+            "marker": "rdv-latency:wrap_resume",
+            "dataLossOccurred": false,
+            "sha256": "12a912586c9435c44edda8c1c745e11cf157f0b5ef05503a2b8d684bddaa4d62"
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 10.575,
+            "p95": 15.485,
+            "max": 16.72
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 96
+          },
+          "longestTask": 225,
+          "lastEditToCurrentLayout": 598.275,
+          "setup": {
+            "offset": 989,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 98.695,
+              "maxMs": 22.315
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 262.77,
+              "maxMs": 171.39
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.855,
+              "maxMs": 0.98
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.565,
+              "maxMs": 1.385
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 29.365,
+              "maxMs": 29.365
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-styled_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "364dbfde84704f0b1bfd90da60c9a8db6390d3c16a35b347506abe9bcbd23d53"
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 75.745,
+            "p95": 75.745,
+            "max": 75.745
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 80,
+            "p95": 80,
+            "max": 80
+          },
+          "longestTask": 178,
+          "lastEditToCurrentLayout": 4070.34,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 6.635,
+              "maxMs": 6.635
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 6.01,
+              "maxMs": 6.01
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 43.345,
+              "maxMs": 43.345
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1136.705,
+              "maxMs": 24.42
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.075,
+              "maxMs": 1.075
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 129.235,
+              "maxMs": 129.235
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.4,
+              "maxMs": 0.61
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 148.01,
+              "maxMs": 148.01
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.215,
+              "maxMs": 0.18
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 10540,
+            "at": 1.535,
+            "duration": 80,
+            "delay": 0.135,
+            "processing": 0.18
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 3.43,
+              "depth": 1,
+              "ms": 6.635
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 10.505,
+              "depth": 3,
+              "ms": 6.01
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 17.015,
+              "depth": 2,
+              "ms": 43.345
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 62.82,
+              "depth": 3,
+              "ms": 5.49
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 69.8,
+              "depth": 3,
+              "ms": 2.15
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 74.21,
+              "depth": 0,
+              "ms": 1.075
+            }
+          ],
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-enter.trace.json.gz",
+            "marker": "rdv-latency:enter",
+            "dataLossOccurred": false,
+            "sha256": "aa99a85d2133f8a85c623a6ce4cfc42d3c97802163436776dcaada5fb2e35e4c"
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.77,
+            "p95": 16.135,
+            "max": 17.2
+          },
+          "eventTiming": {
+            "n": 70,
+            "p50": 16,
+            "p95": 24,
+            "max": 88
+          },
+          "longestTask": 122,
+          "lastEditToCurrentLayout": 567.625,
+          "setup": {
+            "offset": 1130,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 103.205,
+              "maxMs": 23.39
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 120.355,
+              "maxMs": 64.685
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.215,
+              "maxMs": 0.14
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.42,
+              "maxMs": 0.775
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.225,
+              "maxMs": 1.115
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 125.635,
+              "maxMs": 98.475
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-styled_boundary_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_boundary_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "0ffefa409f37733f5c6f9bdae035546448d88e3c0b51c9fd8684c7351f8e6558"
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 9.025,
+            "p95": 16.365,
+            "max": 17.32
+          },
+          "eventTiming": {
+            "n": 65,
+            "p50": 16,
+            "p95": 24,
+            "max": 64
+          },
+          "longestTask": 152,
+          "lastEditToCurrentLayout": 1495.53,
+          "setup": {
+            "offset": 9,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 67.625,
+              "maxMs": 12.675
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 174.325,
+              "maxMs": 111.53
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.41,
+              "maxMs": 0.83
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.1,
+              "maxMs": 1.07
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 31.475,
+              "maxMs": 15.87
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.58,
+              "maxMs": 0.73
+            }
+          },
+          "trace": {
+            "file": "local-module-nvca-late-body-profile-styled_interior_pause_resume.trace.json.gz",
+            "marker": "rdv-latency:styled_interior_pause_resume",
+            "dataLossOccurred": false,
+            "sha256": "e25db0b015dbb35c95484ea0029a6dfd5e96aff9c03a58afc0123e9bb83c5634"
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-matrix",
+      "label": "local-module-nvca",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "deada0bafda4814c60e8c0d84dd4097f33442e2c732b40e77965a9c6b6fb007f",
+      "nativeCallTimers": false,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "targetRegion": "default",
+        "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital por",
+        "nativeText": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment. Among other things, the Corporation\u2019s Certificate of Incorporation establishes the powers, preferences and special rights of each class and series of the Corporation\u2019s stock.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.945,
+            "p95": 15.79,
+            "max": 17.405
+          },
+          "eventTiming": {
+            "n": 97,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 131,
+          "lastEditToCurrentLayout": 1199.665
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.145,
+            "p95": 14.91,
+            "max": 15.9
+          },
+          "eventTiming": {
+            "n": 19,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 6.97,
+            "p95": 15.295,
+            "max": 16.275
+          },
+          "eventTiming": {
+            "n": 51,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 81,
+          "lastEditToCurrentLayout": 475.815
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 67.62,
+            "p95": 67.62,
+            "max": 69.9
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 72,
+            "p95": 72,
+            "max": 72
+          },
+          "longestTask": 65,
+          "lastEditToCurrentLayout": 153.465
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.665,
+            "p95": 15.925,
+            "max": 17.22
+          },
+          "eventTiming": {
+            "n": 31,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 76,
+          "lastEditToCurrentLayout": 1030.78
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.105,
+            "p95": 15.92,
+            "max": 17.48
+          },
+          "eventTiming": {
+            "n": 51,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 150,
+          "lastEditToCurrentLayout": 1062.54,
+          "setup": {
+            "offset": 900,
+            "runBoundary": false
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 118.02,
+            "p95": 118.02,
+            "max": 118.02
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 128,
+            "p95": 128,
+            "max": 128
+          },
+          "longestTask": 173,
+          "lastEditToCurrentLayout": 3354.04,
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 7985,
+            "at": 1.485,
+            "duration": 128,
+            "delay": 0.47,
+            "processing": 0.495
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.1,
+            "p95": 16.605,
+            "max": 17.53
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 114,
+          "lastEditToCurrentLayout": 518.4,
+          "setup": {
+            "offset": 1019,
+            "runBoundary": true,
+            "boldBefore": false
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 9.94,
+            "p95": 16.025,
+            "max": 16.685
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 149,
+          "lastEditToCurrentLayout": 484.28,
+          "setup": {
+            "offset": 59,
+            "runBoundary": false,
+            "boldBefore": false
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-matrix",
+      "label": "local-studio-nvca",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "0f7295bf1443fe13c3c3bd9b31b94d0f5ab2468ec909245a8a9dab49adc3aca5",
+      "nativeCallTimers": false,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "studio",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "targetRegion": "default",
+        "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital por",
+        "nativeText": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment. Among other things, the Corporation\u2019s Certificate of Incorporation establishes the powers, preferences and special rights of each class and series of the Corporation\u2019s stock.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 52,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 6.99,
+            "p95": 16.955,
+            "max": 17.75
+          },
+          "eventTiming": {
+            "n": 80,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 101,
+          "lastEditToCurrentLayout": 1335.105
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.475,
+            "p95": 15.83,
+            "max": 16.29
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.68,
+            "p95": 16.445,
+            "max": 17.35
+          },
+          "eventTiming": {
+            "n": 64,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 120,
+          "lastEditToCurrentLayout": 1075.795
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 54.74,
+            "p95": 54.74,
+            "max": 56.4
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 56,
+            "p95": 56,
+            "max": 64
+          },
+          "longestTask": 54,
+          "lastEditToCurrentLayout": 121.99
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 9.275,
+            "p95": 17.23,
+            "max": 17.695
+          },
+          "eventTiming": {
+            "n": 35,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 93,
+          "lastEditToCurrentLayout": 1045.635
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.65,
+            "p95": 16.19,
+            "max": 17.34
+          },
+          "eventTiming": {
+            "n": 60,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 140,
+          "lastEditToCurrentLayout": 1148.57,
+          "setup": {
+            "offset": 900,
+            "runBoundary": false
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 100.85,
+            "p95": 100.85,
+            "max": 100.85
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 112,
+            "p95": 112,
+            "max": 112
+          },
+          "longestTask": 172,
+          "lastEditToCurrentLayout": 3512.25,
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 3651,
+            "at": 1.66,
+            "duration": 112,
+            "delay": 3.5,
+            "processing": 0.175
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.4,
+            "p95": 16.36,
+            "max": 17.115
+          },
+          "eventTiming": {
+            "n": 70,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 173,
+          "lastEditToCurrentLayout": 575.715,
+          "setup": {
+            "offset": 1019,
+            "runBoundary": true,
+            "boldBefore": false
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 8.87,
+            "p95": 16.11,
+            "max": 17.075
+          },
+          "eventTiming": {
+            "n": 66,
+            "p50": 16,
+            "p95": 24,
+            "max": 128
+          },
+          "longestTask": 235,
+          "lastEditToCurrentLayout": 614.68,
+          "setup": {
+            "offset": 59,
+            "runBoundary": false,
+            "boldBefore": false
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-matrix",
+      "label": "local-studio-nvca-profile",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "0c588f57e2abd92dc1bdbff1849a5d56aae8c3cdd1b98fb3adf5b231c2bbc4e4",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "studio",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "targetRegion": "default",
+        "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital por",
+        "nativeText": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment. Among other things, the Corporation\u2019s Certificate of Incorporation establishes the powers, preferences and special rights of each class and series of the Corporation\u2019s stock.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 52,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.375,
+            "p95": 16.115,
+            "max": 17.605
+          },
+          "eventTiming": {
+            "n": 87,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 81,
+          "lastEditToCurrentLayout": 1094.39,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 25.685,
+              "maxMs": 16.93
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 38.345,
+              "maxMs": 38.345
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 1.065,
+              "maxMs": 1.065
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 1.515,
+              "maxMs": 1.515
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.295,
+              "maxMs": 0.16
+            },
+            "native.ListComments": {
+              "count": 1,
+              "totalMs": 0.05,
+              "maxMs": 0.05
+            },
+            "native.ListImages": {
+              "count": 2,
+              "totalMs": 2.385,
+              "maxMs": 1.55
+            },
+            "native.ListContentControls": {
+              "count": 2,
+              "totalMs": 1.53,
+              "maxMs": 1.03
+            },
+            "native.RawGetXml": {
+              "count": 6,
+              "totalMs": 2.005,
+              "maxMs": 0.73
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 1.895,
+              "maxMs": 1.895
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 61.305,
+              "maxMs": 61.305
+            }
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.04,
+            "p95": 13.63,
+            "max": 15.885
+          },
+          "eventTiming": {
+            "n": 25,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {}
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 6.965,
+            "p95": 14.325,
+            "max": 16.92
+          },
+          "eventTiming": {
+            "n": 56,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 93,
+          "lastEditToCurrentLayout": 501.485,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 168.72,
+              "maxMs": 24.17
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 102.945,
+              "maxMs": 31.87
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 8.21,
+              "maxMs": 1.875
+            },
+            "native.GetListMembership": {
+              "count": 12,
+              "totalMs": 3.245,
+              "maxMs": 0.45
+            },
+            "native.ListComments": {
+              "count": 6,
+              "totalMs": 0.38,
+              "maxMs": 0.08
+            },
+            "native.ListImages": {
+              "count": 12,
+              "totalMs": 15.215,
+              "maxMs": 1.925
+            },
+            "native.ListContentControls": {
+              "count": 12,
+              "totalMs": 13.2,
+              "maxMs": 3.025
+            },
+            "native.RawGetXml": {
+              "count": 6,
+              "totalMs": 36.855,
+              "maxMs": 28.235
+            },
+            "native.ListAnnotations": {
+              "count": 6,
+              "totalMs": 1.365,
+              "maxMs": 0.35
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 78.975,
+              "maxMs": 18.12
+            }
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 51.48,
+            "p95": 51.48,
+            "max": 52.83
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 56,
+            "p95": 56,
+            "max": 56
+          },
+          "longestTask": 50,
+          "lastEditToCurrentLayout": 106.855,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 12.615,
+              "maxMs": 12.615
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 21.06,
+              "maxMs": 21.06
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 4.97,
+              "maxMs": 4.97
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.22,
+              "maxMs": 0.135
+            },
+            "native.ListComments": {
+              "count": 1,
+              "totalMs": 0.035,
+              "maxMs": 0.035
+            },
+            "native.ListImages": {
+              "count": 2,
+              "totalMs": 2.13,
+              "maxMs": 1.22
+            },
+            "native.ListContentControls": {
+              "count": 2,
+              "totalMs": 1.3,
+              "maxMs": 0.765
+            },
+            "native.RawGetXml": {
+              "count": 1,
+              "totalMs": 0.335,
+              "maxMs": 0.335
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.165,
+              "maxMs": 0.165
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 6.68,
+              "maxMs": 6.68
+            }
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 12.37,
+            "p95": 16.7,
+            "max": 16.73
+          },
+          "eventTiming": {
+            "n": 31,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 1191.01,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 76.34,
+              "maxMs": 28.58
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 28.385,
+              "maxMs": 17.165
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 25.065,
+              "maxMs": 23.555
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 1.0,
+              "maxMs": 0.365
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.11,
+              "maxMs": 0.065
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 4.32,
+              "maxMs": 1.85
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 3.085,
+              "maxMs": 1.455
+            },
+            "native.RawGetXml": {
+              "count": 7,
+              "totalMs": 2.51,
+              "maxMs": 0.705
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.205,
+              "maxMs": 0.205
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 13.94,
+              "maxMs": 13.94
+            }
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 10.475,
+            "p95": 16.455,
+            "max": 17.55
+          },
+          "eventTiming": {
+            "n": 48,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 136,
+          "lastEditToCurrentLayout": 1060.635,
+          "setup": {
+            "offset": 900,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 55.035,
+              "maxMs": 15.85
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 166.33,
+              "maxMs": 103.045
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.61,
+              "maxMs": 1.03
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.905,
+              "maxMs": 0.605
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.06,
+              "maxMs": 0.035
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 7.555,
+              "maxMs": 5.905
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 3.24,
+              "maxMs": 2.205
+            },
+            "native.RawGetXml": {
+              "count": 7,
+              "totalMs": 2.77,
+              "maxMs": 0.765
+            },
+            "native.ListAnnotations": {
+              "count": 2,
+              "totalMs": 0.25,
+              "maxMs": 0.175
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 17.675,
+              "maxMs": 11.275
+            }
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 113.625,
+            "p95": 113.625,
+            "max": 113.625
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 120,
+            "p95": 120,
+            "max": 120
+          },
+          "longestTask": 171,
+          "lastEditToCurrentLayout": 3545.95,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 13.295,
+              "maxMs": 13.295
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 11.42,
+              "maxMs": 11.42
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 53.24,
+              "maxMs": 53.24
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1078.82,
+              "maxMs": 22.395
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.23,
+              "maxMs": 0.155
+            },
+            "native.ListComments": {
+              "count": 1,
+              "totalMs": 0.025,
+              "maxMs": 0.025
+            },
+            "native.ListImages": {
+              "count": 2,
+              "totalMs": 1.475,
+              "maxMs": 0.75
+            },
+            "native.ListContentControls": {
+              "count": 2,
+              "totalMs": 0.965,
+              "maxMs": 0.49
+            },
+            "native.RawGetXml": {
+              "count": 6,
+              "totalMs": 1.555,
+              "maxMs": 0.565
+            },
+            "native.Project": {
+              "count": 1,
+              "totalMs": 36.13,
+              "maxMs": 36.13
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 127.71,
+              "maxMs": 127.71
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 142.305,
+              "maxMs": 142.305
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.18,
+              "maxMs": 0.135
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 2006,
+            "at": 2.22,
+            "duration": 120,
+            "delay": 0.4,
+            "processing": 0.21
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 5.425,
+              "depth": 1,
+              "ms": 13.295
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 19.62,
+              "depth": 3,
+              "ms": 11.42
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 31.97,
+              "depth": 2,
+              "ms": 53.24
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 87.215,
+              "depth": 3,
+              "ms": 1.875
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 90.035,
+              "depth": 3,
+              "ms": 1.845
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 93.465,
+              "depth": 0,
+              "ms": 0.155
+            },
+            {
+              "name": "native.ListComments",
+              "at": 93.66,
+              "depth": 0,
+              "ms": 0.025
+            },
+            {
+              "name": "native.ListImages",
+              "at": 94.055,
+              "depth": 0,
+              "ms": 0.75
+            },
+            {
+              "name": "native.ListContentControls",
+              "at": 94.815,
+              "depth": 0,
+              "ms": 0.475
+            },
+            {
+              "name": "native.RawGetXml",
+              "at": 95.515,
+              "depth": 0,
+              "ms": 0.145
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 95.89,
+              "depth": 0,
+              "ms": 0.075
+            },
+            {
+              "name": "native.Project",
+              "at": 119.055,
+              "depth": 0,
+              "ms": 36.13
+            }
+          ]
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.605,
+            "p95": 16.2,
+            "max": 17.535
+          },
+          "eventTiming": {
+            "n": 69,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 168,
+          "lastEditToCurrentLayout": 508.26,
+          "setup": {
+            "offset": 1019,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 66.77,
+              "maxMs": 16.815
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 169.785,
+              "maxMs": 116.875
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.16,
+              "maxMs": 0.085
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.32,
+              "maxMs": 1.19
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.405,
+              "maxMs": 0.135
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.07,
+              "maxMs": 0.04
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 3.675,
+              "maxMs": 1.58
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 2.355,
+              "maxMs": 1.045
+            },
+            "native.RawGetXml": {
+              "count": 2,
+              "totalMs": 0.7,
+              "maxMs": 0.4
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.075,
+              "maxMs": 0.075
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 22.72,
+              "maxMs": 22.72
+            }
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 10.02,
+            "p95": 16.4,
+            "max": 17.64
+          },
+          "eventTiming": {
+            "n": 56,
+            "p50": 16,
+            "p95": 24,
+            "max": 120
+          },
+          "longestTask": 225,
+          "lastEditToCurrentLayout": 517.865,
+          "setup": {
+            "offset": 59,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 69.245,
+              "maxMs": 18.555
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 226.265,
+              "maxMs": 179.015
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.79,
+              "maxMs": 0.985
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.395,
+              "maxMs": 0.12
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.075,
+              "maxMs": 0.04
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 3.625,
+              "maxMs": 1.47
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 2.425,
+              "maxMs": 1.025
+            },
+            "native.RawGetXml": {
+              "count": 2,
+              "totalMs": 0.71,
+              "maxMs": 0.38
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.095,
+              "maxMs": 0.095
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 10.23,
+              "maxMs": 10.23
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-matrix",
+      "label": "local-module-nvca-late-body-profile",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "a8fc49cd116723a4e0b2601092ce403355eacb8fc248354ca3f1edb89df59691",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "li:body:b7c300ea7e2ace0785b708e947cf9c6f",
+        "targetRegion": "late-body",
+        "text": "9.Amendment or Repeal.\u00a0Any repeal or modification of the foregoing provisions of this\u00a0Article\u00a0Tenth\u00a0",
+        "nativeText": "Amendment or Repeal. Any repeal or modification of the foregoing provisions of this Article Tenth shall not adversely affect any right or protection hereunder of any person in respect of any act or omission occurring prior to the time of such repeal or modification. The rights provided hereunder shall inure to the benefit of any Indemnified Person and such person\u2019s heirs, executors and administrators.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": false,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 6.245,
+            "p95": 17.03,
+            "max": 17.57
+          },
+          "eventTiming": {
+            "n": 84,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 134,
+          "lastEditToCurrentLayout": 665.87,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 48.35,
+              "maxMs": 20.02
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 63.62,
+              "maxMs": 63.62
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.615,
+              "maxMs": 0.615
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 1.41,
+              "maxMs": 1.41
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 3.685,
+              "maxMs": 3.685
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 133.735,
+              "maxMs": 133.735
+            }
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.185,
+            "p95": 13.705,
+            "max": 15.97
+          },
+          "eventTiming": {
+            "n": 22,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {}
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 6.735,
+            "p95": 15.86,
+            "max": 16.6
+          },
+          "eventTiming": {
+            "n": 52,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 93,
+          "lastEditToCurrentLayout": 1033.815,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 263.96,
+              "maxMs": 56.205
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 75.165,
+              "maxMs": 21.535
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 7.805,
+              "maxMs": 1.705
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 12.725,
+              "maxMs": 3.385
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 134.4,
+              "maxMs": 35.275
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.835,
+              "maxMs": 0.97
+            }
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 82.24,
+            "p95": 82.24,
+            "max": 83.725
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 88,
+            "p95": 88,
+            "max": 88
+          },
+          "longestTask": 80,
+          "lastEditToCurrentLayout": 184.905,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 23.66,
+              "maxMs": 23.66
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 26.62,
+              "maxMs": 26.62
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 11.94,
+              "maxMs": 11.94
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 3,
+              "maxMs": 3
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 31.395,
+              "maxMs": 31.395
+            }
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 6.27,
+            "p95": 13.54,
+            "max": 14.545
+          },
+          "eventTiming": {
+            "n": 25,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 115,
+          "lastEditToCurrentLayout": 975.975,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 126.16,
+              "maxMs": 63.24
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 33.2,
+              "maxMs": 17.84
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.735,
+              "maxMs": 1.525
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 4.015,
+              "maxMs": 2.085
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 25.51,
+              "maxMs": 25.51
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.615,
+              "maxMs": 0.775
+            }
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.3,
+            "p95": 13.565,
+            "max": 15.215
+          },
+          "eventTiming": {
+            "n": 55,
+            "p50": 16,
+            "p95": 24,
+            "max": 64
+          },
+          "longestTask": 199,
+          "lastEditToCurrentLayout": 523.425,
+          "setup": {
+            "offset": 989,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 68.175,
+              "maxMs": 15.79
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 231.96,
+              "maxMs": 155.655
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.32,
+              "maxMs": 0.72
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.985,
+              "maxMs": 1
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 18.295,
+              "maxMs": 18.295
+            }
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 143.415,
+            "p95": 143.415,
+            "max": 143.415
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 152,
+            "p95": 152,
+            "max": 152
+          },
+          "longestTask": 172,
+          "lastEditToCurrentLayout": 3502.63,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 16.76,
+              "maxMs": 16.76
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 13.275,
+              "maxMs": 13.275
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 82.725,
+              "maxMs": 82.725
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1088.44,
+              "maxMs": 23.395
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 2.08,
+              "maxMs": 2.08
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 151.59,
+              "maxMs": 151.59
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.355,
+              "maxMs": 0.58
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 143.48,
+              "maxMs": 143.48
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.17,
+              "maxMs": 0.135
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 7125,
+            "at": 1.51,
+            "duration": 152,
+            "delay": 0.485,
+            "processing": 0.51
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 7.22,
+              "depth": 1,
+              "ms": 16.76
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 25.045,
+              "depth": 3,
+              "ms": 13.275
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 39.66,
+              "depth": 2,
+              "ms": 82.725
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 124.575,
+              "depth": 3,
+              "ms": 6.4
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 132.65,
+              "depth": 3,
+              "ms": 3.78
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 139.93,
+              "depth": 0,
+              "ms": 2.08
+            }
+          ]
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.46,
+            "p95": 15.84,
+            "max": 16.635
+          },
+          "eventTiming": {
+            "n": 62,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 122,
+          "lastEditToCurrentLayout": 557.255,
+          "setup": {
+            "offset": 1130,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 89.265,
+              "maxMs": 22.3
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 108.51,
+              "maxMs": 59.16
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.195,
+              "maxMs": 0.115
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.94,
+              "maxMs": 1.205
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 3.835,
+              "maxMs": 2.635
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 85.18,
+              "maxMs": 63.425
+            }
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 7.56,
+            "p95": 16.335,
+            "max": 17.13
+          },
+          "eventTiming": {
+            "n": 71,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 182,
+          "lastEditToCurrentLayout": 1155.34,
+          "setup": {
+            "offset": 9,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 86.02,
+              "maxMs": 20.895
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 214.775,
+              "maxMs": 145.1
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.3,
+              "maxMs": 0.72
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.075,
+              "maxMs": 1.11
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 39.735,
+              "maxMs": 25.495
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.405,
+              "maxMs": 0.665
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "after-preparation-matrix",
+      "label": "local-module-nvca-footnote-profile",
+      "buildRevision": "46fd7f1",
+      "workspaceCommit": "46fd7f1ad9b64876c1f61dff921806e9377d5b47",
+      "workspaceDirty": false,
+      "sourceReportSha256": "dc58110e5abafafdf990d3ff93681915ed7d42e8bd32c9742f54d37997df4bca",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "targetRegion": "footnote",
+        "text": "Consider adding other exceptions as provided in\u00a0Section 9\u00a0of the model Indemnification Agreement. Re",
+        "nativeText": "Consider adding other exceptions as provided in Section 9 of the model Indemnification Agreement. Recent provisions may also include exceptions for conduct found to be in violation of the Corporation\u2019s Code of Conduct.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.38,
+            "p95": 15.905,
+            "max": 17.005
+          },
+          "eventTiming": {
+            "n": 86,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 127,
+          "lastEditToCurrentLayout": 1175.92,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 31.43,
+              "maxMs": 15.34
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 80.635,
+              "maxMs": 80.635
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.655,
+              "maxMs": 0.655
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 1.305,
+              "maxMs": 1.305
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.29,
+              "maxMs": 1.29
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 119.235,
+              "maxMs": 119.235
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.54,
+              "maxMs": 0.72
+            }
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.66,
+            "p95": 14.385,
+            "max": 16.43
+          },
+          "eventTiming": {
+            "n": 24,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {}
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.4,
+            "p95": 15.505,
+            "max": 16.52
+          },
+          "eventTiming": {
+            "n": 58,
+            "p50": 16,
+            "p95": 40,
+            "max": 48
+          },
+          "longestTask": 112,
+          "lastEditToCurrentLayout": 1099.02,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 187.085,
+              "maxMs": 22.605
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 131.675,
+              "maxMs": 67.62
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 12.755,
+              "maxMs": 6.65
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 4.495,
+              "maxMs": 1.25
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 47.76,
+              "maxMs": 17.615
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.62,
+              "maxMs": 0.795
+            }
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 70.435,
+            "p95": 70.435,
+            "max": 72.97
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 80,
+            "p95": 80,
+            "max": 80
+          },
+          "longestTask": 68,
+          "lastEditToCurrentLayout": 869.05,
+          "nativeCalls": {
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 21.255,
+              "maxMs": 21.255
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 13.835,
+              "maxMs": 13.835
+            },
+            "native.GetFormatting": {
+              "count": 1,
+              "totalMs": 17.1,
+              "maxMs": 17.1
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.265,
+              "maxMs": 1.265
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 8.895,
+              "maxMs": 8.895
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 2.15,
+              "maxMs": 0.71
+            }
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 15.02,
+            "p95": 17.165,
+            "max": 17.3
+          },
+          "eventTiming": {
+            "n": 31,
+            "p50": 24,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 99,
+          "lastEditToCurrentLayout": 1121.53,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 118.69,
+              "maxMs": 58.47
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 30.87,
+              "maxMs": 19.205
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.865,
+              "maxMs": 1.675
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.045,
+              "maxMs": 1.03
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 9.78,
+              "maxMs": 9.78
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.54,
+              "maxMs": 0.73
+            }
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.29,
+            "p95": 16.18,
+            "max": 17.275
+          },
+          "eventTiming": {
+            "n": 52,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 205,
+          "lastEditToCurrentLayout": 1144.57,
+          "setup": {
+            "offset": 807,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 67.495,
+              "maxMs": 20.595
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 252.57,
+              "maxMs": 168.615
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.025,
+              "maxMs": 1.34
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.495,
+              "maxMs": 1.035
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 13.61,
+              "maxMs": 8.73
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.57,
+              "maxMs": 0.725
+            }
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 59.855,
+            "p95": 59.855,
+            "max": 59.855
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 64,
+            "p95": 64,
+            "max": 64
+          },
+          "longestTask": 184,
+          "lastEditToCurrentLayout": 3351.4,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 10.725,
+              "maxMs": 10.725
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 16.53,
+              "maxMs": 16.53
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 9.87,
+              "maxMs": 9.87
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1088.2,
+              "maxMs": 22.03
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.53,
+              "maxMs": 0.53
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 90.76,
+              "maxMs": 90.76
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.37,
+              "maxMs": 0.63
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 142.095,
+              "maxMs": 142.095
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.18,
+              "maxMs": 0.13
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 4901,
+            "at": 1.36,
+            "duration": 64,
+            "delay": 0.31,
+            "processing": 0.22
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 4.135,
+              "depth": 1,
+              "ms": 10.725
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 15.685,
+              "depth": 3,
+              "ms": 16.53
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 33.19,
+              "depth": 2,
+              "ms": 9.87
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 47.085,
+              "depth": 3,
+              "ms": 5.255
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 53.905,
+              "depth": 3,
+              "ms": 2.1
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 58.445,
+              "depth": 0,
+              "ms": 0.53
+            },
+            {
+              "name": "native.Save",
+              "at": 65.155,
+              "depth": 0,
+              "ms": 90.76
+            }
+          ]
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.345,
+            "p95": 16.98,
+            "max": 17.185
+          },
+          "eventTiming": {
+            "n": 62,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 126,
+          "lastEditToCurrentLayout": 1012.78,
+          "setup": {
+            "offset": 944,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 51.295,
+              "maxMs": 11.915
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 152.585,
+              "maxMs": 98.485
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.115,
+              "maxMs": 0.075
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.325,
+              "maxMs": 0.67
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.785,
+              "maxMs": 0.395
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 45.575,
+              "maxMs": 40.9
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.6,
+              "maxMs": 0.855
+            }
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 8.835,
+            "p95": 15.235,
+            "max": 16.185
+          },
+          "eventTiming": {
+            "n": 59,
+            "p50": 16,
+            "p95": 24,
+            "max": 72
+          },
+          "longestTask": 211,
+          "lastEditToCurrentLayout": 996.475,
+          "setup": {
+            "offset": 24,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 152.78,
+              "maxMs": 88.025
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 137.98,
+              "maxMs": 91.555
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.515,
+              "maxMs": 0.915
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.175,
+              "maxMs": 0.7
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 9.77,
+              "maxMs": 9.77
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.455,
+              "maxMs": 0.68
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "final-matrix",
+      "label": "local-module-nvca",
+      "buildRevision": "af634f9",
+      "workspaceCommit": "af634f9001b1afb7ac79b104816b06b11fb9eea5",
+      "workspaceDirty": false,
+      "sourceReportSha256": "c087270613ecf1445f0312af3d7415fccbc0624d1060c04f521010e964bef935",
+      "nativeCallTimers": false,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "targetRegion": "default",
+        "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital por",
+        "nativeText": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment. Among other things, the Corporation\u2019s Certificate of Incorporation establishes the powers, preferences and special rights of each class and series of the Corporation\u2019s stock.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.32,
+            "p95": 15.94,
+            "max": 16.84
+          },
+          "eventTiming": {
+            "n": 93,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 108,
+          "lastEditToCurrentLayout": 1166.595
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.745,
+            "p95": 14.825,
+            "max": 16.21
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.575,
+            "p95": 15.62,
+            "max": 17.03
+          },
+          "eventTiming": {
+            "n": 52,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 62,
+          "lastEditToCurrentLayout": 489.965
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 92.36,
+            "p95": 92.36,
+            "max": 94.21
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 96,
+            "p95": 96,
+            "max": 96
+          },
+          "longestTask": 91,
+          "lastEditToCurrentLayout": 132.995
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 6.19,
+            "p95": 16.035,
+            "max": 16.55
+          },
+          "eventTiming": {
+            "n": 24,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 74,
+          "lastEditToCurrentLayout": 1033.48
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.125,
+            "p95": 15.955,
+            "max": 17.12
+          },
+          "eventTiming": {
+            "n": 51,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 134,
+          "lastEditToCurrentLayout": 1058.745,
+          "setup": {
+            "offset": 900,
+            "runBoundary": false
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 91.335,
+            "p95": 91.335,
+            "max": 91.335
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 104,
+            "p95": 104,
+            "max": 104
+          },
+          "longestTask": 1068,
+          "lastEditToCurrentLayout": 3204.845,
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 5129,
+            "at": 2.53,
+            "duration": 104,
+            "delay": 0.635,
+            "processing": 0.385
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 10.995,
+            "p95": 17.3,
+            "max": 17.58
+          },
+          "eventTiming": {
+            "n": 60,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 134,
+          "lastEditToCurrentLayout": 525.86,
+          "setup": {
+            "offset": 1019,
+            "runBoundary": true,
+            "boldBefore": false
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 9.835,
+            "p95": 15.95,
+            "max": 18.035
+          },
+          "eventTiming": {
+            "n": 65,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 107,
+          "lastEditToCurrentLayout": 1099.955,
+          "setup": {
+            "offset": 59,
+            "runBoundary": false,
+            "boldBefore": false
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "final-matrix",
+      "label": "local-studio-nvca",
+      "buildRevision": "af634f9",
+      "workspaceCommit": "af634f9001b1afb7ac79b104816b06b11fb9eea5",
+      "workspaceDirty": false,
+      "sourceReportSha256": "0e7165b06106f85159001f0fddda500972ad7d358170a8b299eb46a4e4043ff6",
+      "nativeCallTimers": false,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "studio",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "targetRegion": "default",
+        "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital por",
+        "nativeText": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment. Among other things, the Corporation\u2019s Certificate of Incorporation establishes the powers, preferences and special rights of each class and series of the Corporation\u2019s stock.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 52,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 9.335,
+            "p95": 16.7,
+            "max": 17.655
+          },
+          "eventTiming": {
+            "n": 96,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 75,
+          "lastEditToCurrentLayout": 1092.07
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.195,
+            "p95": 14.675,
+            "max": 16.415
+          },
+          "eventTiming": {
+            "n": 26,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.67,
+            "p95": 16.8,
+            "max": 17.76
+          },
+          "eventTiming": {
+            "n": 64,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 94,
+          "lastEditToCurrentLayout": 502.38
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 0.305,
+            "p95": 0.305,
+            "max": 66.26
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 32,
+            "p95": 32,
+            "max": 72
+          },
+          "longestTask": 65,
+          "lastEditToCurrentLayout": 174.605
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 11.515,
+            "p95": 16.435,
+            "max": 18.085
+          },
+          "eventTiming": {
+            "n": 34,
+            "p50": 24,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 101,
+          "lastEditToCurrentLayout": 1093.815
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.2,
+            "p95": 15.46,
+            "max": 17.16
+          },
+          "eventTiming": {
+            "n": 48,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 174,
+          "lastEditToCurrentLayout": 1036.405,
+          "setup": {
+            "offset": 900,
+            "runBoundary": false
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 108.33,
+            "p95": 108.33,
+            "max": 108.33
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 120,
+            "p95": 120,
+            "max": 120
+          },
+          "longestTask": 1120,
+          "lastEditToCurrentLayout": 3589.72,
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 7372,
+            "at": 0.73,
+            "duration": 120,
+            "delay": 4.47,
+            "processing": 0.17
+          }
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.095,
+            "p95": 16.925,
+            "max": 17.97
+          },
+          "eventTiming": {
+            "n": 67,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 174,
+          "lastEditToCurrentLayout": 526.78,
+          "setup": {
+            "offset": 1019,
+            "runBoundary": true,
+            "boldBefore": false
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 9.755,
+            "p95": 15.82,
+            "max": 17.605
+          },
+          "eventTiming": {
+            "n": 62,
+            "p50": 16,
+            "p95": 24,
+            "max": 104
+          },
+          "longestTask": 219,
+          "lastEditToCurrentLayout": 527.965,
+          "setup": {
+            "offset": 59,
+            "runBoundary": false,
+            "boldBefore": false
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "final-matrix",
+      "label": "local-studio-nvca-profile",
+      "buildRevision": "af634f9",
+      "workspaceCommit": "af634f9001b1afb7ac79b104816b06b11fb9eea5",
+      "workspaceDirty": false,
+      "sourceReportSha256": "c0583245705d0b4ae4f3f9f9b6ea3b477160989af64f43a7ed39a69df7dc4a1e",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "studio",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "targetRegion": "default",
+        "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital por",
+        "nativeText": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment. Among other things, the Corporation\u2019s Certificate of Incorporation establishes the powers, preferences and special rights of each class and series of the Corporation\u2019s stock.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 52,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 8.955,
+            "p95": 16.445,
+            "max": 17.955
+          },
+          "eventTiming": {
+            "n": 104,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 80,
+          "lastEditToCurrentLayout": 1105.795,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 22.12,
+              "maxMs": 9.94
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 37.355,
+              "maxMs": 37.355
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.53,
+              "maxMs": 0.53
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.265,
+              "maxMs": 0.135
+            },
+            "native.ListComments": {
+              "count": 1,
+              "totalMs": 0.045,
+              "maxMs": 0.045
+            },
+            "native.ListImages": {
+              "count": 2,
+              "totalMs": 2.12,
+              "maxMs": 1.285
+            },
+            "native.ListContentControls": {
+              "count": 2,
+              "totalMs": 1.405,
+              "maxMs": 0.895
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 1.35,
+              "maxMs": 1.35
+            },
+            "native.RawGetXml": {
+              "count": 6,
+              "totalMs": 1.895,
+              "maxMs": 0.705
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 2.31,
+              "maxMs": 2.31
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 77.405,
+              "maxMs": 77.405
+            }
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 7.83,
+            "p95": 13.2,
+            "max": 15.715
+          },
+          "eventTiming": {
+            "n": 24,
+            "p50": 16,
+            "p95": 16,
+            "max": 24
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {}
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.065,
+            "p95": 16.125,
+            "max": 17.3
+          },
+          "eventTiming": {
+            "n": 62,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 93,
+          "lastEditToCurrentLayout": 459.565,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 174.71,
+              "maxMs": 25.875
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 104.255,
+              "maxMs": 47.11
+            },
+            "native.GetListMembership": {
+              "count": 12,
+              "totalMs": 2.35,
+              "maxMs": 0.37
+            },
+            "native.ListComments": {
+              "count": 6,
+              "totalMs": 0.28,
+              "maxMs": 0.065
+            },
+            "native.ListImages": {
+              "count": 11,
+              "totalMs": 14.54,
+              "maxMs": 1.83
+            },
+            "native.ListContentControls": {
+              "count": 11,
+              "totalMs": 10.805,
+              "maxMs": 1.84
+            },
+            "native.ListAnchors": {
+              "count": 6,
+              "totalMs": 13.105,
+              "maxMs": 5.315
+            },
+            "native.RawGetXml": {
+              "count": 6,
+              "totalMs": 2.9,
+              "maxMs": 0.71
+            },
+            "native.ListAnnotations": {
+              "count": 6,
+              "totalMs": 1.29,
+              "maxMs": 0.335
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 106.02,
+              "maxMs": 45.26
+            }
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 62.165,
+            "p95": 62.165,
+            "max": 63.1
+          },
+          "eventTiming": {
+            "n": 4,
+            "p50": 32,
+            "p95": 64,
+            "max": 64
+          },
+          "longestTask": 61,
+          "lastEditToCurrentLayout": 163.295,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 4,
+              "totalMs": 19.37,
+              "maxMs": 5.425
+            },
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 18.27,
+              "maxMs": 18.27
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 11.415,
+              "maxMs": 11.415
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.36,
+              "maxMs": 0.185
+            },
+            "native.ListComments": {
+              "count": 1,
+              "totalMs": 0.045,
+              "maxMs": 0.045
+            },
+            "native.ListImages": {
+              "count": 2,
+              "totalMs": 1.98,
+              "maxMs": 1.085
+            },
+            "native.ListContentControls": {
+              "count": 2,
+              "totalMs": 1.485,
+              "maxMs": 0.95
+            },
+            "native.RawGetXml": {
+              "count": 1,
+              "totalMs": 0.52,
+              "maxMs": 0.52
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.165,
+              "maxMs": 0.165
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 12.825,
+              "maxMs": 12.825
+            }
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 14.6,
+            "p95": 16.93,
+            "max": 17.105
+          },
+          "eventTiming": {
+            "n": 31,
+            "p50": 24,
+            "p95": 24,
+            "max": 56
+          },
+          "longestTask": 75,
+          "lastEditToCurrentLayout": 1133.175,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 71.105,
+              "maxMs": 19.66
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 34.995,
+              "maxMs": 18.245
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.98,
+              "maxMs": 0.29
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.115,
+              "maxMs": 0.065
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 4.34,
+              "maxMs": 1.995
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 3.53,
+              "maxMs": 2.035
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 3.56,
+              "maxMs": 1.99
+            },
+            "native.RawGetXml": {
+              "count": 7,
+              "totalMs": 3.15,
+              "maxMs": 0.955
+            },
+            "native.ListAnnotations": {
+              "count": 2,
+              "totalMs": 0.645,
+              "maxMs": 0.34
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 65.755,
+              "maxMs": 44.79
+            }
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 10.05,
+            "p95": 17.085,
+            "max": 17.54
+          },
+          "eventTiming": {
+            "n": 50,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 128,
+          "lastEditToCurrentLayout": 1023.105,
+          "setup": {
+            "offset": 900,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 42.23,
+              "maxMs": 9.695
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 178.805,
+              "maxMs": 101.385
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.35,
+              "maxMs": 0.155
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.045,
+              "maxMs": 0.025
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 2.62,
+              "maxMs": 1.275
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 1.46,
+              "maxMs": 0.535
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 4.365,
+              "maxMs": 3.79
+            },
+            "native.RawGetXml": {
+              "count": 7,
+              "totalMs": 2.045,
+              "maxMs": 0.79
+            },
+            "native.ListAnnotations": {
+              "count": 2,
+              "totalMs": 0.19,
+              "maxMs": 0.12
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 12.97,
+              "maxMs": 6.795
+            }
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 129.835,
+            "p95": 129.835,
+            "max": 129.835
+          },
+          "eventTiming": {
+            "n": 3,
+            "p50": 136,
+            "p95": 136,
+            "max": 136
+          },
+          "longestTask": 1030,
+          "lastEditToCurrentLayout": 3387.57,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 18.46,
+              "maxMs": 18.46
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1036.995,
+              "maxMs": 20.895
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 42.73,
+              "maxMs": 42.73
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.245,
+              "maxMs": 0.19
+            },
+            "native.ListComments": {
+              "count": 1,
+              "totalMs": 0.02,
+              "maxMs": 0.02
+            },
+            "native.ListImages": {
+              "count": 2,
+              "totalMs": 1.575,
+              "maxMs": 0.825
+            },
+            "native.ListContentControls": {
+              "count": 2,
+              "totalMs": 0.955,
+              "maxMs": 0.49
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 0.79,
+              "maxMs": 0.79
+            },
+            "native.RawGetXml": {
+              "count": 6,
+              "totalMs": 1.84,
+              "maxMs": 0.79
+            },
+            "native.Project": {
+              "count": 1,
+              "totalMs": 43.645,
+              "maxMs": 43.645
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 127.5,
+              "maxMs": 127.5
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 149.7,
+              "maxMs": 149.7
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.2,
+              "maxMs": 0.165
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 7777,
+            "at": 2.32,
+            "duration": 136,
+            "delay": 0.48,
+            "processing": 0.37
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 6.96,
+              "depth": 1,
+              "ms": 18.46
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 26.83,
+              "depth": 2,
+              "ms": 15.69
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 42.73,
+              "depth": 2,
+              "ms": 10.925
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 53.875,
+              "depth": 2,
+              "ms": 42.73
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 100.68,
+              "depth": 0,
+              "ms": 0.19
+            },
+            {
+              "name": "native.ListComments",
+              "at": 100.91,
+              "depth": 0,
+              "ms": 0.02
+            },
+            {
+              "name": "native.ListImages",
+              "at": 101.245,
+              "depth": 0,
+              "ms": 0.75
+            },
+            {
+              "name": "native.ListContentControls",
+              "at": 102.01,
+              "depth": 0,
+              "ms": 0.465
+            },
+            {
+              "name": "native.ListAnchors",
+              "at": 102.505,
+              "depth": 1,
+              "ms": 0.79
+            },
+            {
+              "name": "native.RawGetXml",
+              "at": 103.755,
+              "depth": 0,
+              "ms": 0.14
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 104.115,
+              "depth": 0,
+              "ms": 0.055
+            },
+            {
+              "name": "native.Project",
+              "at": 137.875,
+              "depth": 0,
+              "ms": 43.645
+            }
+          ]
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.64,
+            "p95": 17.105,
+            "max": 18.01
+          },
+          "eventTiming": {
+            "n": 65,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 166,
+          "lastEditToCurrentLayout": 533.315,
+          "setup": {
+            "offset": 1019,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 77.76,
+              "maxMs": 17.175
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 178.035,
+              "maxMs": 115.205
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.185,
+              "maxMs": 0.125
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.515,
+              "maxMs": 0.16
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.07,
+              "maxMs": 0.04
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 3.73,
+              "maxMs": 1.595
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 2.67,
+              "maxMs": 1.09
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 2.22,
+              "maxMs": 1.19
+            },
+            "native.RawGetXml": {
+              "count": 2,
+              "totalMs": 0.765,
+              "maxMs": 0.395
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.15,
+              "maxMs": 0.15
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 22.67,
+              "maxMs": 22.67
+            }
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 9.91,
+            "p95": 16.02,
+            "max": 17.53
+          },
+          "eventTiming": {
+            "n": 65,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 154,
+          "lastEditToCurrentLayout": 529.605,
+          "setup": {
+            "offset": 59,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 45.58,
+              "maxMs": 13.065
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 148.59,
+              "maxMs": 123.885
+            },
+            "native.GetListMembership": {
+              "count": 4,
+              "totalMs": 0.31,
+              "maxMs": 0.1
+            },
+            "native.ListComments": {
+              "count": 2,
+              "totalMs": 0.045,
+              "maxMs": 0.03
+            },
+            "native.ListImages": {
+              "count": 3,
+              "totalMs": 3.475,
+              "maxMs": 1.345
+            },
+            "native.ListContentControls": {
+              "count": 3,
+              "totalMs": 2.265,
+              "maxMs": 0.965
+            },
+            "native.ListAnchors": {
+              "count": 2,
+              "totalMs": 1.61,
+              "maxMs": 1.045
+            },
+            "native.RawGetXml": {
+              "count": 2,
+              "totalMs": 0.62,
+              "maxMs": 0.395
+            },
+            "native.ListAnnotations": {
+              "count": 1,
+              "totalMs": 0.11,
+              "maxMs": 0.11
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 19.32,
+              "maxMs": 19.32
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "final-matrix",
+      "label": "local-module-nvca-late-body-profile",
+      "buildRevision": "af634f9",
+      "workspaceCommit": "af634f9001b1afb7ac79b104816b06b11fb9eea5",
+      "workspaceDirty": false,
+      "sourceReportSha256": "478396cec10b6431da51df631f2db778a28c73cb7d777852e86f4a86c5f08c91",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "li:body:b7c300ea7e2ace0785b708e947cf9c6f",
+        "targetRegion": "late-body",
+        "text": "9.Amendment or Repeal.\u00a0Any repeal or modification of the foregoing provisions of this\u00a0Article\u00a0Tenth\u00a0",
+        "nativeText": "Amendment or Repeal. Any repeal or modification of the foregoing provisions of this Article Tenth shall not adversely affect any right or protection hereunder of any person in respect of any act or omission occurring prior to the time of such repeal or modification. The rights provided hereunder shall inure to the benefit of any Indemnified Person and such person\u2019s heirs, executors and administrators.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 6.315,
+            "p95": 16.4,
+            "max": 17.47
+          },
+          "eventTiming": {
+            "n": 86,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 142,
+          "lastEditToCurrentLayout": 657.11,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 42.985,
+              "maxMs": 26.7
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 51.955,
+              "maxMs": 51.955
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.925,
+              "maxMs": 0.925
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 3.03,
+              "maxMs": 3.03
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 141.69,
+              "maxMs": 141.69
+            }
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.945,
+            "p95": 15.315,
+            "max": 16.695
+          },
+          "eventTiming": {
+            "n": 25,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {}
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.82,
+            "p95": 17.045,
+            "max": 17.34
+          },
+          "eventTiming": {
+            "n": 60,
+            "p50": 16,
+            "p95": 40,
+            "max": 48
+          },
+          "longestTask": 92,
+          "lastEditToCurrentLayout": 1013.76,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 260.705,
+              "maxMs": 29.285
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 169.08,
+              "maxMs": 56.675
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 15.365,
+              "maxMs": 3.39
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 158.455,
+              "maxMs": 33.695
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.515,
+              "maxMs": 0.73
+            }
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 0.56,
+            "p95": 0.56,
+            "max": 89.745
+          },
+          "eventTiming": {
+            "n": 1,
+            "p50": 96,
+            "p95": 96,
+            "max": 96
+          },
+          "longestTask": 88,
+          "lastEditToCurrentLayout": 183.585,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 4,
+              "totalMs": 44.295,
+              "maxMs": 15.82
+            },
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 18.06,
+              "maxMs": 18.06
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 12.7,
+              "maxMs": 12.7
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 2.14,
+              "maxMs": 2.14
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 28.955,
+              "maxMs": 28.955
+            }
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 6.415,
+            "p95": 9.64,
+            "max": 17.11
+          },
+          "eventTiming": {
+            "n": 40,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 114,
+          "lastEditToCurrentLayout": 1066.615,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 151.09,
+              "maxMs": 51.83
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 33.945,
+              "maxMs": 20.895
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 5.105,
+              "maxMs": 3.25
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 26.125,
+              "maxMs": 26.125
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.48,
+              "maxMs": 0.715
+            }
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 8.995,
+            "p95": 16.845,
+            "max": 17.16
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 40
+          },
+          "longestTask": 142,
+          "lastEditToCurrentLayout": 578.225,
+          "setup": {
+            "offset": 989,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 99.69,
+              "maxMs": 44.45
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 151.53,
+              "maxMs": 88.675
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.255,
+              "maxMs": 1.28
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 77.29,
+              "maxMs": 50.645
+            }
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 92.11,
+            "p95": 92.11,
+            "max": 92.11
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 96,
+            "p95": 96,
+            "max": 96
+          },
+          "longestTask": 1048,
+          "lastEditToCurrentLayout": 3227.415,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 13.595,
+              "maxMs": 13.595
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1041.255,
+              "maxMs": 26.425
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 37.345,
+              "maxMs": 37.345
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.17,
+              "maxMs": 1.17
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 90.6,
+              "maxMs": 90.6
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 75.37,
+              "maxMs": 75.37
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.635,
+              "maxMs": 0.835
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 142.6,
+              "maxMs": 142.6
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.205,
+              "maxMs": 0.175
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 5534,
+            "at": 2.62,
+            "duration": 96,
+            "delay": 0.41,
+            "processing": 0.35
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 6.6,
+              "depth": 1,
+              "ms": 13.595
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 21.04,
+              "depth": 2,
+              "ms": 26.425
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 47.6,
+              "depth": 2,
+              "ms": 2.685
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 50.375,
+              "depth": 2,
+              "ms": 37.345
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 92.47,
+              "depth": 0,
+              "ms": 1.17
+            }
+          ]
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 8.795,
+            "p95": 16.315,
+            "max": 17.49
+          },
+          "eventTiming": {
+            "n": 73,
+            "p50": 16,
+            "p95": 24,
+            "max": 48
+          },
+          "longestTask": 129,
+          "lastEditToCurrentLayout": 532.355,
+          "setup": {
+            "offset": 1130,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 150.02,
+              "maxMs": 78.83
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 87.245,
+              "maxMs": 58.895
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.175,
+              "maxMs": 0.135
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 3.6,
+              "maxMs": 2.565
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 60.73,
+              "maxMs": 46.37
+            }
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 8.675,
+            "p95": 15.56,
+            "max": 17.29
+          },
+          "eventTiming": {
+            "n": 77,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 215,
+          "lastEditToCurrentLayout": 1159.965,
+          "setup": {
+            "offset": 9,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 88.17,
+              "maxMs": 24.075
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 215.085,
+              "maxMs": 151.805
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.995,
+              "maxMs": 1.985
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 37.655,
+              "maxMs": 21.33
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.48,
+              "maxMs": 0.7
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cohort": "final-matrix",
+      "label": "local-module-nvca-footnote-profile",
+      "buildRevision": "af634f9",
+      "workspaceCommit": "af634f9001b1afb7ac79b104816b06b11fb9eea5",
+      "workspaceDirty": false,
+      "sourceReportSha256": "18240c4b01e0d4139129fbb2c934f78915d3b5f69278f1eb80a93ac6777f216a",
+      "nativeCallTimers": true,
+      "standaloneCpuProfile": false,
+      "browserTrace": false,
+      "mode": "module",
+      "extended": true,
+      "browser": "143.0.7499.4",
+      "info": {
+        "target": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "targetRegion": "footnote",
+        "text": "Consider adding other exceptions as provided in\u00a0Section 9\u00a0of the model Indemnification Agreement. Re",
+        "nativeText": "Consider adding other exceptions as provided in Section 9 of the model Indemnification Agreement. Recent provisions may also include exceptions for conduct found to be in violation of the Corporation\u2019s Code of Conduct.",
+        "hash": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+        "pages": 65,
+        "version": 0,
+        "crossOriginIsolated": true,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.7499.4 Safari/537.36",
+        "hardwareConcurrency": 8
+      },
+      "errors": [],
+      "gatePassed": true,
+      "phases": [
+        {
+          "name": "continuous",
+          "keyToFrame": {
+            "n": 49,
+            "p50": 7.04,
+            "p95": 15.985,
+            "max": 17.175
+          },
+          "eventTiming": {
+            "n": 89,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 88,
+          "lastEditToCurrentLayout": 1061.295,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 3,
+              "totalMs": 25.325,
+              "maxMs": 15.22
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 1,
+              "totalMs": 54.28,
+              "maxMs": 54.28
+            },
+            "native.GetPageMapStatus": {
+              "count": 1,
+              "totalMs": 0.44,
+              "maxMs": 0.44
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.695,
+              "maxMs": 0.695
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 80.64,
+              "maxMs": 80.64
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.55,
+              "maxMs": 0.725
+            }
+          }
+        },
+        {
+          "name": "caret",
+          "keyToFrame": {
+            "n": 24,
+            "p50": 8.735,
+            "p95": 14.805,
+            "max": 15.965
+          },
+          "eventTiming": {
+            "n": 27,
+            "p50": 16,
+            "p95": 16,
+            "max": 16
+          },
+          "longestTask": 0,
+          "lastEditToCurrentLayout": null,
+          "nativeCalls": {}
+        },
+        {
+          "name": "pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 9.115,
+            "p95": 16.505,
+            "max": 17.175
+          },
+          "eventTiming": {
+            "n": 54,
+            "p50": 16,
+            "p95": 72,
+            "max": 88
+          },
+          "longestTask": 97,
+          "lastEditToCurrentLayout": 955.375,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 18,
+              "totalMs": 238.27,
+              "maxMs": 48.48
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 6,
+              "totalMs": 72.835,
+              "maxMs": 18.725
+            },
+            "native.GetListMembership": {
+              "count": 6,
+              "totalMs": 4.715,
+              "maxMs": 0.965
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 6,
+              "totalMs": 47.885,
+              "maxMs": 9.545
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.56,
+              "maxMs": 0.75
+            }
+          }
+        },
+        {
+          "name": "bold",
+          "keyToFrame": {
+            "n": 2,
+            "p50": 136.23,
+            "p95": 136.23,
+            "max": 137.395
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 136,
+            "p95": 136,
+            "max": 144
+          },
+          "longestTask": 132,
+          "lastEditToCurrentLayout": 716.47,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 4,
+              "totalMs": 81.97,
+              "maxMs": 59
+            },
+            "native.ApplyFormat": {
+              "count": 1,
+              "totalMs": 21.33,
+              "maxMs": 21.33
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 13.045,
+              "maxMs": 13.045
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 1.2,
+              "maxMs": 1.2
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 4.5,
+              "maxMs": 4.5
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.545,
+              "maxMs": 0.785
+            }
+          }
+        },
+        {
+          "name": "wrap_resume",
+          "keyToFrame": {
+            "n": 14,
+            "p50": 7.015,
+            "p95": 13.57,
+            "max": 14.065
+          },
+          "eventTiming": {
+            "n": 32,
+            "p50": 16,
+            "p95": 24,
+            "max": 24
+          },
+          "longestTask": 90,
+          "lastEditToCurrentLayout": 1029.795,
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 106.34,
+              "maxMs": 51.23
+            },
+            "native.ReplaceTextAtSpan": {
+              "count": 2,
+              "totalMs": 34.86,
+              "maxMs": 21.45
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 2.3,
+              "maxMs": 1.31
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 11.26,
+              "maxMs": 11.26
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.745,
+              "maxMs": 0.965
+            }
+          }
+        },
+        {
+          "name": "styled_pause_resume",
+          "keyToFrame": {
+            "n": 25,
+            "p50": 9.145,
+            "p95": 15.17,
+            "max": 17.645
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 179,
+          "lastEditToCurrentLayout": 1141.41,
+          "setup": {
+            "offset": 807,
+            "runBoundary": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 65.065,
+              "maxMs": 17.575
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 227.01,
+              "maxMs": 139.575
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.38,
+              "maxMs": 0.8
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 18.245,
+              "maxMs": 9.585
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.475,
+              "maxMs": 0.705
+            }
+          }
+        },
+        {
+          "name": "enter",
+          "keyToFrame": {
+            "n": 1,
+            "p50": 71.205,
+            "p95": 71.205,
+            "max": 71.205
+          },
+          "eventTiming": {
+            "n": 2,
+            "p50": 80,
+            "p95": 80,
+            "max": 80
+          },
+          "longestTask": 1030,
+          "lastEditToCurrentLayout": 3019.01,
+          "nativeCalls": {
+            "native.SplitParagraph": {
+              "count": 1,
+              "totalMs": 16.52,
+              "maxMs": 16.52
+            },
+            "native.GetFormatting": {
+              "count": 355,
+              "totalMs": 1022.195,
+              "maxMs": 20.865
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 1,
+              "totalMs": 16.01,
+              "maxMs": 16.01
+            },
+            "native.GetListMembership": {
+              "count": 1,
+              "totalMs": 0.95,
+              "maxMs": 0.95
+            },
+            "native.Save": {
+              "count": 1,
+              "totalMs": 118.65,
+              "maxMs": 118.65
+            },
+            "native.ListAnchors": {
+              "count": 1,
+              "totalMs": 0.79,
+              "maxMs": 0.79
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.525,
+              "maxMs": 0.735
+            },
+            "native.RegisterPageMap": {
+              "count": 1,
+              "totalMs": 142.175,
+              "maxMs": 142.175
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.2,
+              "maxMs": 0.17
+            }
+          },
+          "slowestInteraction": {
+            "type": "keydown",
+            "id": 8749,
+            "at": 1.895,
+            "duration": 80,
+            "delay": 0.34,
+            "processing": 0.44
+          },
+          "overlappingNativeCalls": [
+            {
+              "name": "native.SplitParagraph",
+              "at": 7.045,
+              "depth": 1,
+              "ms": 16.52
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 24.215,
+              "depth": 2,
+              "ms": 15.54
+            },
+            {
+              "name": "native.GetFormatting",
+              "at": 39.895,
+              "depth": 2,
+              "ms": 2.61
+            },
+            {
+              "name": "native.RenderEditorBlocksHtml",
+              "at": 42.74,
+              "depth": 2,
+              "ms": 16.01
+            },
+            {
+              "name": "native.GetListMembership",
+              "at": 68.39,
+              "depth": 0,
+              "ms": 0.95
+            },
+            {
+              "name": "native.Save",
+              "at": 80.65,
+              "depth": 0,
+              "ms": 118.65
+            }
+          ]
+        },
+        {
+          "name": "styled_boundary_pause_resume",
+          "keyToFrame": {
+            "n": 30,
+            "p50": 7.47,
+            "p95": 14.855,
+            "max": 17.375
+          },
+          "eventTiming": {
+            "n": 63,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 125,
+          "lastEditToCurrentLayout": 1022.555,
+          "setup": {
+            "offset": 944,
+            "runBoundary": true,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 49.455,
+              "maxMs": 15.4
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 152.265,
+              "maxMs": 98.095
+            },
+            "native.GetPageMapStatus": {
+              "count": 2,
+              "totalMs": 0.13,
+              "maxMs": 0.09
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 0.88,
+              "maxMs": 0.52
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 45.975,
+              "maxMs": 40.7
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.375,
+              "maxMs": 0.66
+            }
+          }
+        },
+        {
+          "name": "styled_interior_pause_resume",
+          "keyToFrame": {
+            "n": 28,
+            "p50": 7.97,
+            "p95": 14.835,
+            "max": 16.81
+          },
+          "eventTiming": {
+            "n": 67,
+            "p50": 16,
+            "p95": 24,
+            "max": 32
+          },
+          "longestTask": 110,
+          "lastEditToCurrentLayout": 1145.61,
+          "setup": {
+            "offset": 24,
+            "runBoundary": false,
+            "boldBefore": false
+          },
+          "nativeCalls": {
+            "native.GetFormatting": {
+              "count": 6,
+              "totalMs": 71.49,
+              "maxMs": 19.56
+            },
+            "native.ReplaceTextAtSpanWithFormat": {
+              "count": 2,
+              "totalMs": 135.76,
+              "maxMs": 80.235
+            },
+            "native.GetListMembership": {
+              "count": 2,
+              "totalMs": 1.125,
+              "maxMs": 0.765
+            },
+            "native.RenderEditorBlocksHtml": {
+              "count": 2,
+              "totalMs": 53.875,
+              "maxMs": 45.83
+            },
+            "native.RawGetXml": {
+              "count": 5,
+              "totalMs": 1.61,
+              "maxMs": 0.875
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "All fourteen follow-up runs are retained. Before preparation changes, the late-body trace failed at 152 ms Enter. After preparation changes, the late-body matrix run also failed at 152 ms Enter. The other twelve runs passed.",
+    "After the canonical formatting lookup change, all five final runs pass all nine historical phases. Maxima: module 104 ms, studio 120 ms, profiled studio 136 ms, late body 96 ms, footnote 144 ms.",
+    "Every completed workload passed text, formatting, surrounding-text, key-count and Enter-undo assertions. No application code changed within either five-run matrix.",
+    "Chrome traces are diagnostic and include script sampling, layout and GC instrumentation plus between-phase trace export. They are identified separately from the comparison matrix.",
+    "The original two 184 ms delays were not captured again; their exact causes remain unproven. Subsequent traces identified synchronous incoming-document setup and a 152 ms Enter response. No historical failures are discarded.",
+    "These are quantized Chrome Event Timing samples on one machine with a 16 ms reporting threshold. Key-to-rAF starts in the handler and excludes prior queuing. This is not population INP or an editor-wide latency guarantee.",
+    "The overlappingNativeCalls field is a diagnostic time-window intersection, not causal attribution. A quantized event duration can include a call that begins after the actual paint; do not attribute the whole call to that input response.",
+    "Native operations and background tasks may exceed 150 ms when no sampled input overlaps them. Full structural layout after Enter can still take seconds. Cold opening, exports, excluded native structures, compound edits and slower devices remain outside a 150 ms claim."
+  ]
+}
