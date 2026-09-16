@@ -45,7 +45,7 @@ assert.equal(typeof worker.createWorkerDocxodus, 'function');
 assert.equal(typeof browser.convertDocxToPaginatedHtml, 'function');
 assert.equal(typeof server.convertDocxToPdf, 'function');
 const copied = await copyDocxodusRuntime('./runtime');
-assert.equal(copied.version, '12.6.1');
+assert.equal(copied.version, '12.6.2');
 console.log('Packed ESM entry points and runtime-copy helper passed.');
 `);
 process.stdout.write(run(process.execPath, [join(temp, 'consumer.mjs')], temp));
@@ -74,6 +74,6 @@ export function Consumer() {
 `);
 run(process.execPath, [resolve(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--jsx', 'react-jsx', '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'bundler', '--types', 'react,node', 'consumer.tsx'], temp);
 const metadata = JSON.parse(await readFile(join(temp, 'package/package.json'), 'utf8'));
-assert.equal(metadata.peerDependencies.docxodus, '12.6.1');
+assert.equal(metadata.peerDependencies.docxodus, '12.6.2');
 assert.equal(metadata.peerDependenciesMeta['@docxodus/export'].optional, true);
 console.log(`Packed consumer types passed. ${pack.entryCount} files, ${pack.size} compressed bytes. Artifacts: ${temp}`);

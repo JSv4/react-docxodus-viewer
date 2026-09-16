@@ -1,8 +1,17 @@
 # Editor performance campaign
 
-## Published 12.6.1 integration
+## Published 12.6.2 integration
 
-The integration now pins the unmodified `docxodus@12.6.1` and matching export
+The integration now pins the unmodified `docxodus@12.6.2` and matching export
+companion. [Upstream #802](https://github.com/JSv4/Docxodus/issues/802) extends the
+supported atomic formatted operation to runs with leading tabs, including the
+NVCA footnote that caused the remaining 816 ms stall. The full historical
+workloads remain the comparison; other excluded structures retain the public
+atomic batch. See the [12.6.2 upgrade notes](12.6.2-upgrade.md).
+
+## Historical 12.6.1 results
+
+The preceding integration pinned the unmodified `docxodus@12.6.1` and matching export
 companion. The supported atomic text-plus-format operation now handles interior
 insertion in ordinary text runs, resolving
 [Docxodus #799](https://github.com/JSv4/Docxodus/issues/799). Excluded structures
@@ -324,17 +333,19 @@ After the timed replacement attempts, each formatted context measures a warm
 interior insertion. Successful insertions must preserve surrounding formatting,
 advance the version once, and restore text and runs through one undo and redo.
 Rejected insertions must leave the native version and formatting unchanged.
-Each formatted context also probes the NVCA footnote's tab/text run and verifies
-its atomic fallback. `RDV_NATIVE_INSERTIONS_ONLY=1` skips the replacement workload
+Each formatted context also probes the NVCA footnote's leading-tab/text run and
+requires the pinned engine to accept the atomic insertion. A refusal fails the
+check. `RDV_NATIVE_INSERTIONS_ONLY=1` skips the replacement workload
 and runs only ordinary/mixed-run insertion probes in two fresh contexts. XML
 undo checks compare expanded namespace names, attribute values, and ordered
 children because the package snapshot can rename equivalent namespace prefixes.
 
 [Docxodus #788](https://github.com/JSv4/Docxodus/issues/788) was resolved in the
-published 12.6.0 release, and [#799](https://github.com/JSv4/Docxodus/issues/799)
-extends that operation to ordinary interior insertions in 12.6.1. Excluded
-structures and disjoint drafts retain the public atomic batch to preserve
-neighboring formatting and one-step undo. See the [upgrade notes](12.6.1-upgrade.md). No native runtime
+published 12.6.0 release. [#799](https://github.com/JSv4/Docxodus/issues/799)
+extends that operation to ordinary interior insertions in 12.6.1, and
+[#802](https://github.com/JSv4/Docxodus/issues/802) adds leading-tab runs in 12.6.2.
+Other excluded structures and disjoint drafts retain the public atomic batch to
+preserve neighboring formatting and one-step undo. See the [upgrade notes](12.6.2-upgrade.md). No native runtime
 patch or private editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements

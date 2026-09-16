@@ -144,14 +144,32 @@ for (const sample of [
   { name: 'paragraph start', text: 'Plain text.', offset: 0, fast: true },
   { name: 'empty paragraph', text: '', offset: 0, fast: true },
   { name: 'inside a run', text: 'Plain text.', offset: 3, fast: true },
+  { name: 'inside a run with one leading tab', text: 'Plain text.', offset: 3, fast: true, leadingTabs: 1 },
+  { name: 'inside a run with two leading tabs', text: 'Plain text.', offset: 3, fast: true, leadingTabs: 2 },
   { name: 'before an identical space', text: 'Plain text.', offset: 5, fast: true },
   { name: 'before identical text', text: ' *B* original', offset: 0, fast: true },
   { name: 'inside a hyperlink', text: 'Plain link text.', markdown: 'Plain [link text.](https://example.com)', offset: 8, fast: false },
 ]) test(`formatted typing at ${sample.name} preserves surrounding runs and one-step undo`, async ({ page }) => {
-  await open(page, sample.markdown ?? sample.text.replace(/\*/g, '\\*'));
+  await open(page, sample.leadingTabs ? 'Source' : sample.markdown ?? sample.text.replace(/\*/g, '\\*'));
+  if (sample.leadingTabs) {
+    await page.evaluate(({tabs, text}) => window.editorTest.controllers[0].run(s => {
+      const id = window.editorTest.anchor;
+      const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+      const xml = new DOMParser().parseFromString(s.raw.getXml(id), 'application/xml');
+      const node = xml.getElementsByTagNameNS(w, 't')[0];
+      node.textContent = text;
+      for (let index = 0; index < tabs; index++) node.before(xml.createElementNS(w, 'w:tab'));
+      return s.raw.replaceXml(id, new XMLSerializer().serializeToString(xml));
+    }), { tabs: sample.leadingTabs, text: sample.text });
+    await expect(paragraphs(page).first()).toContainText(sample.text);
+    await settled(page);
+  }
   await paragraphs(page).first().click();
-  await page.keyboard.press('Home');
-  for (let i = 0; i < sample.offset; i++) await page.keyboard.press('ArrowRight');
+  // Native text offsets omit the tab's rendered padding. Approach these
+  // interior positions from the text's end rather than counting that padding.
+  await page.keyboard.press(sample.leadingTabs ? 'End' : 'Home');
+  const movements = sample.leadingTabs ? sample.text.length - sample.offset : sample.offset;
+  for (let i = 0; i < movements; i++) await page.keyboard.press(sample.leadingTabs ? 'ArrowLeft' : 'ArrowRight');
   await page.keyboard.press('Control+b');
   const before = await page.evaluate(() => {
     const controller = window.editorTest.controllers[0], s = controller.getSnapshot().session!;
@@ -173,6 +191,19 @@ for (const sample of [
   expect(after.version).toBe(before.version + 1);
   expect(after.runs.filter(run => run.effective.bold).map(run => run.text).join('')).toBe(typed);
   expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(sample.text);
+  if (sample.leadingTabs) {
+    const markers = await page.evaluate(() => {
+      const xml = new DOMParser().parseFromString(window.editorTest.controllers[0].read(s => s.raw.getXml(window.editorTest.anchor)), 'application/xml');
+      let offset = 0;
+      const positions = [];
+      for (const node of xml.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', '*')) {
+        if (node.localName === 't') offset += node.textContent!.length;
+        else if (node.localName === 'tab') positions.push(offset);
+      }
+      return positions;
+    });
+    expect(markers).toEqual(Array(sample.leadingTabs).fill(0));
+  }
   expect(await page.evaluate(() => Reflect.get(window, 'typingCalls'))).toEqual(sample.fast
     ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 1, transaction: 1, hash: 1 });
   if (sample.markdown) expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.listHyperlinks()))).toMatchObject([{ target: 'https://example.com/' }]);
