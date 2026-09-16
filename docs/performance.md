@@ -9,6 +9,82 @@ insertion in ordinary text runs, resolving
 retain the public atomic batch. See the [12.6.1 upgrade notes](12.6.1-upgrade.md)
 for the fallback contract and runtime compatibility.
 
+Five serial production runs at application revision `4273011` covered the
+original module/studio workload, a profiled studio run, and profiled runs near
+the end of the body and in a late footnote. Each retained all nine extended
+phases and passed its text, formatting, surrounding-text, key-count, and
+Enter-undo checks.
+
+| Maximum observed input response | Module | Studio | Studio, profiled | Late body, profiled | Footnote, profiled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Five ordinary interaction phases | 56 ms | 72 ms | 56 ms | 88 ms | 96 ms |
+| Collapsed Enter | 64 ms | 152 ms | 104 ms | 104 ms | 40 ms |
+| Original styled pause/resume phase | 40 ms | 56 ms | 64 ms | 80 ms | 40 ms |
+| Explicit run-boundary styled typing | 48 ms | 32 ms | 56 ms | 64 ms | 40 ms |
+| Explicit interior styled typing | 48 ms | 40 ms | 152 ms | 24 ms | 816 ms |
+| Full 150 ms gate | Pass | Fail | Fail | Pass | Fail |
+
+The original unprofiled interior typing cases improved from 384–400 ms on 12.6.0
+to 40–48 ms. **The broader 150 ms goal is still unmet.** Both 152 ms observations
+remain in the results; the profiled studio outlier overlapped a 189.2 ms native
+formatted operation. That measurement does not isolate the native internal
+cause of its variability.
+
+The footnote exposes a documented exclusion in 12.6.1: its first text run
+contains a leading `w:tab` and `w:t`. The caret is inside the text, but the atomic
+formatted insertion refuses this mixed-content run. The existing public batch
+preserves editing semantics and incurs 199.6 ms for native page-map registration,
+274.4 ms for transaction setup, and 284.7 ms for the package hash in this run.
+The resumed key waited about 809 ms. Follow-up:
+[Docxodus #802](https://github.com/JSv4/Docxodus/issues/802).
+
+The [compact latency record](benchmarks/2026-09-16-latency.json) retains all five
+runs, actual target anchors/text, native call summaries, and the overlapping
+calls for failed gates. These are quantized Chrome Event Timing observations on
+one Intel Core Ultra 7 258V, Linux x64, Chromium 143.0.7499.4, at 1480×1050 with
+no CPU throttling. Full structural layout after Enter still takes seconds,
+separately from its input response. These samples do not establish population
+INP or an editor-wide maximum; excluded structures, compound edits, opening,
+exports, and slower devices remain material limits.
+
+### Native operation checks
+
+A serial batch/formatted/formatted/batch comparison measured the supported
+formatted replacement at 56.0–56.4 ms for the first edit and 26.6–29.8 ms on
+repeats. Ordinary warm interior insertion took 28.7–29.1 ms. The legacy batch
+took 624.3–625.8 ms initially and 523.7–526.9 ms on repeats. All twelve replacement
+checks and both insertion checks passed, including one-step undo/redo. See the
+[native comparison](benchmarks/2026-09-16-native-transactions.json).
+
+Two additional fresh native contexts isolated the real footnote structure.
+Ordinary interior insertion succeeded in 64.6–68.5 ms. Insertion into the
+tab/text run was refused in 6.8–6.9 ms without changing its version, XML, or
+formatting. Its atomic fallback took 600.2–621.9 ms even without React, rendering,
+or a page map. Text, surrounding formatting, one-version atomicity, and undo/redo
+passed; undo restored the XML with equivalent namespace-prefix spellings
+normalized. See the [insertion contract record](benchmarks/2026-09-16-native-insertion-contract.json).
+A subsequent [marker integrity check](benchmarks/2026-09-16-native-marker-integrity.json)
+also verified that the edited XML retains the tab and footnote-reference count,
+order, attributes, and positions relative to the text in both fresh contexts.
+
+### Validation
+
+Lint, types, library/demo builds, the complete API identity audit, and the
+generated pagination check passed. All 82 unit tests and 51 browser contracts
+passed, with two opt-in browser skips; CI for the application revision is
+[green](https://github.com/JSv4/react-docxodus-viewer/actions/runs/35052785492).
+The full NVCA integrity test passed with 65 pages, 234 body paragraphs, 110
+footnote paragraphs, 13 intentionally modified paragraphs, one added paragraph,
+and 31 native commits. Save/reopen checks preserved unrelated paragraph XML,
+fields, bookmarks, notes, sections, and package parts. Native and cooperative
+pages, HTML, and fragment maps matched on the same fixture. See the
+[integrity record](benchmarks/2026-09-16-nvca-integrity.json).
+The built production studio and module pages passed seven smoke tests, with one
+source-only skip.
+Packed consumer imports, types, runtime-copy verification, and the Node export
+API check passed. PDF rendering was skipped because this host denies the
+unprivileged user namespaces required by Chromium's process sandbox.
+
 ## Historical 12.6.0 results
 
 The preceding integration used the unmodified `docxodus@12.6.0` and matching export
@@ -248,6 +324,11 @@ After the timed replacement attempts, each formatted context measures a warm
 interior insertion. Successful insertions must preserve surrounding formatting,
 advance the version once, and restore text and runs through one undo and redo.
 Rejected insertions must leave the native version and formatting unchanged.
+Each formatted context also probes the NVCA footnote's tab/text run and verifies
+its atomic fallback. `RDV_NATIVE_INSERTIONS_ONLY=1` skips the replacement workload
+and runs only ordinary/mixed-run insertion probes in two fresh contexts. XML
+undo checks compare expanded namespace names, attribute values, and ordered
+children because the package snapshot can rename equivalent namespace prefixes.
 
 [Docxodus #788](https://github.com/JSv4/Docxodus/issues/788) was resolved in the
 published 12.6.0 release, and [#799](https://github.com/JSv4/Docxodus/issues/799)

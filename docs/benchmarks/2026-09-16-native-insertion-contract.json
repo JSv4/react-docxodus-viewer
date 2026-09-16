@@ -1,0 +1,229 @@
+{
+  "startedAt": "2026-09-16T03:59:31.375Z",
+  "sha256": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+  "packages": {
+    "installed": {
+      "version": "12.6.1",
+      "sessionHash": "ab8ed26c11cd76a5a306fe7dd49545aca5af81c7f8ee1aed1048fb6610e4964d",
+      "runtimeHash": "f9e82ed508f63a18c0fe1f30bd10a8f46b9173e11266c9c0dfbbe66f5b02d51f",
+      "engineRuntimeHash": "91cc7688e1a45faf3b265242298b531da39ab1d6833127df256a9f0c2adb69f7"
+    }
+  },
+  "browser": "143.0.7499.4",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) Ultra 7 258V",
+    "logicalCpus": 8,
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "workload": "Two fresh formatted contexts: ordinary body interior insertion, then insertion inside a footnote run with a leading tab and its atomic batch fallback.",
+  "cpuThrottling": false,
+  "runs": [
+    {
+      "label": "formatted",
+      "root": "installed",
+      "version": "12.6.1",
+      "attempts": [],
+      "interiorInsertion": {
+        "anchorId": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "offset": 46,
+        "sourceRun": {
+          "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment.",
+          "start": 0,
+          "children": [
+            "rPr",
+            "t"
+          ]
+        },
+        "supported": true,
+        "unchanged": false,
+        "ms": 68.51500001549721,
+        "calls": [
+          {
+            "name": "ReplaceTextAtSpanWithFormat",
+            "ms": 68.4200000166893
+          }
+        ],
+        "checks": {
+          "text": true,
+          "bold": true,
+          "surroundingFormatting": true,
+          "oneVersion": true,
+          "undo": true,
+          "redo": true,
+          "undoXml": true
+        }
+      },
+      "mixedRunInsertion": {
+        "anchorId": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "offset": 24,
+        "sourceRun": {
+          "text": "Consider adding other exceptions as provided in ",
+          "start": 0,
+          "children": [
+            "tab",
+            "t"
+          ]
+        },
+        "supported": false,
+        "error": {
+          "code": "offset_out_of_range",
+          "message": "interior insertion requires an ordinary character boundary in a plain text run outside fields and inline containers",
+          "anchorId": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea"
+        },
+        "unchanged": true,
+        "ms": 6.944999992847443,
+        "calls": [
+          {
+            "name": "ReplaceTextAtSpanWithFormat",
+            "ms": 6.9200000166893005
+          }
+        ],
+        "batchFallback": {
+          "ms": 621.9250000119209,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 37.7950000166893
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 265.0100000202656
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 10.769999980926514
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 32.375
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 20.49500000476837
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 247.71000000834465
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "surroundingFormatting": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true,
+            "undoXml": true
+          }
+        }
+      },
+      "crossOriginIsolated": true,
+      "errors": []
+    },
+    {
+      "label": "formatted",
+      "root": "installed",
+      "version": "12.6.1",
+      "attempts": [],
+      "interiorInsertion": {
+        "anchorId": "p:body:4710ebe8b1d02e1d73fe75c7a85af48f",
+        "offset": 46,
+        "sourceRun": {
+          "text": "The Certificate of Incorporation is a key document produced in connection with a venture capital portfolio investment.",
+          "start": 0,
+          "children": [
+            "rPr",
+            "t"
+          ]
+        },
+        "supported": true,
+        "unchanged": false,
+        "ms": 64.61500000953674,
+        "calls": [
+          {
+            "name": "ReplaceTextAtSpanWithFormat",
+            "ms": 64.5300000011921
+          }
+        ],
+        "checks": {
+          "text": true,
+          "bold": true,
+          "surroundingFormatting": true,
+          "oneVersion": true,
+          "undo": true,
+          "redo": true,
+          "undoXml": true
+        }
+      },
+      "mixedRunInsertion": {
+        "anchorId": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "offset": 24,
+        "sourceRun": {
+          "text": "Consider adding other exceptions as provided in ",
+          "start": 0,
+          "children": [
+            "tab",
+            "t"
+          ]
+        },
+        "supported": false,
+        "error": {
+          "code": "offset_out_of_range",
+          "message": "interior insertion requires an ordinary character boundary in a plain text run outside fields and inline containers",
+          "anchorId": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea"
+        },
+        "unchanged": true,
+        "ms": 6.844999998807907,
+        "calls": [
+          {
+            "name": "ReplaceTextAtSpanWithFormat",
+            "ms": 6.834999978542328
+          }
+        ],
+        "batchFallback": {
+          "ms": 600.1650000214577,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 39.73499998450279
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 248.71000000834465
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 6.140000015497208
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 27.895000010728836
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 20.349999994039536
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 249.79499998688698
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "surroundingFormatting": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true,
+            "undoXml": true
+          }
+        }
+      },
+      "crossOriginIsolated": true,
+      "errors": []
+    }
+  ]
+}
