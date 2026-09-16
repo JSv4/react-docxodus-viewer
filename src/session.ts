@@ -118,7 +118,13 @@ export class DocxSessionController {
       const changes = start < 0 ? null : this.journal.slice(start);
       const changed = changes && covered(changes, this.cacheVersion, version);
       const stableDefinitions = !!changes && definitionsCovered(changes, this.cacheVersion, version);
-      if (changed) changed.forEach(id => { this.formattingCache.delete(id); this.catalogChanges.add(id); });
+      if (changed) {
+        const ids = new Set(changed);
+        for (const [id, formatting] of this.formattingCache) {
+          if (ids.has(id) || (formatting && ids.has(formatting.anchorId))) this.formattingCache.delete(id);
+        }
+        changed.forEach(id => this.catalogChanges.add(id));
+      }
       else { this.formattingCache.clear(); this.catalogCache = null; this.catalogChanges.clear(); }
       if (!stableDefinitions) this.stylesCache = null;
       this.anchorsCache = null;
@@ -137,7 +143,13 @@ export class DocxSessionController {
     const native = this.refreshReadCache();
     // An atomic shadow reports its base version until commit; never cache its reads.
     if (this.depth || this.transactionDepth) return native.getFormatting(anchorId);
-    if (!this.formattingCache.has(anchorId)) this.formattingCache.set(anchorId, native.getFormatting(anchorId));
+    if (!this.formattingCache.has(anchorId)) {
+      const formatting = native.getFormatting(anchorId);
+      this.formattingCache.set(anchorId, formatting);
+      // A former paragraph ID may now resolve to a heading. Share that native
+      // result with its canonical ID, and invalidate both aliases on later edits.
+      if (formatting?.anchorId) this.formattingCache.set(formatting.anchorId, formatting);
+    }
     return this.formattingCache.get(anchorId)!;
   }
   /** Text/run edits and paragraph splits preserve definitions. Unknown edits invalidate them. */

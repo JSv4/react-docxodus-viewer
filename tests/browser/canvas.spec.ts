@@ -78,7 +78,17 @@ test('collapsed Enter uses one native undo unit and one batch render', async ({ 
     const original = bridge.BeginTransaction;
     const renderOne = bridge.RenderBlockHtml;
     const renderMany = bridge.RenderEditorBlocksHtml;
-    if (!renderMany) throw new Error('The pinned native batch renderer is unavailable');
+    const listAnchors = bridge.ListAnchors;
+    if (!renderMany || !listAnchors) throw new Error('The pinned native editor bridge is unavailable');
+    let measuring = false, scans = 0;
+    document.addEventListener('beforeinput', () => {
+      measuring = true;
+      requestAnimationFrame(() => { measuring = false; Reflect.set(window, 'splitAnchorScansBeforePaint', scans); });
+    }, { once: true, capture: true });
+    bridge.ListAnchors = handle => {
+      if (measuring) scans++;
+      return listAnchors(handle);
+    };
     Reflect.set(window, 'splitTransactions', 0);
     Reflect.set(window, 'splitSingleRenders', 0);
     Reflect.set(window, 'splitBatchRenders', 0);
@@ -100,6 +110,7 @@ test('collapsed Enter uses one native undo unit and one batch render', async ({ 
   expect(await page.evaluate(() => Reflect.get(window, 'splitTransactions'))).toBe(0);
   expect(await page.evaluate(() => Reflect.get(window, 'splitSingleRenders'))).toBe(0);
   expect(await page.evaluate(() => Reflect.get(window, 'splitBatchRenders'))).toBe(1);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window, 'splitAnchorScansBeforePaint'))).toBe(0);
   await page.keyboard.press('Control+z');
   await expect.poll(() => nativeText(page)).toEqual(['Hello world.']);
   await page.keyboard.press('Control+y');

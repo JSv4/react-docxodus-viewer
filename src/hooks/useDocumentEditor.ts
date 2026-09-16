@@ -54,11 +54,19 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
       const previous = selectionRef.current;
       if (selectionOwner.current === snapshot.session && previous?.version === snapshot.version && previous.anchorId === anchorId && previous.source === source &&
         previous.span?.start === span?.start && previous.span?.length === span?.length && !!previous.span === !!span) return true;
-      const index = controller.getAnchorIndex();
-      const id = index[anchorId] ? anchorId : Object.keys(index).find(id => index[id].unid === anchorId.split(':').at(-1));
-      const info = id ? index[id] : undefined;
-      if (!info || !['p', 'h', 'li'].includes(info.kind)) throw new Error('Choose a paragraph or heading to edit.');
-      const text = editableText(controller.getFormatting(id!));
+      let id = anchorId;
+      let formatting = /^(p|h|li):/.test(id) ? controller.getFormatting(id) : null;
+      if (!formatting || formatting.anchorId !== id) {
+        // Preserve shorthand/stale-ID selection for hosts. Canvas selections
+        // already carry a canonical ID and need no document-wide inventory.
+        const index = controller.getAnchorIndex();
+        const resolved = index[id] ? id : Object.keys(index).find(key => index[key].unid === id.split(':').at(-1));
+        const info = resolved ? index[resolved] : undefined;
+        if (!info || !['p', 'h', 'li'].includes(info.kind)) throw new Error('Choose a paragraph or heading to edit.');
+        id = resolved!;
+        formatting = controller.getFormatting(id);
+      }
+      const text = editableText(formatting);
       if (span && (span.start < 0 || span.length < 0 || span.start + span.length > text.length)) throw new Error('Select text inside this paragraph.');
       const next = { anchorId: id!, span, text, version: snapshot.version, source };
       if (selectionOwner.current === snapshot.session && JSON.stringify(selectionRef.current) === JSON.stringify(next)) return true;
@@ -83,9 +91,8 @@ export function useDocumentEditor(controller: DocxSessionController, options: Us
   const selectedAnchorId = selection?.anchorId;
   const query = useCallback((session: DocxSession) => {
     if (!selectedAnchorId) return null;
-    const info = controller.getAnchorIndex()[selectedAnchorId];
-    if (!info) return null;
     const formatting = controller.getFormatting(selectedAnchorId);
+    if (!formatting || formatting.anchorId !== selectedAnchorId) return null;
     // Enriched metadata includes projection/hash work. Preserve the public detail
     // accessor for hosts that need it without paying for it to move the caret.
     const version = session.getVersion();
