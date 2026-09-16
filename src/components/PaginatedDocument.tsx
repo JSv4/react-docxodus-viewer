@@ -9,6 +9,7 @@ import type { CanvasEditor } from '../editing/CanvasEditor';
 import { canvasParagraphs } from '../editing/canvasDom';
 import type { LiveBlockUpdate } from '../rendering/liveBlocks';
 import { replaceBlockPresentation } from '../rendering/liveBlocks';
+import { cooperativePagination, yieldToBrowser } from '../rendering/cooperativePagination';
 
 export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' | 'showPageNumbers' | 'pageGap' | 'cssPrefix' | 'fragmentParagraphs' | 'layoutToken'> {
   html: string;
@@ -272,26 +273,42 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       // The converter supplies its own default canvas color inside the ShadowRoot.
       // Apply the host's theme to the canvas without changing the document pages.
       container.style.backgroundColor = backgroundColor;
-      // Docxodus 12.4.1 measures note/header reserves while creating pages. Zooming
+      // Docxodus 12.6.1 measures note/header reserves while creating pages. Zooming
       // those pages during measurement mixes scaled pixels with document points,
       // clipping body paragraphs in documents with substantial footnotes.
       const engine = new PaginationEngine(staging, container, {
         scale: 1, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
       });
-      const result = engine.paginate();
-      scalePages(result, scaleRef.current, pageGap);
-      if (documentVersion !== undefined && rendererFingerprint !== undefined) {
-        engine.normalizePageMapFragmentIdentities();
-        result.pageMap = engine.materializePageMap(documentVersion, rendererFingerprint);
-      }
+      const check = () => {
+        if (signal.aborted || (canvasEditor && !canvasEditor.acceptsLayout(canvasOwner ?? null, documentVersion))) throw new DOMException('Editing superseded this layout', 'AbortError');
+      };
+      const idle = async () => { if (canvasEditor) await canvasEditor.whenIdle(signal); };
+      const cooperative = cooperativePagination(engine, check, idle);
+      const result = await cooperative.paginate();
+      await idle(); check();
+      const pause = async () => { await yieldToBrowser(); check(); await idle(); check(); };
+      await canvasEditor?.prepareLayout(documentBody, canvasOwner ?? null, documentVersion, pause);
+      let renderedScale: number;
+      let geometry: BlockGeometry;
+      do {
+        renderedScale = scaleRef.current;
+        scalePages(result, renderedScale, pageGap);
+        if (documentVersion !== undefined && rendererFingerprint !== undefined) {
+          await cooperative.normalizePageMapFragmentIdentities();
+          result.pageMap = await cooperative.materializePageMap(documentVersion, rendererFingerprint);
+        }
+        await idle(); check();
+        geometry = measureBlocks(documentBody, renderedScale);
+        await pause();
+      } while (renderedScale !== scaleRef.current);
       activeLayout.current?.dispose();
       Object.assign(wrapper.style, { opacity: '', position: '', top: '', left: '', width: '', pointerEvents: '' });
       wrapper.inert = false;
       body.current = documentBody;
       callbacksRef.current.onRootChange?.(documentBody);
       detachEditor = canvasEditor?.attach(documentBody, canvasOwner ?? null);
-      activeLayout.current = { wrapper, dispose, engine, result, scale: scaleRef.current, pageGap, owner: canvasOwner ?? null, documentVersion, rendererFingerprint,
-        geometry: measureBlocks(documentBody, scaleRef.current), settings: layoutSettings };
+      activeLayout.current = { wrapper, dispose, engine, result, scale: renderedScale, pageGap, owner: canvasOwner ?? null, documentVersion, rendererFingerprint,
+        geometry, settings: layoutSettings };
       callbacksRef.current.onPaginationComplete?.(result);
       if (typeof IntersectionObserver !== 'undefined') {
         const visible = new Map<Element, { page: number; ratio: number }>();

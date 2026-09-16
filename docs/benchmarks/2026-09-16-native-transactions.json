@@ -1,0 +1,435 @@
+{
+  "startedAt": "2026-09-16T03:48:36.653Z",
+  "sha256": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+  "packages": {
+    "installed": {
+      "version": "12.6.1",
+      "sessionHash": "ab8ed26c11cd76a5a306fe7dd49545aca5af81c7f8ee1aed1048fb6610e4964d",
+      "runtimeHash": "f9e82ed508f63a18c0fe1f30bd10a8f46b9173e11266c9c0dfbbe66f5b02d51f",
+      "engineRuntimeHash": "91cc7688e1a45faf3b265242298b531da39ab1d6833127df256a9f0c2adb69f7"
+    }
+  },
+  "browser": "143.0.7499.4",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) Ultra 7 258V",
+    "logicalCpus": 8,
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "workload": "The same text-plus-Bold edit via executeBatch and replaceMatch(match, text, format); first attempt and two repeats after undo/redo, in fresh batch/formatted/formatted/batch browser contexts. Each formatted context then measures a warm interior insertion and verifies neighboring formatting and undo/redo.",
+  "cpuThrottling": false,
+  "runs": [
+    {
+      "label": "batch",
+      "root": "installed",
+      "version": "12.6.1",
+      "attempts": [
+        {
+          "iteration": 0,
+          "ms": 625.7900000214577,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 40.0799999833107
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 263.03999999165535
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 20.24500000476837
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 20.524999976158142
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 19.634999990463257
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 251.66999998688698
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 1,
+          "ms": 523.7399999797344,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 17.4200000166893
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 216.6700000166893
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 9.094999998807907
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 14.150000005960464
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 19
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 246.0600000023842
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 2,
+          "ms": 525.625,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 17.080000013113022
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 212.65000000596046
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 5.370000004768372
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 13.290000021457672
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 18.714999973773956
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 257.3400000035763
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        }
+      ],
+      "crossOriginIsolated": true,
+      "errors": []
+    },
+    {
+      "label": "formatted",
+      "root": "installed",
+      "version": "12.6.1",
+      "attempts": [
+        {
+          "iteration": 0,
+          "ms": 56.00999999046326,
+          "calls": [
+            {
+              "name": "ReplaceTextAtSpanWithFormat",
+              "ms": 55.90999999642372
+            }
+          ],
+          "hashPresent": false,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 1,
+          "ms": 29.80000001192093,
+          "calls": [
+            {
+              "name": "ReplaceTextAtSpanWithFormat",
+              "ms": 29.780000001192093
+            }
+          ],
+          "hashPresent": false,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 2,
+          "ms": 26.655000001192093,
+          "calls": [
+            {
+              "name": "ReplaceTextAtSpanWithFormat",
+              "ms": 26.645000010728836
+            }
+          ],
+          "hashPresent": false,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        }
+      ],
+      "interiorInsertion": {
+        "offset": 46,
+        "supported": true,
+        "unchanged": false,
+        "ms": 29.08500000834465,
+        "calls": [
+          {
+            "name": "ReplaceTextAtSpanWithFormat",
+            "ms": 29.060000002384186
+          }
+        ],
+        "checks": {
+          "text": true,
+          "bold": true,
+          "surroundingFormatting": true,
+          "oneVersion": true,
+          "undo": true,
+          "redo": true
+        }
+      },
+      "crossOriginIsolated": true,
+      "errors": []
+    },
+    {
+      "label": "formatted",
+      "root": "installed",
+      "version": "12.6.1",
+      "attempts": [
+        {
+          "iteration": 0,
+          "ms": 56.38500002026558,
+          "calls": [
+            {
+              "name": "ReplaceTextAtSpanWithFormat",
+              "ms": 56.28999999165535
+            }
+          ],
+          "hashPresent": false,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 1,
+          "ms": 29.094999998807907,
+          "calls": [
+            {
+              "name": "ReplaceTextAtSpanWithFormat",
+              "ms": 29.0799999833107
+            }
+          ],
+          "hashPresent": false,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 2,
+          "ms": 26.634999990463257,
+          "calls": [
+            {
+              "name": "ReplaceTextAtSpanWithFormat",
+              "ms": 26.625
+            }
+          ],
+          "hashPresent": false,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        }
+      ],
+      "interiorInsertion": {
+        "offset": 46,
+        "supported": true,
+        "unchanged": false,
+        "ms": 28.66499999165535,
+        "calls": [
+          {
+            "name": "ReplaceTextAtSpanWithFormat",
+            "ms": 28.645000010728836
+          }
+        ],
+        "checks": {
+          "text": true,
+          "bold": true,
+          "surroundingFormatting": true,
+          "oneVersion": true,
+          "undo": true,
+          "redo": true
+        }
+      },
+      "crossOriginIsolated": true,
+      "errors": []
+    },
+    {
+      "label": "batch",
+      "root": "installed",
+      "version": "12.6.1",
+      "attempts": [
+        {
+          "iteration": 0,
+          "ms": 624.3150000274181,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 39.125
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 262.5049999952316
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 20.349999994039536
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 18.389999985694885
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 19.575000017881393
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 253.91499999165535
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 1,
+          "ms": 526.8199999928474,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 17.53999999165535
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 218.18000000715256
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 9.049999982118607
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 14.254999995231628
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 19.070000022649765
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 247.34999999403954
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        },
+        {
+          "iteration": 2,
+          "ms": 526.8950000107288,
+          "calls": [
+            {
+              "name": "ListRevisions",
+              "ms": 16.919999986886978
+            },
+            {
+              "name": "BeginTransaction",
+              "ms": 212.6850000023842
+            },
+            {
+              "name": "ReplaceTextAtSpan",
+              "ms": 5.475000023841858
+            },
+            {
+              "name": "ApplyFormat",
+              "ms": 13.534999996423721
+            },
+            {
+              "name": "ListRevisions",
+              "ms": 18.435000002384186
+            },
+            {
+              "name": "GetPackageContentHash",
+              "ms": 258.75
+            }
+          ],
+          "hashPresent": true,
+          "checks": {
+            "text": true,
+            "bold": true,
+            "oneVersion": true,
+            "undo": true,
+            "redo": true
+          }
+        }
+      ],
+      "crossOriginIsolated": true,
+      "errors": []
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "react-docxodus-viewer",
   "version": "0.8.0",
-  "description": "React DOCX viewing, review, comparison, editing sessions, history and export powered by Docxodus 12.4.1",
+  "description": "React DOCX viewing, review, comparison, editing sessions, history and export powered by Docxodus 12.6.1",
   "type": "module",
   "main": "./dist/react-docxodus-viewer.es.js",
   "module": "./dist/react-docxodus-viewer.es.js",
@@ -65,12 +65,14 @@
     "sync:wasm": "node scripts/sync-wasm.mjs",
     "predev": "npm run sync:wasm",
     "test:browser": "playwright test",
-    "check:api": "node scripts/check-api.mjs",
+    "check:api": "node scripts/check-api.mjs && node scripts/generate-cooperative-pagination.mjs --check",
     "test:pdf": "node --test tests/node/export.test.mjs",
     "check": "npm run lint && npm test && npm run build && npm run check:api",
     "test:package": "npm run build:lib && node scripts/check-package.mjs",
     "test:stress": "node scripts/stress-editor.mjs",
-    "test:performance": "node scripts/stress-editor.mjs --benchmark"
+    "test:performance": "node scripts/stress-editor.mjs --benchmark",
+    "test:latency": "node scripts/benchmark-latency.mjs",
+    "test:latency:native": "node scripts/benchmark-native-transactions.mjs"
   },
   "repository": {
     "type": "git",
@@ -92,12 +94,12 @@
   "author": "",
   "license": "MIT",
   "peerDependencies": {
-    "docxodus": "12.4.1",
+    "docxodus": "12.6.1",
     "react": ">=18",
-    "@docxodus/export": "12.4.1"
+    "@docxodus/export": "12.6.1"
   },
   "devDependencies": {
-    "@docxodus/export": "12.4.1",
+    "@docxodus/export": "12.6.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.57.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -108,7 +110,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.0.14",
-    "docxodus": "12.4.1",
+    "docxodus": "12.6.1",
     "eslint": "^10.4.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

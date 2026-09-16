@@ -13,9 +13,8 @@ import '../src/styles/DocumentViewer.css';
 import './App.css';
 
 const WASM_BASE_PATH = import.meta.env.BASE_URL + 'wasm/';
-const FINGERPRINT = 'react-studio-v12.4.1';
+const FINGERPRINT = 'react-studio-v12.6.1';
 const snapshotBytes = (session: DocxSession) => session.save();
-const documentCounts = (session: DocxSession) => ({ comments: session.listComments().length, revisions: session.listRevisions().length });
 const docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 type Panel = 'edit' | 'review' | 'comments' | 'annotations' | 'history' | 'verify' | 'export';
 const tabs: { id: Panel; label: string; icon: IconName; hint: string }[] = [
@@ -51,7 +50,8 @@ function Workspace() {
   const { canvasEditor, select } = editor;
   const anchor = editor.selection?.anchorId ?? requestedAnchor;
   const bytes = useSessionQuery(panel === 'verify' || panel === 'export' ? controller : undefined, snapshotBytes).data;
-  const counts = useSessionQuery(controller, documentCounts).data;
+  const documentCounts = useCallback((session: DocxSession) => ({ comments: session.listComments().length, revisions: controller.getRevisions().length }), [controller]);
+  const counts = useSessionQuery(controller, documentCounts, { scope: 'document' }).data;
   const history = useDocumentHistory({ documentId, indexedDbName: 'react-docxodus-viewer-studio' });
   const busy = session.isLoading || sampleLoading;
   const ready = !!session.session;
@@ -136,7 +136,7 @@ function Workspace() {
   }}>
     <nav className="studio-rail" aria-label="Workspace"><a className="studio-mark" href="#" aria-label="Docxodus workspace" onClick={event => { event.preventDefault(); setTab('document'); }}>d<span>.</span></a>
       <div className="rail-navigation">{[{ id: 'document', icon: 'document', label: 'Document workspace', short: 'Document' }, { id: 'compare', icon: 'compare', label: 'Compare documents', short: 'Compare' }, { id: 'external', icon: 'label', label: 'External annotations', short: 'Labels' }].map(item => <button type="button" className={`rail-button ${tab === item.id ? 'active' : ''}`} aria-label={item.label} aria-pressed={tab === item.id} title={item.label} key={item.id} onClick={() => setTab(item.id)}><Icon name={item.icon as IconName} size={21} /><span>{item.short}</span></button>)}</div>
-      <div className="rail-bottom"><a className="rail-button" href="?example=modules" target="_blank" rel="noreferrer" aria-label="Explore embeddable modules" title="Embeddable viewer and editor"><Icon name="code" /><span>Modules</span></a><button className="rail-button" aria-label="Open command menu" title="Commands · Ctrl / ⌘ K" onClick={() => setCommandOpen(true)}><Icon name="command" /><span>Commands</span></button><span className="engine-version" title="Powered by Docxodus 12.4.1">12.4.1</span></div>
+      <div className="rail-bottom"><a className="rail-button" href="?example=modules" target="_blank" rel="noreferrer" aria-label="Explore embeddable modules" title="Embeddable viewer and editor"><Icon name="code" /><span>Modules</span></a><button className="rail-button" aria-label="Open command menu" title="Commands · Ctrl / ⌘ K" onClick={() => setCommandOpen(true)}><Icon name="command" /><span>Commands</span></button><span className="engine-version" title="Powered by Docxodus 12.6.1">12.6.1</span></div>
     </nav>
     <div className="studio-main"><header className="studio-header"><div className="document-identity"><span className="document-glyph"><Icon name={tab === 'compare' ? 'compare' : tab === 'external' ? 'label' : 'document'} size={20} /></span><div><p className="breadcrumb">DOCXODUS <span>/</span> {tab === 'document' ? 'WORKSPACE' : tab === 'compare' ? 'COMPARE' : 'ANNOTATIONS'}</p><h1>{tab === 'document' ? (ready ? filename.replace(/\.docx$/i, '') : 'A little space to think.') : tab === 'compare' ? 'Every difference, in context.' : 'Give your document meaning.'}</h1></div></div>
       <div className="header-actions"><button className="command-trigger" aria-label="Search workspace commands" onClick={() => setCommandOpen(true)}><Icon name="search" size={15} /><span>Search commands</span><kbd>⌘ K</kbd></button><span className="header-divider" /><button className="icon-button" aria-label="New document" title="New document" disabled={busy} onClick={create}><Icon name="plus" size={20} /></button><button className="quiet-button open-button" disabled={busy} onClick={openFile}><Icon name="open" size={17} />Open DOCX</button><button className="icon-button" aria-label="Download DOCX" title="Download DOCX" disabled={!ready || busy} onClick={download}><Icon name="download" /></button><button className="primary-button" aria-label="export" disabled={!ready || busy} onClick={() => showPanel('export')}>Export<Icon name="arrow" size={16} /></button></div>

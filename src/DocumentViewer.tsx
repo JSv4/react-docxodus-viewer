@@ -7,6 +7,7 @@ import { useSessionState, useSessionQuery } from './hooks/useDocxSession';
 import type { DocumentSource } from './session';
 import { reconcileSourceAnchors } from './rendering/anchors';
 import { liveRenderOptions, patchSourceBlocks } from './rendering/liveBlocks';
+import { yieldToBrowser } from './rendering/cooperativePagination';
 import type { LiveBlockUpdate } from './rendering/liveBlocks';
 import type {
   DocumentViewerProps,
@@ -193,8 +194,8 @@ export function DocumentViewer({
   const [showSettings, setShowSettings] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('document');
   const [internalRevisions, setRevisions] = useState<Revision[]>([]);
-  const selectRevisions = useCallback((session: DocxSession) => session.listRevisions(), []);
-  const sessionRevisions = useSessionQuery(sessionController, selectRevisions);
+  const selectRevisions = useCallback((session: DocxSession) => sessionController?.getRevisions() ?? session.listRevisions(), [sessionController]);
+  const sessionRevisions = useSessionQuery(sessionController, selectRevisions, { scope: 'document' });
   const onRevisionsRef = useRef(onRevisionsExtracted);
   useEffect(() => { onRevisionsRef.current = onRevisionsExtracted; }, [onRevisionsExtracted]);
   useEffect(() => { if (sessionRevisions.data) onRevisionsRef.current?.(sessionRevisions.data); }, [sessionRevisions.data]);
@@ -261,9 +262,15 @@ export function DocumentViewer({
     const profile = JSON.stringify({ ...options, paginationScale: 1 });
     try {
       if (sessionController) {
-        if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
-        if (!current() || !sessionDocument || sessionController.getSnapshot().session !== sessionDocument.owner ||
-          sessionController.getSnapshot().version !== sessionDocument.version) return;
+        do {
+          if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
+          // An idle promise can resume inside an input event's microtask drain.
+          // Start native rendering in its own background task, checking typing
+          // again after input had an opportunity to resume.
+          await yieldToBrowser();
+          if (!current() || !sessionDocument || sessionController.getSnapshot().session !== sessionDocument.owner ||
+            sessionController.getSnapshot().version !== sessionDocument.version) return;
+        } while (canvasEditor?.getSnapshot().suspended);
         const previous = sourceRender.current;
         if (!force && previous?.owner === sessionDocument.owner && previous.profile === profile) {
           const anchors = sessionController.getRenderChanges(previous.owner, previous.version);
@@ -272,6 +279,13 @@ export function DocumentViewer({
             // Unsupported bridge profiles/blocks fall back to the complete converter.
             const renderOptions = liveRenderOptions(options, sessionController);
             const rendered = renderOptions && sessionController.renderBlocks(anchors, renderOptions);
+            // Native conversion is synchronous. Give input/paint a turn before
+            // parsing and patching the source tree, then reject obsolete output.
+            if (rendered) {
+              await yieldToBrowser();
+              if (canvasEditor) await canvasEditor.whenIdle(abort.signal);
+              if (!current() || sessionController.getSnapshot().session !== sessionDocument.owner || sessionController.getSnapshot().version !== sessionDocument.version) return;
+            }
             const patched = rendered && anchors.every(id => rendered[id]) && patchSourceBlocks(previous.html, rendered);
             if (patched) {
               sourceRender.current = { ...previous, html: patched.html, version: sessionDocument.version };

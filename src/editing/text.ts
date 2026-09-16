@@ -1,4 +1,18 @@
-import type { DocxSession, EditResult, FormattingInspection } from 'docxodus/core';
+import type { CharSpan, DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
+
+/**
+ * ExactVisibleText in Docxodus 12.6.1 is descendant w:t text plus native list
+ * numbering for body paragraphs. Keep that contract without Markdown projection.
+ * Requires a canonical anchor; unknown XML retains the native metadata fallback.
+ */
+export function visibleBlockText(session: DocxSession, anchorId: string): string | null {
+  const xml = session.raw.getXml(anchorId);
+  const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+  if (parsed.querySelector('parsererror')) return session.getAnchorInfo(anchorId)?.visibleText ?? null;
+  const text = Array.from(parsed.documentElement.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't')).map(node => node.textContent ?? '').join('');
+  const prefix = /^(p|h|li):body:/.test(anchorId) ? session.getListMembership(anchorId)?.generatedLabel : undefined;
+  return prefix ? text ? `${prefix} ${text}` : prefix : text;
+}
 
 export function escapePattern(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
@@ -13,6 +27,28 @@ export function editableText(formatting: FormattingInspection | null) {
   return text;
 }
 
+type TextChange = { start: number; removed: string; inserted: string };
+function borrowInsertion(before: string, change: TextChange): TextChange {
+  if (change.removed.length || !before.length) return change;
+  if (change.start) {
+    const neighbour = Array.from(before.slice(0, change.start)).at(-1)!;
+    return { start: change.start - neighbour.length, removed: neighbour, inserted: neighbour + change.inserted };
+  }
+  const neighbour = String.fromCodePoint(before.codePointAt(0)!);
+  return { start: 0, removed: neighbour, inserted: change.inserted + neighbour };
+}
+
+/** Keep the original selection when identical spaces/letters make a diff ambiguous. */
+export function textChangeAtSelection(before: string, after: string, span: CharSpan): TextChange | null {
+  const end = span.start + span.length;
+  if (!Number.isInteger(span.start) || !Number.isInteger(span.length) || span.start < 0 || span.length < 0 || end > before.length ||
+    (span.start > 0 && /[\uDC00-\uDFFF]/.test(before[span.start] ?? '')) || (end > 0 && /[\uDC00-\uDFFF]/.test(before[end] ?? ''))) return null;
+  const prefix = before.slice(0, span.start), suffix = before.slice(end);
+  if (after.length < prefix.length + suffix.length || !after.startsWith(prefix) || !after.endsWith(suffix)) return null;
+  const inserted = after.slice(prefix.length, after.length - suffix.length);
+  return !span.length && !inserted.length ? null : { start: span.start, removed: before.slice(span.start, end), inserted };
+}
+
 /** One changed span, expanded to a neighbouring character for pure insertions. */
 export function textChange(before: string, after: string, expandInsertion = true) {
   let start = 0;
@@ -23,11 +59,8 @@ export function textChange(before: string, after: string, expandInsertion = true
   let newEnd = after.length;
   while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
   if (oldEnd < before.length && /[\uDC00-\uDFFF]/.test(before[oldEnd])) { oldEnd++; newEnd++; }
-  if (expandInsertion && oldEnd === start && before.length) {
-    if (start > 0) { start--; if (/[\uDC00-\uDFFF]/.test(before[start])) start--; }
-    else { oldEnd += before.codePointAt(0)! > 0xffff ? 2 : 1; newEnd += oldEnd; }
-  }
-  return { start, removed: before.slice(start, oldEnd), inserted: after.slice(start, newEnd) };
+  const change = { start, removed: before.slice(start, oldEnd), inserted: after.slice(start, newEnd) };
+  return expandInsertion ? borrowInsertion(before, change) : change;
 }
 
 /** Keep unchanged words between separate edits intact, including their run formatting. */
@@ -59,49 +92,68 @@ export function textChanges(before: string, after: string) {
       else inserted += next[j++];
     }
     const local = textChange(removed, inserted)!;
-    let change = { ...local, start: start + local.start };
-    if (!change.removed.length && before.length) {
-      // Native text matches need a nonempty range. Borrow one adjacent code point.
-      if (change.start) {
-        const neighbour = Array.from(before.slice(0, change.start)).at(-1)!;
-        change = { start: change.start - neighbour.length, removed: neighbour, inserted: neighbour + change.inserted };
-      } else {
-        const neighbour = String.fromCodePoint(before.codePointAt(0)!);
-        change = { start: 0, removed: neighbour, inserted: change.inserted + neighbour };
-      }
-    }
-    changes.push(change);
+    changes.push(borrowInsertion(before, { ...local, start: start + local.start }));
   }
   return changes;
 }
 
 /** Preserve surrounding runs, links and paragraph formatting instead of rewriting a block. */
-export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string): Parameters<DocxSession['executeBatch']>[0] {
-  const live = session.getAnchorInfo(anchorId);
-  if (!live || editableText(session.getFormatting(anchorId)) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
-  const changes = textChanges(before, after);
+export function paragraphTextSteps(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp, selection?: CharSpan, atomicTyping = true): Parameters<DocxSession['executeBatch']>[0] {
+  const formatting = session.getFormatting(anchorId);
+  if (!formatting || editableText(formatting) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
+  const canonical = formatting.anchorId;
+  const [kind, scope] = canonical.split(':');
+  const selected = typingFormat && selection ? textChangeAtSelection(before, after, selection) : null;
+  const changes = selected ? [borrowInsertion(before, selected)] : textChanges(before, after);
   if (!changes.length) return [];
-  if (!before.length) {
+  const exact = selected ?? textChange(before, after, false)!;
+  // 12.6.1 inserts inside ordinary text runs and formats exactly the replacement
+  // in one undo/version unit. Let native code decide whether a particular run's
+  // field/container structure allows this operation.
+  const atomicFormat = atomicTyping && typingFormat && exact.inserted.length && changes.length === 1
+    ? typingFormat : undefined;
+  if (atomicFormat) changes.splice(0, changes.length, exact);
+  if (!before.length && !atomicFormat) {
+    const visible = visibleBlockText(session, canonical);
+    if (visible === null) throw new Error('This paragraph changed. Reload its text before applying your draft.');
     // replaceText accepts Markdown. Escape literal typing into an empty paragraph.
     const literal = after.replace(/([\\`*_{}[\]()#+.!<>|~-])/g, '\\$1');
-    return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: live.visibleText }) }];
+    return [{ tool: 'ParagraphEditor', action: 'insert text', mutation: () => session.replaceText(anchorId, literal, { expectedText: visible }) }];
   }
-  return changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
+  const steps: Array<Parameters<DocxSession['executeBatch']>[0][number]> = changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const current = editableText(session.getFormatting(anchorId));
     if (current.slice(change.start, change.start + change.removed.length) !== change.removed) throw new Error('This text changed before the edit could be applied.');
-    // 12.4.1 replaceMatch addresses only enclosingAnchor.id + span (its
+    // 12.6.1 replaceMatch addresses only enclosingAnchor.id + span (its
     // ReplaceTextAtSpan bridge). We already have those verified native offsets.
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.
     return session.replaceMatch({ text: change.removed,
-      enclosingAnchor: { id: anchorId, kind: live.kind, scope: live.scope, unid: anchorId.split(':').at(-1)! },
+      enclosingAnchor: { id: canonical, kind, scope, unid: canonical.split(':').at(-1)! },
       span: { start: change.start, length: change.removed.length }, fragments: [],
       contextBefore: current.slice(0, change.start), contextAfter: current.slice(change.start + change.removed.length), groups: [change.removed],
-    }, change.inserted);
+    }, change.inserted, atomicFormat);
   } }));
+  // Unsupported inline structures and disjoint drafts retain the atomic batch.
+  // Format only the actual new span, excluding any borrowed boundary character.
+  if (typingFormat && exact.inserted.length && !atomicFormat) steps.push({ tool: 'ParagraphEditor', action: 'typing format',
+    mutation: () => session.applyFormat(canonical, { start: exact.start, length: exact.inserted.length }, typingFormat) });
+  return steps;
 }
 
-export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string): EditResult | readonly EditResult[] | ReturnType<DocxSession['executeBatch']> | null {
-  const steps = paragraphTextSteps(session, anchorId, before, after);
-  return steps.length === 1 ? steps[0].mutation() : steps.length ? session.executeBatch(steps) : null;
+export function replaceParagraphText(session: DocxSession, anchorId: string, before: string, after: string, typingFormat?: FormatOp, selection?: CharSpan): EditResult | readonly EditResult[] | ReturnType<DocxSession['executeBatch']> | null {
+  const steps = paragraphTextSteps(session, anchorId, before, after, typingFormat, selection);
+  if (steps.length !== 1) return steps.length ? session.executeBatch(steps) : null;
+  const version = session.getVersion();
+  const result = steps[0].mutation();
+  // Native refuses interior insertions in fields, hyperlinks and mixed-content
+  // runs before mutation. Preserve the previous surgical text+format batch for
+  // these cases; never retry a changed version or an unrelated format failure.
+  if (typingFormat && 'success' in result && !result.success &&
+    result.error?.code === 'offset_out_of_range' && session.getVersion() === version) {
+    const exact = (selection && textChangeAtSelection(before, after, selection)) || textChange(before, after, false);
+    if (exact && !exact.removed.length && exact.inserted.length) {
+      return session.executeBatch(paragraphTextSteps(session, anchorId, before, after, typingFormat, selection, false));
+    }
+  }
+  return result;
 }

@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 export async function copyDocxodusRuntime(destination) {
   const dist = dirname(fileURLToPath(import.meta.resolve('docxodus/core')));
   const { version } = JSON.parse(await readFile(resolve(dist, '../package.json'), 'utf8'));
-  if (version !== '12.4.1') throw new Error(`Expected Docxodus 12.4.1, found ${version}`);
+  if (version !== '12.6.1') throw new Error(`Expected Docxodus 12.6.1, found ${version}`);
   const manifest = JSON.parse(await readFile(resolve(dist, 'export-assets.json'), 'utf8'));
   if (manifest.packageVersion !== version) throw new Error('Export assets do not match the engine version.');
   for (const asset of manifest.assets) {

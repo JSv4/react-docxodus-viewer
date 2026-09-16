@@ -1,3 +1,126 @@
+// src/external-annotation-wire.ts
+function readPawlsPage(p) {
+  return {
+    page: {
+      width: p.Page?.Width ?? p.page?.width,
+      height: p.Page?.Height ?? p.page?.height,
+      index: p.Page?.Index ?? p.page?.index
+    },
+    tokens: (p.Tokens || p.tokens || []).map((t) => ({
+      x: t.X ?? t.x,
+      y: t.Y ?? t.y,
+      width: t.Width ?? t.width,
+      height: t.Height ?? t.height,
+      text: t.Text ?? t.text
+    }))
+  };
+}
+function readAnnotationJson(json) {
+  if (!json) return void 0;
+  if (json.Start !== void 0 || json.start !== void 0) {
+    return {
+      id: json.Id ?? json.id,
+      start: json.Start ?? json.start,
+      end: json.End ?? json.end,
+      text: json.Text ?? json.text
+    };
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(json)) {
+    const v = value;
+    result[key] = {
+      bounds: {
+        top: v.Bounds?.Top ?? v.bounds?.top,
+        bottom: v.Bounds?.Bottom ?? v.bounds?.bottom,
+        left: v.Bounds?.Left ?? v.bounds?.left,
+        right: v.Bounds?.Right ?? v.bounds?.right
+      },
+      tokensJsons: (v.TokensJsons || v.tokensJsons || []).map((t) => ({
+        pageIndex: t.PageIndex ?? t.pageIndex,
+        tokenIndex: t.TokenIndex ?? t.tokenIndex
+      })),
+      rawText: v.RawText ?? v.rawText
+    };
+  }
+  return result;
+}
+function readAnnotation(a) {
+  return {
+    id: a.Id ?? a.id,
+    annotationLabel: a.AnnotationLabel ?? a.annotationLabel,
+    rawText: a.RawText ?? a.rawText,
+    page: a.Page ?? a.page,
+    annotationJson: readAnnotationJson(a.AnnotationJson ?? a.annotationJson),
+    parentId: a.ParentId ?? a.parentId,
+    annotationType: a.AnnotationType ?? a.annotationType,
+    structural: a.Structural ?? a.structural
+  };
+}
+function readRelationship(r) {
+  return {
+    id: r.Id ?? r.id,
+    relationshipLabel: r.RelationshipLabel ?? r.relationshipLabel,
+    sourceAnnotationIds: r.SourceAnnotationIds ?? r.sourceAnnotationIds ?? [],
+    targetAnnotationIds: r.TargetAnnotationIds ?? r.targetAnnotationIds ?? [],
+    structural: r.Structural ?? r.structural
+  };
+}
+function readLabel(l) {
+  return {
+    id: l.Id ?? l.id,
+    color: l.Color ?? l.color,
+    description: l.Description ?? l.description ?? "",
+    icon: l.Icon ?? l.icon ?? "",
+    text: l.Text ?? l.text,
+    labelType: l.LabelType ?? l.labelType ?? "text"
+  };
+}
+function readLabels(raw) {
+  const labels = {};
+  for (const [key, value] of Object.entries(raw || {})) labels[key] = readLabel(value);
+  return labels;
+}
+function readOpenContractExport(parsed) {
+  return {
+    title: parsed.Title ?? parsed.title,
+    content: parsed.Content ?? parsed.content,
+    description: parsed.Description ?? parsed.description,
+    pageCount: parsed.PageCount ?? parsed.pageCount,
+    pawlsFileContent: (parsed.PawlsFileContent || parsed.pawlsFileContent || []).map(readPawlsPage),
+    docLabels: parsed.DocLabels ?? parsed.docLabels ?? [],
+    labelledText: (parsed.LabelledText || parsed.labelledText || []).map(readAnnotation),
+    relationships: (parsed.Relationships || parsed.relationships)?.map(readRelationship)
+  };
+}
+function readExternalAnnotationSet(parsed) {
+  return {
+    documentId: parsed.DocumentId ?? parsed.documentId,
+    documentHash: parsed.DocumentHash ?? parsed.documentHash,
+    createdAt: parsed.CreatedAt ?? parsed.createdAt,
+    updatedAt: parsed.UpdatedAt ?? parsed.updatedAt,
+    version: parsed.Version ?? parsed.version,
+    ...readOpenContractExport(parsed),
+    textLabels: readLabels(parsed.TextLabels || parsed.textLabels),
+    docLabelDefinitions: readLabels(parsed.DocLabelDefinitions || parsed.docLabelDefinitions)
+  };
+}
+function readExternalAnnotationValidation(parsed) {
+  return {
+    isValid: parsed.IsValid ?? parsed.isValid,
+    hashMismatch: parsed.HashMismatch ?? parsed.hashMismatch,
+    issues: (parsed.Issues || parsed.issues || []).map((i) => ({
+      annotationId: i.AnnotationId ?? i.annotationId,
+      issueType: i.IssueType ?? i.issueType,
+      description: i.Description ?? i.description,
+      expectedText: i.ExpectedText ?? i.expectedText,
+      actualText: i.ActualText ?? i.actualText
+    }))
+  };
+}
+function readProjectedHtml(parsed) {
+  return parsed.Html ?? parsed.html;
+}
+
 // src/docxodus.worker.ts
 var wasmExports = null;
 var initPromise = null;
@@ -99,10 +222,22 @@ function handleProveRedlineReversibility(request) {
 function handleVerifyDeliverable(request) {
   try {
     const converter = ensureInitialized().DocumentConverter;
-    const json = request.baselineBytes === void 0 ? converter.VerifyDeliverable(request.documentBytes) : converter.VerifyDeliverableWithBaseline(
-      request.baselineBytes,
-      request.documentBytes
-    );
+    let json;
+    if (request.requestJson !== void 0) {
+      if (!converter.VerifyDeliverableWithRequest || !converter.VerifyDeliverableWithBaselineAndRequest) {
+        throw new Error("This WASM bundle predates full verification requests; rebuild docxodus.");
+      }
+      json = request.baselineBytes === void 0 ? converter.VerifyDeliverableWithRequest(request.documentBytes, request.requestJson) : converter.VerifyDeliverableWithBaselineAndRequest(
+        request.baselineBytes,
+        request.documentBytes,
+        request.requestJson
+      );
+    } else {
+      json = request.baselineBytes === void 0 ? converter.VerifyDeliverable(request.documentBytes) : converter.VerifyDeliverableWithBaseline(
+        request.baselineBytes,
+        request.documentBytes
+      );
+    }
     return {
       verification: JSON.parse(json)
     };
@@ -119,6 +254,72 @@ function handleGetSemanticChanges(request) {
     );
     if (isErrorResponse(json)) return { error: parseError(json).error };
     return { semanticChanges: JSON.parse(json) };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+function handleCreateExternalAnnotationSet(request) {
+  try {
+    const json = ensureInitialized().DocumentConverter.CreateExternalAnnotationSet(
+      request.documentBytes,
+      request.documentId
+    );
+    if (isErrorResponse(json)) return { error: parseError(json).error };
+    return { annotationSet: readExternalAnnotationSet(JSON.parse(json)) };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+function handleValidateExternalAnnotations(request) {
+  try {
+    const json = ensureInitialized().DocumentConverter.ValidateExternalAnnotations(
+      request.documentBytes,
+      JSON.stringify(request.annotationSet)
+    );
+    if (isErrorResponse(json)) return { error: parseError(json).error };
+    return { validation: readExternalAnnotationValidation(JSON.parse(json)) };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+function handleProjectAnnotationsOntoHtml(request) {
+  try {
+    const json = ensureInitialized().DocumentConverter.ProjectAnnotationsOntoHtml(
+      request.html,
+      JSON.stringify(request.annotationSet),
+      request.projectionOptions?.cssClassPrefix ?? "ext-annot-",
+      request.projectionOptions?.labelMode ?? 0 /* Above */
+    );
+    if (isErrorResponse(json)) return { error: parseError(json).error };
+    return { html: readProjectedHtml(JSON.parse(json)) };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+function handleConvertWithExternalAnnotations(request) {
+  try {
+    const options = request.conversionOptions;
+    const json = ensureInitialized().DocumentConverter.ConvertDocxToHtmlWithExternalAnnotations(
+      request.documentBytes,
+      JSON.stringify(request.annotationSet),
+      options?.pageTitle ?? "Document",
+      options?.cssPrefix ?? "docx-",
+      options?.fabricateClasses ?? true,
+      options?.additionalCss ?? "",
+      request.projectionOptions?.cssClassPrefix ?? "ext-annot-",
+      request.projectionOptions?.labelMode ?? 0 /* Above */
+    );
+    if (isErrorResponse(json)) return { error: parseError(json).error };
+    return { html: readProjectedHtml(JSON.parse(json)) };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+function handleExportToOpenContract(request) {
+  try {
+    const json = ensureInitialized().DocumentConverter.ExportToOpenContract(request.documentBytes);
+    if (isErrorResponse(json)) return { error: parseError(json).error };
+    return { export: readOpenContractExport(JSON.parse(json)) };
   } catch (error) {
     return { error: String(error) };
   }
@@ -274,6 +475,18 @@ function handleGetRevisions(request) {
     return { error: String(error) };
   }
 }
+function handleGetComments(request) {
+  const exports = ensureInitialized();
+  try {
+    const result = exports.DocumentComparer.GetCommentsJson(request.documentBytes);
+    if (isErrorResponse(result)) {
+      return parseError(result);
+    }
+    return { comments: JSON.parse(result) };
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
 function handleGetDocumentMetadata(request) {
   const exports = ensureInitialized();
   try {
@@ -357,9 +570,16 @@ function handleSessionGetSemanticChanges(request) {
 }
 function handleSessionVerifyDeliverable(request) {
   try {
-    const json = ensureInitialized().DocxSessionBridge.VerifyDeliverable(
-      request.handle
-    );
+    const bridge = ensureInitialized().DocxSessionBridge;
+    let json;
+    if (request.requestJson !== void 0) {
+      if (!bridge.VerifyDeliverableWithRequest) {
+        throw new Error("This WASM bundle predates full verification requests; rebuild docxodus.");
+      }
+      json = bridge.VerifyDeliverableWithRequest(request.handle, request.requestJson);
+    } else {
+      json = bridge.VerifyDeliverable(request.handle);
+    }
     return {
       verification: JSON.parse(json)
     };
@@ -598,6 +818,71 @@ self.addEventListener("message", async (event) => {
         };
         break;
       }
+      case "createExternalAnnotationSet": {
+        const result = handleCreateExternalAnnotationSet(
+          request
+        );
+        response = {
+          id: request.id,
+          type: "createExternalAnnotationSet",
+          success: !result.error,
+          annotationSet: result.annotationSet,
+          error: result.error
+        };
+        break;
+      }
+      case "validateExternalAnnotations": {
+        const result = handleValidateExternalAnnotations(
+          request
+        );
+        response = {
+          id: request.id,
+          type: "validateExternalAnnotations",
+          success: !result.error,
+          validation: result.validation,
+          error: result.error
+        };
+        break;
+      }
+      case "projectAnnotationsOntoHtml": {
+        const result = handleProjectAnnotationsOntoHtml(
+          request
+        );
+        response = {
+          id: request.id,
+          type: "projectAnnotationsOntoHtml",
+          success: !result.error,
+          html: result.html,
+          error: result.error
+        };
+        break;
+      }
+      case "convertDocxToHtmlWithExternalAnnotations": {
+        const result = handleConvertWithExternalAnnotations(
+          request
+        );
+        response = {
+          id: request.id,
+          type: "convertDocxToHtmlWithExternalAnnotations",
+          success: !result.error,
+          html: result.html,
+          error: result.error
+        };
+        break;
+      }
+      case "exportToOpenContract": {
+        const result = handleExportToOpenContract(
+          request
+        );
+        response = {
+          id: request.id,
+          type: "exportToOpenContract",
+          success: !result.error,
+          export: result.export,
+          error: result.error
+        };
+        break;
+      }
       case "getRevisions": {
         const getRevisionsRequest = request;
         const result = handleGetRevisions(getRevisionsRequest);
@@ -606,6 +891,17 @@ self.addEventListener("message", async (event) => {
           type: "getRevisions",
           success: !result.error,
           revisions: result.revisions,
+          error: result.error
+        };
+        break;
+      }
+      case "getComments": {
+        const result = handleGetComments(request);
+        response = {
+          id: request.id,
+          type: "getComments",
+          success: !result.error,
+          comments: result.comments,
           error: result.error
         };
         break;

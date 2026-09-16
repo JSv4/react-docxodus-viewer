@@ -29,7 +29,7 @@ for (const [entry, upstream] of surfaces) {
 const entry = await readFile('dist/react-docxodus-viewer.es.js', 'utf8');
 assert(!entry.includes('docxodus/react') && !entry.includes('docxodus/editor') && !entry.includes('@docxodus/export'), 'Browser root must not load editor or Node export dependencies');
 const metadata = JSON.parse(await readFile('node_modules/docxodus/package.json', 'utf8'));
-assert.equal(metadata.version, '12.4.1');
+assert.equal(metadata.version, '12.6.1');
 const built = await import('../dist/react-docxodus-viewer.es.js');
 const core = await import('docxodus/core');
 for (const [name, value] of Object.entries(core)) assert.equal(built[name], value, `Runtime export ${name} changed`);

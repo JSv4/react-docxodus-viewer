@@ -9,7 +9,7 @@ Explore all three layouts in the demo at `?example=modules`.
 ## Runtime setup
 
 ```sh
-npm install react-docxodus-viewer docxodus@12.4.1
+npm install react-docxodus-viewer docxodus@12.6.1
 npx rdv-copy-runtime public/docxodus
 ```
 
