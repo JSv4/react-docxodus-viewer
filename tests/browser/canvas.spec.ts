@@ -269,6 +269,44 @@ test('IME composition remains on the page until confirmed', async ({ page }) => 
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
+test('incoming layout waits for composition and discards superseded preparation', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await open(page, 'Say: ');
+  await settled(page);
+  const firstPage = page.locator('#pagination-container .page-box').first();
+  await firstPage.evaluate(element => { (element as HTMLElement).dataset.layoutRetained = 'true'; });
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.imeSetComposition', { text: '日本', selectionStart: 2, selectionEnd: 2 });
+  // A host layout setting may change while the active canvas has an IME draft.
+  // Both requests must wait before creating another document tree; the second
+  // cancels the first without disturbing the active page or its composition.
+  for (const gap of ['32px', '40px']) {
+    await page.locator('.rdv-viewer').evaluate((element, gap) => {
+      (element as HTMLElement).style.setProperty('--rdv-page-gap', gap);
+      window.dispatchEvent(new Event('resize'));
+    }, gap);
+    await expect(page.locator('.rdv-paginated-document[aria-busy="true"]')).toHaveCount(1);
+    await page.waitForTimeout(100);
+    await expect(page.locator('.rdv-document-html')).toHaveCount(1);
+    await expect(firstPage).toHaveAttribute('data-layout-retained', 'true');
+  }
+  expect(await nativeText(page)).toEqual(['Say: ']);
+  await cdp.send('Input.imeSetComposition', { text: '日本語', selectionStart: 3, selectionEnd: 3 });
+  await cdp.send('Input.insertText', { text: '日本語' });
+  await expect.poll(() => nativeText(page)).toEqual(['Say: 日本語']);
+  await settled(page);
+  await expect(page.locator('.rdv-document-html')).toHaveCount(1);
+  await expect(firstPage).not.toHaveAttribute('data-layout-retained');
+  await page.keyboard.type('!');
+  await page.keyboard.press('Control+s');
+  expect(await nativeText(page)).toEqual(['Say: 日本語!']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
 test('conflicting external text edits preserve typing for recovery', async ({ page }) => {
   await open(page, 'Original.');
   await paragraphs(page).first().click();

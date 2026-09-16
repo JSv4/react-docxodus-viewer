@@ -42,8 +42,8 @@ function adaptRootSelectors(rules: CSSRuleList) {
 }
 
 /** A viewer may stay mounted inside a hidden tab while conversion finishes. */
-function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
+async function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
     let observer: ResizeObserver | undefined;
     let frame: number | undefined;
     const cleanup = () => {
@@ -52,21 +52,27 @@ function waitForLayout(element: HTMLElement, signal: AbortSignal): Promise<void>
       signal.removeEventListener('abort', abort);
     };
     const abort = () => { cleanup(); reject(new DOMException('Pagination cancelled', 'AbortError')); };
-    const check = () => {
-      if (element.getBoundingClientRect().width <= 0) return false;
-      cleanup(); resolve(); return true;
-    };
     if (signal.aborted) { abort(); return; }
-    if (check()) return;
     signal.addEventListener('abort', abort, { once: true });
     if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(check);
+      // Reading bounds here forces the entire incoming document to lay out in
+      // the same task that parsed it. Observe the browser's next layout instead.
+      observer = new ResizeObserver(entries => {
+        if (entries.some(entry => entry.target === element && entry.contentRect.width > 0)) { cleanup(); resolve(); }
+      });
       observer.observe(element);
     } else {
-      const poll = () => { if (!check()) frame = requestAnimationFrame(poll); };
+      const poll = () => {
+        if (element.getBoundingClientRect().width > 0) { cleanup(); resolve(); }
+        else frame = requestAnimationFrame(poll);
+      };
       frame = requestAnimationFrame(poll);
     }
   });
+  // Pagination writes must not run in a ResizeObserver delivery's microtasks.
+  // That can resize the viewer again before the observer cycle completes.
+  await yieldToBrowser();
+  if (signal.aborted) throw new DOMException('Pagination cancelled', 'AbortError');
 }
 
 /** Zoom changes presentation, never the document's page breaks. */
@@ -186,76 +192,91 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
         }
       }
     }
-    const shadow = element.shadowRoot ?? element.attachShadow({ mode: 'open' });
-    const parsed = new DOMParser().parseFromString(html, 'text/html');
-    const wrapper = document.createElement('div');
-    for (const attribute of Array.from(parsed.documentElement.attributes)) wrapper.setAttribute(attribute.name, attribute.value);
-    wrapper.classList.add('rdv-document-html');
-    const documentBody = document.createElement('div');
-    for (const attribute of Array.from(parsed.body.attributes)) documentBody.setAttribute(attribute.name, attribute.value);
-    documentBody.classList.add('rdv-document-body');
-    wrapper.append(...Array.from(parsed.head.querySelectorAll('style')), documentBody);
-    documentBody.append(...Array.from(parsed.body.childNodes));
-    // Converted HTML sometimes contains a legacy bootstrap script. React owns execution.
-    wrapper.querySelectorAll('script, iframe, object, embed').forEach(node => node.remove());
-    for (const node of [wrapper, ...wrapper.querySelectorAll('*')]) {
-      for (const attribute of Array.from(node.attributes)) {
-        if (/^on/i.test(attribute.name) || (/^(href|src|xlink:href)$/i.test(attribute.name) && /^\s*javascript:/i.test(attribute.value))) node.removeAttribute(attribute.name);
-      }
-    }
-    // Measure the incoming pages while the current editing surface retains focus.
-    // The actual DOM handoff happens synchronously after fonts/images are ready.
-    if (activeLayout.current) Object.assign(wrapper.style, { opacity: '0', position: 'absolute', top: '0', left: '0', width: '100%', pointerEvents: 'none' });
-    wrapper.inert = true;
-    shadow.append(wrapper);
-    const selectionStyles = document.createElement('style');
-    selectionStyles.textContent = '[data-rdv-selected="true"] { outline: 1.5px solid var(--rdv-selection-color, #93aa79); outline-offset: 5px; border-radius: 1px; }';
-    wrapper.append(selectionStyles);
-    for (const stylesheet of wrapper.querySelectorAll('style')) {
-      if (stylesheet.sheet) adaptRootSelectors(stylesheet.sheet.cssRules);
-    }
-    const onClick = (event: MouseEvent) => {
-      if (canvasEditor && event.target instanceof Element && event.target.closest('[data-rdv-editable="true"]')) return;
-      const target = event.target instanceof Element ? event.target : null;
-      // Inline comment/revision wrappers have their own anchors. Editing a passage
-      // should select its paragraph, rather than the discussion attached to it.
-      const selection = shadowSelection(documentBody);
-      if (callbacksRef.current.onTextSelectionChange) {
-        if (target?.closest('a[href]')) event.preventDefault();
-        if (selection && !selection.isCollapsed) return;
-      }
-      const block = target?.closest(paragraphSelector);
-      const anchor = (block ?? target?.closest('[data-source-anchor-id]'))?.getAttribute('data-source-anchor-id');
-      if (anchor) callbacksRef.current.onAnchorSelect?.(anchor);
-      const link = target?.closest('a[href^="#"]');
-      if (link) {
-        const id = link.getAttribute('href')!.slice(1);
-        const destination = Array.from(documentBody.querySelectorAll<HTMLElement>('[id]')).find(node => node.id === id);
-        if (destination) { event.preventDefault(); destination.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-      }
-    };
-    documentBody.addEventListener('click', onClick);
-    const onSelection = () => {
-      if (canvasEditor) return;
-      const selection = shadowSelection(documentBody);
-      if (callbacksRef.current.onTextSelectionChange && selection && !selection.isCollapsed) {
-        callbacksRef.current.onTextSelectionChange(readTextSelection(documentBody, activeLayout.current?.documentVersion));
-      }
-    };
-    documentBody.addEventListener('mouseup', onSelection);
-    documentBody.addEventListener('keyup', onSelection);
-    let observer: IntersectionObserver | null = null;
-    let detachEditor: (() => void) | undefined;
-    const dispose = () => {
-      detachEditor?.();
-      observer?.disconnect();
-      documentBody.removeEventListener('click', onClick);
-      documentBody.removeEventListener('mouseup', onSelection);
-      documentBody.removeEventListener('keyup', onSelection);
-      if (body.current === documentBody) { body.current = null; callbacksRef.current.onRootChange?.(null); }
-      wrapper.remove();
-    };
+    let discardPending = () => {};
     void run(async signal => {
+      const check = () => {
+        if (signal.aborted || (canvasEditor && !canvasEditor.acceptsLayout(canvasOwner ?? null, documentVersion))) throw new DOMException('Editing superseded this layout', 'AbortError');
+      };
+      const idle = async () => { if (canvasEditor) await canvasEditor.whenIdle(signal); check(); };
+      await yieldToBrowser();
+      await idle();
+      const shadow = element.shadowRoot ?? element.attachShadow({ mode: 'open' });
+      const parsed = new DOMParser().parseFromString(html, 'text/html');
+      const wrapper = document.createElement('div');
+      discardPending = () => wrapper.remove();
+      for (const attribute of Array.from(parsed.documentElement.attributes)) wrapper.setAttribute(attribute.name, attribute.value);
+      wrapper.classList.add('rdv-document-html');
+      const documentBody = document.createElement('div');
+      for (const attribute of Array.from(parsed.body.attributes)) documentBody.setAttribute(attribute.name, attribute.value);
+      documentBody.classList.add('rdv-document-body');
+      wrapper.append(...Array.from(parsed.head.querySelectorAll('style')), documentBody);
+      documentBody.append(...Array.from(parsed.body.childNodes));
+      // Converted HTML sometimes contains a legacy bootstrap script. React owns execution.
+      wrapper.querySelectorAll('script, iframe, object, embed').forEach(node => node.remove());
+      let preparationDeadline = performance.now() + 8;
+      for (const node of [wrapper, ...wrapper.querySelectorAll('*')]) {
+        for (const attribute of Array.from(node.attributes)) {
+          if (/^on/i.test(attribute.name) || (/^(href|src|xlink:href)$/i.test(attribute.name) && /^\s*javascript:/i.test(attribute.value))) node.removeAttribute(attribute.name);
+        }
+        if (performance.now() >= preparationDeadline) {
+          await yieldToBrowser(); await idle(); preparationDeadline = performance.now() + 8;
+        }
+      }
+      // Measure the incoming pages while the current editing surface retains focus.
+      // The actual DOM handoff happens synchronously after fonts/images are ready.
+      if (activeLayout.current) Object.assign(wrapper.style, { opacity: '0', position: 'absolute', top: '0', left: '0', width: '100%', pointerEvents: 'none' });
+      wrapper.inert = true;
+      shadow.append(wrapper);
+      const selectionStyles = document.createElement('style');
+      selectionStyles.textContent = '[data-rdv-selected="true"] { outline: 1.5px solid var(--rdv-selection-color, #93aa79); outline-offset: 5px; border-radius: 1px; }';
+      wrapper.append(selectionStyles);
+      for (const stylesheet of wrapper.querySelectorAll('style')) {
+        if (stylesheet.sheet) adaptRootSelectors(stylesheet.sheet.cssRules);
+      }
+      const onClick = (event: MouseEvent) => {
+        if (canvasEditor && event.target instanceof Element && event.target.closest('[data-rdv-editable="true"]')) return;
+        const target = event.target instanceof Element ? event.target : null;
+        // Inline comment/revision wrappers have their own anchors. Editing a passage
+        // should select its paragraph, rather than the discussion attached to it.
+        const selection = shadowSelection(documentBody);
+        if (callbacksRef.current.onTextSelectionChange) {
+          if (target?.closest('a[href]')) event.preventDefault();
+          if (selection && !selection.isCollapsed) return;
+        }
+        const block = target?.closest(paragraphSelector);
+        const anchor = (block ?? target?.closest('[data-source-anchor-id]'))?.getAttribute('data-source-anchor-id');
+        if (anchor) callbacksRef.current.onAnchorSelect?.(anchor);
+        const link = target?.closest('a[href^="#"]');
+        if (link) {
+          const id = link.getAttribute('href')!.slice(1);
+          const destination = Array.from(documentBody.querySelectorAll<HTMLElement>('[id]')).find(node => node.id === id);
+          if (destination) { event.preventDefault(); destination.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+        }
+      };
+      documentBody.addEventListener('click', onClick);
+      const onSelection = () => {
+        if (canvasEditor) return;
+        const selection = shadowSelection(documentBody);
+        if (callbacksRef.current.onTextSelectionChange && selection && !selection.isCollapsed) {
+          callbacksRef.current.onTextSelectionChange(readTextSelection(documentBody, activeLayout.current?.documentVersion));
+        }
+      };
+      documentBody.addEventListener('mouseup', onSelection);
+      documentBody.addEventListener('keyup', onSelection);
+      let observer: IntersectionObserver | null = null;
+      let detachEditor: (() => void) | undefined = undefined;
+      const dispose = () => {
+        detachEditor?.();
+        observer?.disconnect();
+        documentBody.removeEventListener('click', onClick);
+        documentBody.removeEventListener('mouseup', onSelection);
+        documentBody.removeEventListener('keyup', onSelection);
+        if (body.current === documentBody) { body.current = null; callbacksRef.current.onRootChange?.(null); }
+        wrapper.remove();
+      };
+      discardPending = () => { if (activeLayout.current?.wrapper !== wrapper) dispose(); };
+      await yieldToBrowser();
+      await idle();
       await waitForLayout(element, signal);
       documentBody.getBoundingClientRect(); // Start font requests before awaiting readiness.
       await document.fonts?.ready;
@@ -279,10 +300,6 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       const engine = new PaginationEngine(staging, container, {
         scale: 1, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
       });
-      const check = () => {
-        if (signal.aborted || (canvasEditor && !canvasEditor.acceptsLayout(canvasOwner ?? null, documentVersion))) throw new DOMException('Editing superseded this layout', 'AbortError');
-      };
-      const idle = async () => { if (canvasEditor) await canvasEditor.whenIdle(signal); };
       const cooperative = cooperativePagination(engine, check, idle);
       const result = await cooperative.paginate();
       await idle(); check();
@@ -324,12 +341,12 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       }
       return result;
     }).catch(error => {
-      if (activeLayout.current?.wrapper !== wrapper) dispose();
+      discardPending();
       if (error?.name !== 'AbortError') callbacksRef.current.onError?.(error);
     });
     return () => {
       cancel();
-      if (activeLayout.current?.wrapper !== wrapper) dispose();
+      discardPending();
     };
   }, [html, canvasEditor, canvasOwner, liveBlocks, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs, documentVersion, rendererFingerprint, backgroundColor, layoutSettings, run, cancel]);
 
