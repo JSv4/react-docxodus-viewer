@@ -9,6 +9,87 @@ NVCA footnote that caused the remaining 816 ms stall. The full historical
 workloads remain the comparison; other excluded structures retain the public
 atomic batch. See the [12.6.2 upgrade notes](12.6.2-upgrade.md).
 
+Five serial production runs at application revision `357c8b6` retained all nine
+extended phases and the same NVCA targets used for 12.6.1. Every run passed its
+text, formatting, surrounding-text, key-count, and Enter-undo checks.
+
+| Maximum observed input response | Module | Studio | Studio, profiled | Late body, profiled | Footnote, profiled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Five ordinary interaction phases | 88 ms | 56 ms | 48 ms | 56 ms | 184 ms |
+| Collapsed Enter | 64 ms | 80 ms | 120 ms | 96 ms | 72 ms |
+| Original styled pause/resume phase | 24 ms | 24 ms | 24 ms | 64 ms | 56 ms |
+| Explicit run-boundary styled typing | 48 ms | 24 ms | 24 ms | 88 ms | 56 ms |
+| Explicit interior styled typing | 72 ms | 40 ms | 24 ms | 184 ms | 64 ms |
+| Full 150 ms gate | Pass | Pass | Pass | Fail | Fail |
+
+The previously blocked footnote interior phase improved from **816 ms to 64 ms**.
+Its two formatted native calls took 53.8 and 41.6 ms, with no transaction setup,
+package hash, or native page-map registration in that phase. The supported
+operation preserves the tab and original text formatting.
+
+**The strict 150 ms gate still fails in two of the five original runs.** Both
+184 ms observations are primarily time queued before the key handler. The late
+body keyup waited 172.2 ms before the first native commit in that phase; no
+instrumented native call or recorded Long Task overlaps its delay. The footnote
+pause/resume keydown waited 163.3 ms during an unattributed 168 ms Long Task,
+also without an overlapping native call. A later 289.1 ms native formatted call
+in the late-body phase is outside the failed event's time window and does not
+explain that delay.
+
+Two diagnostic repeats added CPU profiles and paused other tool work during
+measurement. No application code changed:
+
+| Maximum observed input response | Late body, CPU profile | Footnote, CPU profile |
+| --- | ---: | ---: |
+| Entire nine-phase workload | 96 ms | 80 ms |
+| Explicit interior styled typing | 24 ms | 16 ms |
+| Full 150 ms gate | Pass | Pass |
+
+The outliers did not reproduce in these repeats, so their internal cause remains
+unproven. The repeats do not replace the failures: **five of all seven runs
+pass**. An after-run observation of other host CPU activity is insufficient to
+attribute either delay to contention. The
+[compact latency record](benchmarks/2026-09-16-12.6.2-latency.json) retains every
+phase, both failed event windows, native call summaries, and source/profile
+digests. These are quantized Chrome Event Timing samples on one Intel Core Ultra
+7 258V, Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling;
+they do not establish population INP or an editor-wide maximum. Individual native
+calls and background layout can exceed 150 ms even when no sampled key overlaps
+them. Structural layout after Enter still takes seconds. Excluded native
+structures, compound edits, opening, export, and slower devices remain limits.
+
+### Native operation checks
+
+Two fresh native contexts isolated the original NVCA footnote run containing
+`w:tab` followed by `w:t`, inserting at offset 24. The atomic formatted operation
+now succeeds in **29.5–32.7 ms**, compared with the 600.2–621.9 ms fallback on
+12.6.1. Only `ReplaceTextAtSpanWithFormat` executes for the edit. Both contexts
+also pass ordinary body insertion (67.9–69.9 ms), exact typed formatting,
+surrounding formatting, tab/reference count/order/attributes/text positions,
+one-version atomicity, and one-step undo/redo. Undo restores XML after equivalent
+namespace prefixes are normalized. See the
+[native insertion record](benchmarks/2026-09-16-12.6.2-native-insertions.json).
+
+### Validation
+
+Lint, types, library/demo builds, the complete API identity audit, and generated
+pagination checks pass. All **82 unit tests and 53 browser contracts** pass, with
+two opt-in browser skips; the application revision's
+[CI is green](https://github.com/JSv4/react-docxodus-viewer/actions/runs/35061889302).
+The new browser cases cover one and two leading tabs; the excluded hyperlink
+case still verifies the atomic fallback.
+
+The full NVCA integrity test passes with 65 pages, 234 body paragraphs, 110
+footnote paragraphs, 13 intentionally modified paragraphs, one added paragraph,
+and 31 native commits. Save/reopen preserves unrelated paragraph XML, fields,
+bookmarks, notes, sections, and package parts. Native and cooperative pagination
+match for pages, HTML, and fragment maps on the same fixture. See the
+[integrity record](benchmarks/2026-09-16-12.6.2-nvca-integrity.json).
+The production studio and module pages pass seven smoke tests with one
+source-only skip. Packed consumer imports, types, runtime-copy verification,
+and the Node export API pass. PDF rendering is skipped because this host denies
+the unprivileged user namespaces required by Chromium's process sandbox.
+
 ## Historical 12.6.1 results
 
 The preceding integration pinned the unmodified `docxodus@12.6.1` and matching export

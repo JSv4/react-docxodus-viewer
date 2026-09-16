@@ -1,0 +1,94 @@
+{
+  "applicationRevision": "357c8b6c51b09fb93715b41e0124e80d63639f22",
+  "engineVersion": "12.6.2",
+  "workload": "Source-harness NVCA integrity test; native default Markdown patches. Timings include typing, debounce and layout and are not input-to-paint latency.",
+  "result": "passed",
+  "nativePaginationDifferential": "passed on the same NVCA fixture; pages, HTML and fragment maps match native pagination",
+  "report": {
+    "fixture": "d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29",
+    "pageCount": 65,
+    "bodyParagraphs": 234,
+    "footnoteParagraphs": 110,
+    "loadMs": 8514,
+    "timings": [
+      {
+        "id": "h:body:3c7febe8565d200c894a4f2d964412b6",
+        "commitMs": 1079,
+        "layoutMs": 1416
+      },
+      {
+        "id": "p:body:1ef8f6933054e4feca6a87faff1ea462",
+        "commitMs": 958,
+        "layoutMs": 1307
+      },
+      {
+        "id": "p:body:256139579825824ada5ca0771f6f4c50",
+        "commitMs": 1135,
+        "layoutMs": 2008
+      },
+      {
+        "id": "h:body:0d11ade95e3163f93766a9df86fd877f",
+        "commitMs": 971,
+        "layoutMs": 1395
+      },
+      {
+        "id": "p:body:33eab5a76953e018050c4229ff7eea41",
+        "commitMs": 804,
+        "layoutMs": 1781
+      },
+      {
+        "id": "h:body:46649e27ec54936020588d7037db9938",
+        "commitMs": 1164,
+        "layoutMs": 1588
+      },
+      {
+        "id": "p:body:8a1aabf3b3f0e5935244b196f36efdbf",
+        "commitMs": 816,
+        "layoutMs": 1506
+      },
+      {
+        "id": "h:body:1ad843a6f253e5b1f4af942b1c6a9c08",
+        "commitMs": 1156,
+        "layoutMs": 1988
+      },
+      {
+        "id": "p:body:86ad5c34e28fe5137e7913ad02ab7c00",
+        "commitMs": 1027,
+        "layoutMs": 1384
+      },
+      {
+        "id": "p:fn:1e74d934ae84a7483f06cb093bce7c16",
+        "commitMs": 994,
+        "layoutMs": 1861
+      },
+      {
+        "id": "p:fn:c4dc0f76adfbbb22afab2af3c6b9eae1",
+        "commitMs": 1046,
+        "layoutMs": 1875
+      },
+      {
+        "id": "p:fn:2e91e2d2f3939557a9ffd809fd7c8cea",
+        "commitMs": 1140,
+        "layoutMs": 1917
+      }
+    ],
+    "modifiedParagraphs": 13,
+    "addedParagraphs": 1,
+    "nativeCommits": 31,
+    "assertions": [
+      "all body and footnote text editable",
+      "stable pagination at 50%, 100%, 200%",
+      "typing at 12 locations",
+      "undo/redo",
+      "typing through repeated background conversions",
+      "selected formatting",
+      "split/paste/merge",
+      "final keystroke saved",
+      "reopened native DOCX valid",
+      "all original text preserved outside intentional edits",
+      "unchanged paragraph XML preserved",
+      "fields/bookmarks/notes/sections preserved",
+      "other package parts unchanged"
+    ]
+  }
+}
