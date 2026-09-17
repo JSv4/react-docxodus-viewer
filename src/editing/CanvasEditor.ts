@@ -2,7 +2,7 @@ import type { CharSpan, DocxSession, EditResult, FormatOp } from 'docxodus/core'
 import type { DocxSessionController } from '../session';
 import { editableText, paragraphTextSteps, replaceParagraphText, textChange, textChangeAtSelection } from './text';
 import { shadowSelection } from './selection';
-import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, prepareCanvasBreaks, prepareCanvasHyphens, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
+import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, prepareCanvasBreaks, prepareCanvasHyphens, readCanvasDeletion, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
 
 export interface CanvasEditorSnapshot { suspended: boolean; pending: boolean; composing: boolean; conflict: boolean; format: FormatOp | null }
@@ -154,8 +154,8 @@ export class CanvasEditor {
           prepareCanvasBreaks(block);
           block.querySelectorAll(`${generatedContent}, [data-docx-tab], del, img`).forEach(node => node.setAttribute('contenteditable', 'false'));
           if (!text && !canvasText(block).trim() && !block.querySelector('img, br:not([data-rdv-empty]), [data-docx-tab]')) {
-            const marker = block.querySelector('[data-list-marker="true"]');
-            block.replaceChildren(...(marker ? [marker] : []), Object.assign(document.createElement('br'), { ariaHidden: 'true' }));
+            const markers = block.querySelectorAll('[data-list-marker="true"], a.footnote-ref, a.endnote-ref');
+            block.replaceChildren(...markers, Object.assign(document.createElement('br'), { ariaHidden: 'true' }));
             block.lastElementChild?.setAttribute('data-rdv-empty', 'true');
           }
         }
@@ -396,29 +396,37 @@ export class CanvasEditor {
   }
   private removeRange(session: DocxSession, range: CanvasRange) {
     const { start, end } = range;
+    const results: EditResult[] = [];
+    for (const note of range.notes ?? []) {
+      const anchor = Object.keys(this.controller.getAnchorIndex()).find(id => id.startsWith(`${note.kind}:`) &&
+        new DOMParser().parseFromString(session.raw.getXml(id), 'application/xml').documentElement
+          .getAttributeNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'id') === note.id);
+      if (!anchor) throw new Error('This note changed. Wait for the page to refresh before deleting it.');
+      results.push(check(session.deleteBlock(anchor)));
+    }
     // A caret has no text to remove. The following native split/insertion
     // validates its own anchor/span without two redundant formatting reads.
-    if (samePoint(start, end)) return { results: [] as EditResult[], removed: [] as string[] };
-    if (start.anchorId === end.anchorId) return { results: this.replace(session, start.anchorId, start.offset, end.offset, ''), removed: [] as string[] };
+    if (samePoint(start, end)) return { results, removed: [] as string[] };
+    if (start.anchorId === end.anchorId) return { results: [...results, ...this.replace(session, start.anchorId, start.offset, end.offset, '')], removed: [] as string[] };
     const blocks = [...new Set(this.storyBlocks(start.anchorId).map(block => block.dataset.sourceAnchorId!))];
     const first = blocks.indexOf(start.anchorId), last = blocks.indexOf(end.anchorId);
     if (first < 0 || last <= first) throw new Error('Select text within one document story, in document order.');
     const firstElement = canvasParagraphs(this.root!, start.anchorId)[0], lastElement = canvasParagraphs(this.root!, end.anchorId)[0];
     const cell = firstElement.closest('td, th');
     if (cell !== lastElement.closest('td, th') || blocks.slice(first, last + 1).some(id => canvasParagraphs(this.root!, id)[0].closest('td, th') !== cell)) throw new Error('Edit table cells individually.');
-    const results = this.replace(session, end.anchorId, 0, end.offset, '');
+    results.push(...this.replace(session, end.anchorId, 0, end.offset, ''));
     results.push(...this.replace(session, start.anchorId, start.offset, editableText(session.getFormatting(start.anchorId)).length, ''));
     const removed = blocks.slice(first + 1, last + 1);
     for (const anchor of blocks.slice(first + 1, last)) results.push(check(session.deleteBlock(anchor)));
     results.push(...this.join(session, start.anchorId, end.anchorId));
     return { results, removed };
   }
-  insertText = (value: string, paragraphBreak = false) => {
-    const range = this.root && readCanvasRange(this.root) || this.range;
+  insertText = (value: string, paragraphBreak = false, target?: CanvasRange) => {
+    const range = target ?? (this.root && readCanvasRange(this.root) || this.range);
     if (!range) return false;
     // A collapsed Enter is exactly one native split, which already owns an
     // undo/version unit. Selections and pasted text still need atomic rollback.
-    const atomic = !(paragraphBreak && samePoint(range.start, range.end));
+    const atomic = !(paragraphBreak && samePoint(range.start, range.end) && !range.notes?.length);
     return this.mutate(paragraphBreak ? 'split paragraph' : 'insert text', session => {
       const { results, removed } = this.removeRange(session, range);
       const lines = paragraphBreak ? ['', ''] : value.replace(/\r\n?/g, '\n').split('\n');
@@ -538,7 +546,11 @@ export class CanvasEditor {
       if (event.isComposing || this.state.composing) { this.beginDraft(range.start.anchorId); return; }
       if (event.inputType === 'historyUndo' || event.inputType === 'historyRedo') { event.preventDefault(); if (this.commit()) this.callbacks?.onHistory(event.inputType === 'historyUndo' ? 'undo' : 'redo'); return; }
       if (event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak') { event.preventDefault(); this.insertText('', true); return; }
-      if (range.start.anchorId !== range.end.anchorId) { event.preventDefault(); this.insertText(event.data ?? ''); return; }
+      if (event.inputType.startsWith('delete')) {
+        const deletion = readCanvasDeletion(root, event);
+        if (deletion?.notes?.length) { event.preventDefault(); this.insertText('', false, deletion); return; }
+      }
+      if (range.start.anchorId !== range.end.anchorId || range.notes?.length) { event.preventDefault(); this.insertText(event.data ?? ''); return; }
       if (event.inputType.startsWith('delete') && samePoint(range.start, range.end)) {
         const text = this.draft ? canvasParagraphs(root, range.start.anchorId).map(canvasText).join('') : this.text(range.start.anchorId);
         if (!range.start.offset && /Backward$/.test(event.inputType)) { event.preventDefault(); this.merge(-1); return; }
@@ -554,7 +566,7 @@ export class CanvasEditor {
     const cut = (event: ClipboardEvent) => {
       if (this.callbacks?.readOnly) return;
       this.capture();
-      if (!this.range || samePoint(this.range.start, this.range.end)) return;
+      if (!this.range || (samePoint(this.range.start, this.range.end) && !this.range.notes?.length)) return;
       event.preventDefault(); event.clipboardData?.setData('text/plain', shadowSelection(root)?.toString() ?? ''); this.insertText('');
     };
     const keydown = (event: KeyboardEvent) => {
