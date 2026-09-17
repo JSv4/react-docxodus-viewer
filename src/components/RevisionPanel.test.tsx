@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RevisionPanel } from './RevisionPanel'
-import type { DocxDiffRevision as Revision, RevisionListEntry } from 'docxodus/core'
+import type { DocxDiffRevision as Revision, RevisionListEntry, FormatChangeDetails } from 'docxodus/core'
 
 const mockRevisions: Revision[] = [
   {
@@ -45,12 +45,18 @@ describe('RevisionPanel', () => {
     expect(onAccept).toHaveBeenCalledWith('rev2-native-1');
   });
 
-  it('retains structural diagnostics and disables unsafe resolution', async () => {
+  it.each([
+    { type: 'structure', family: 'cell_merge', filter: 'structural', label: 'cell merge' },
+    { type: 'format', family: 'properties_change', filter: 'formatting', label: 'Formatted' },
+  ] as const)('retains $type diagnostics and disables unsafe resolution', async ({ type, family, filter, label }) => {
     const onAccept = vi.fn();
-    render(<RevisionPanel revisions={[native({ type: 'structure', family: 'cell_merge', resolutionStatus: 'ambiguous', diagnostic: { code: 'ambiguous_pair', message: 'The cell merge has conflicting markers.' } })]} onAccept={onAccept} onAcceptAll={vi.fn()} />);
-    await userEvent.setup().selectOptions(screen.getByRole('combobox'), 'structural');
-    expect(screen.getByText('cell merge')).toBeInTheDocument();
-    expect(screen.getByText('The cell merge has conflicting markers.')).toBeInTheDocument();
+    const revision = native({ type, family, resolutionStatus: 'ambiguous', diagnostic: { code: 'ambiguous_pair', message: 'This change has conflicting markers.' } });
+    render(<RevisionPanel revisions={[revision]} onAccept={onAccept} onAcceptAll={vi.fn()} formatDetails={{ [revision.id]: {
+      oldProperties: { bold: 'false' }, newProperties: { bold: 'false' },
+    } }} />);
+    await userEvent.setup().selectOptions(screen.getByRole('combobox'), filter);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByText('This change has conflicting markers.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Accept all' })).toBeDisabled();
     expect(onAccept).not.toHaveBeenCalled();
@@ -59,6 +65,69 @@ describe('RevisionPanel', () => {
   it('renders empty state when no revisions', () => {
     render(<RevisionPanel revisions={[]} />)
     expect(screen.getByText('No tracked changes found in this document.')).toBeInTheDocument()
+  })
+
+  it.each(['comparison', 'native'] as const)('shows only actual formatting differences for %s revisions', async (source) => {
+    const unchanged: FormatChangeDetails = {
+      oldProperties: { justification: 'Left', spacingAfter: '0' },
+      newProperties: { justification: 'Left', spacingAfter: '0' },
+    }
+    const changed: FormatChangeDetails = {
+      oldProperties: { ...unchanged.oldProperties, bold: 'false', fontSize: '20', underline: 'single' },
+      newProperties: { ...unchanged.newProperties, bold: 'true', fontSize: '24', italic: 'true' },
+    }
+    const entries = [
+      { text: 'Unchanged heading', details: unchanged },
+      { text: 'Changed heading', details: changed },
+    ]
+    const revisions = entries.map(({ text, details }) => source === 'native'
+      ? native({ id: text, type: 'format', family: 'properties_change', text })
+      : { ...mockRevisions[0], revisionType: 'FormatChanged', text, formatChange: details })
+    const { container } = render(<RevisionPanel
+      revisions={[...revisions, { ...mockRevisions[0], formatChange: unchanged }]}
+      formatDetails={Object.fromEntries(entries.map(({ text, details }) => [text, details]))}
+    />)
+
+    expect(Array.from(container.querySelectorAll('.rdv-format-change'), row => row.textContent)).toEqual([
+      'BoldNo→Yes', 'Font Size20→24', 'UnderlineSingle(removed)', 'ItalicYes(added)',
+    ])
+    expect(screen.queryByText('Unchanged heading')).not.toBeInTheDocument()
+    expect(screen.getByText('This is inserted text')).toBeInTheDocument()
+    expect(screen.getByText('2 changes')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Formatting (1)' })).toBeInTheDocument()
+    await userEvent.setup().selectOptions(screen.getByRole('combobox'), 'formatting')
+    expect(screen.getByText('Changed heading')).toBeInTheDocument()
+    expect(screen.queryByText('This is inserted text')).not.toBeInTheDocument()
+  })
+
+  it('keeps changes with incomplete evidence or unprintable properties', () => {
+    const entries: Array<{ text: string; formatChange?: FormatChangeDetails }> = [
+      { text: 'No formatting evidence' },
+      { text: 'Missing old snapshot', formatChange: { newProperties: {} } },
+      { text: 'Missing new snapshot', formatChange: { oldProperties: {} } },
+      { text: 'Empty snapshots', formatChange: { oldProperties: {}, newProperties: {} } },
+      { text: 'Unmodeled run change', formatChange: { oldProperties: {}, newProperties: {}, changedPropertyNames: [] } },
+      { text: 'Unmodeled change beside equal bold', formatChange: { oldProperties: { bold: 'true' }, newProperties: { bold: 'true' }, changedPropertyNames: [] } },
+      { text: 'Table shell changed', formatChange: { oldProperties: {}, newProperties: {}, changedPropertyNames: ['shell'], scope: 'table' } },
+      { text: 'Border XML changed', formatChange: { oldProperties: { border: '<w:top w:val="single"/>' }, newProperties: { border: '<w:top w:val="double"/>' } } },
+    ]
+    const { container } = render(<RevisionPanel revisions={entries.map(entry => ({
+      ...mockRevisions[0], revisionType: 'FormatChanged', ...entry,
+    }))} />)
+    for (const { text } of entries) expect(screen.getByText(text)).toBeInTheDocument()
+    expect(screen.getByText('8 changes')).toBeInTheDocument()
+    expect(container.querySelector('.rdv-format-change')).not.toBeInTheDocument()
+  })
+
+  it('shows the empty state when arriving evidence proves the only revision unchanged', () => {
+    const revision = native({ type: 'format', family: 'properties_change', text: 'Same paragraph' })
+    const { rerender } = render(<RevisionPanel revisions={[revision]} />)
+    expect(screen.getByText('Same paragraph')).toBeInTheDocument()
+    rerender(<RevisionPanel revisions={[revision]} formatDetails={{ [revision.id]: {
+      oldProperties: { keepNext: 'false' }, newProperties: { keepNext: 'false' },
+    } }} />)
+    expect(screen.getByText('No tracked changes found in this document.')).toBeInTheDocument()
+    expect(screen.queryByText('Same paragraph')).not.toBeInTheDocument()
   })
 
   it('displays revision count in stats', () => {

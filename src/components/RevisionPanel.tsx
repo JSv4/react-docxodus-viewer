@@ -12,7 +12,8 @@ export interface RevisionPanelProps {
   onReject?: (id: string) => ReturnType<Resolution>;
   onAcceptAll?: Resolution;
   onRejectAll?: Resolution;
-  /** Optional formatting evidence keyed by native revision id. Comparison records carry their own. */
+  /** Formatting snapshots by native revision id. Equal snapshots without changedPropertyNames
+   * are treated as unchanged; keep that metadata for unmodeled changes. Comparison records carry their own. */
   formatDetails?: Record<string, FormatChangeDetails>;
 }
 
@@ -62,7 +63,7 @@ function truncateText(text: string, maxLength: number = 150): string {
 }
 
 // Filter out raw XML values and clean up property names
-function isValidPropertyValue(value: string): boolean {
+function isValidPropertyValue(value: string | undefined): value is string {
   if (!value || typeof value !== 'string') return false;
   // Filter out raw XML data
   if (value.includes('<') || value.includes('xmlns') || value.includes('Unid=')) return false;
@@ -99,37 +100,24 @@ interface FormatChangeItem {
 function getFormatChanges(details?: FormatChangeDetails): FormatChangeItem[] {
   if (!details) return [];
   const { oldProperties, newProperties } = details;
-  const changes: FormatChangeItem[] = [];
-  const processedKeys = new Set<string>();
+  const keys = new Set([...Object.keys(oldProperties ?? {}), ...Object.keys(newProperties ?? {})]);
+  return [...keys].flatMap(key => {
+    const before = oldProperties?.[key], after = newProperties?.[key];
+    if (before === after) return [];
+    const oldValue = isValidPropertyValue(before) ? formatPropertyValue(before) : undefined;
+    const newValue = isValidPropertyValue(after) ? formatPropertyValue(after) : undefined;
+    return oldValue || newValue ? [{ property: formatPropertyName(key), oldValue, newValue }] : [];
+  });
+}
 
-  // Process old properties
-  if (oldProperties) {
-    for (const [key, value] of Object.entries(oldProperties)) {
-      if (!isValidPropertyValue(value)) continue;
-      processedKeys.add(key);
-      const newValue = newProperties?.[key];
-      changes.push({
-        property: formatPropertyName(key),
-        oldValue: formatPropertyValue(value),
-        newValue: newValue && isValidPropertyValue(newValue) ? formatPropertyValue(newValue) : undefined,
-      });
-    }
-  }
-
-  // Process new properties not in old
-  if (newProperties) {
-    for (const [key, value] of Object.entries(newProperties)) {
-      if (processedKeys.has(key)) continue;
-      if (!isValidPropertyValue(value)) continue;
-      changes.push({
-        property: formatPropertyName(key),
-        oldValue: undefined,
-        newValue: formatPropertyValue(value),
-      });
-    }
-  }
-
-  return changes;
+// Engine records carry changedPropertyNames, even [] for unmodeled changes.
+// Only infer a no-op from nonempty, equal snapshots supplied without that metadata.
+function isUnchangedFormat(details?: FormatChangeDetails): boolean {
+  if (!details?.oldProperties || !details.newProperties || details.changedPropertyNames !== undefined) return false;
+  const { oldProperties, newProperties } = details;
+  const keys = new Set([...Object.keys(oldProperties), ...Object.keys(newProperties)]);
+  return keys.size > 0 && [...keys].every(key => Object.hasOwn(oldProperties, key) && Object.hasOwn(newProperties, key)
+    && oldProperties[key] === newProperties[key]);
 }
 
 export function RevisionPanel({ revisions, onSelect, onAccept, onReject, onAcceptAll, onRejectAll, formatDetails }: RevisionPanelProps) {
@@ -148,10 +136,17 @@ export function RevisionPanel({ revisions, onSelect, onAccept, onReject, onAccep
   // Pair each revision with its stable index in the original array so that
   // filtering and expansion state stay tied to the revision itself, not to a
   // shifting position within the filtered subset.
+  const displayedRevisions = useMemo(() => revisions.flatMap((revision, index) => {
+    const details = 'family' in revision ? formatDetails?.[revision.id] : revision.formatChange;
+    const hasDiagnostic = 'family' in revision && revision.resolutionStatus !== 'supported';
+    if (isFormatChange(revision) && !hasDiagnostic && isUnchangedFormat(details)) return [];
+    const id = 'family' in revision ? revision.id : `${revision.leftAnchor ?? ''}:${revision.rightAnchor ?? ''}:${revision.revisionType}:${index}`;
+    return [{ revision, id, formatChanges: getFormatChanges(details) }];
+  }), [revisions, formatDetails]);
+
   const filteredRevisions = useMemo(() => {
-    const withIds = revisions.map((revision, index) => ({ revision, id: 'family' in revision ? revision.id : `${revision.leftAnchor ?? ''}:${revision.rightAnchor ?? ''}:${revision.revisionType}:${index}` }));
-    if (filter === 'all') return withIds;
-    return withIds.filter(({ revision }) => {
+    if (filter === 'all') return displayedRevisions;
+    return displayedRevisions.filter(({ revision }) => {
       switch (filter) {
         case 'insertions': return isInsertion(revision);
         case 'deletions': return isDeletion(revision);
@@ -161,16 +156,19 @@ export function RevisionPanel({ revisions, onSelect, onAccept, onReject, onAccep
         default: return true;
       }
     });
-  }, [revisions, filter]);
+  }, [displayedRevisions, filter]);
 
-  const stats = useMemo(() => ({
-    total: revisions.length,
-    insertions: revisions.filter(isInsertion).length,
-    deletions: revisions.filter(isDeletion).length,
-    moves: revisions.filter(isMove).length,
-    formatting: revisions.filter(isFormatChange).length,
-    structural: revisions.filter(isStructural).length,
-  }), [revisions]);
+  const stats = useMemo(() => {
+    const visible = displayedRevisions.map(({ revision }) => revision);
+    return {
+      total: visible.length,
+      insertions: visible.filter(isInsertion).length,
+      deletions: visible.filter(isDeletion).length,
+      moves: visible.filter(isMove).length,
+      formatting: visible.filter(isFormatChange).length,
+      structural: visible.filter(isStructural).length,
+    };
+  }, [displayedRevisions]);
 
   const toggleExpanded = (index: string) => {
     setExpandedIds((prev) => {
@@ -184,7 +182,7 @@ export function RevisionPanel({ revisions, onSelect, onAccept, onReject, onAccep
     });
   };
 
-  if (revisions.length === 0) {
+  if (displayedRevisions.length === 0) {
     return (
       <div className="rdv-revision-panel">
         <div className="rdv-revision-empty">
@@ -244,10 +242,9 @@ export function RevisionPanel({ revisions, onSelect, onAccept, onReject, onAccep
       </div>
 
       <div className="rdv-revision-list">
-        {filteredRevisions.map(({ revision, id }) => {
+        {filteredRevisions.map(({ revision, id, formatChanges }) => {
           const isExpanded = expandedIds.has(id);
           const needsTruncation = revision.text.length > 150;
-          const formatChanges = getFormatChanges('family' in revision ? formatDetails?.[revision.id] : revision.formatChange);
 
           return (
             <div
