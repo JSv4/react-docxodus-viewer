@@ -1,7 +1,10 @@
 import { paragraphSelector, shadowSelection } from './selection';
 
 export interface CanvasPoint { anchorId: string; offset: number }
-export interface CanvasRange { start: CanvasPoint; end: CanvasPoint; backward: boolean }
+export interface CanvasRange {
+  start: CanvasPoint; end: CanvasPoint; backward: boolean;
+  notes?: { kind: 'fn' | 'en'; id: string }[];
+}
 export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-ref, a[class$="-backref"], a.comment-marker';
 const ignored = `${generatedContent}, [data-rdv-empty], [data-rdv-presentation], [data-docx-tab], br, del, [data-revision-type="deleted"]`;
 
@@ -80,18 +83,47 @@ export function canvasPoint(root: HTMLElement, node: Node, offset: number): Canv
   return { anchorId: block.dataset.sourceAnchorId!, offset: fragments.slice(0, index).reduce((length, part) => length + canvasText(part).length, 0) + canvasText(prefix.cloneContents()).length };
 }
 
-export function readCanvasRange(root: HTMLElement): CanvasRange | null {
+export function readCanvasRange(root: HTMLElement, target?: StaticRange): CanvasRange | null {
   const selection = shadowSelection(root);
   if (!selection?.rangeCount) return null;
   const tree = root.getRootNode() as ShadowRoot;
   const composed = (selection as Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] }).getComposedRanges?.({ shadowRoots: [tree] });
-  const range = composed?.[0] ?? selection.getRangeAt(0);
+  const range = target ?? composed?.[0] ?? selection.getRangeAt(0);
   const start = canvasPoint(root, range.startContainer, range.startOffset);
   if (start && range.startContainer === range.endContainer && range.startOffset === range.endOffset) return { start, end: start, backward: false };
   const end = canvasPoint(root, range.endContainer, range.endOffset);
   if (!start || !end) return null;
+  // Notes occupy no native text offsets, but remain selectable DOM content.
+  const selected = root.ownerDocument.createRange();
+  selected.setStart(range.startContainer, range.startOffset); selected.setEnd(range.endContainer, range.endOffset);
+  const notes = Array.from(root.querySelectorAll<HTMLElement>('#pagination-container a.footnote-ref, #pagination-container a.endnote-ref'))
+    .filter(ref => selected.intersectsNode(ref)).map(ref => ({
+      kind: ref.matches('.footnote-ref') ? 'fn' as const : 'en' as const,
+      id: ref.dataset.footnoteId ?? ref.dataset.endnoteId ?? ref.id.replace(/^(fn|en)-ref-/, ''),
+    }));
   const anchor = selection.anchorNode && canvasPoint(root, selection.anchorNode, selection.anchorOffset);
-  return { start, end, backward: !!anchor && !samePoint(start, end) && samePoint(anchor, end) };
+  return { start, end, notes, backward: !!anchor && !samePoint(start, end) && samePoint(anchor, end) };
+}
+
+/** Older beforeinput implementations omit target ranges for collapsed deletion. */
+export function readCanvasDeletion(root: HTMLElement, event: InputEvent): CanvasRange | null {
+  const target = event.getTargetRanges?.()[0];
+  if (target) return readCanvasRange(root, target);
+  const selection = shadowSelection(root);
+  const caret = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  if (caret?.collapsed && /^(deleteContentBackward|deleteContentForward)$/.test(event.inputType)) {
+    const backward = event.inputType.endsWith('Backward');
+    const block = (caret.startContainer instanceof Element ? caret.startContainer : caret.startContainer.parentElement)?.closest(paragraphSelector);
+    for (const ref of block?.querySelectorAll('a.footnote-ref, a.endnote-ref') ?? []) {
+      const note = root.ownerDocument.createRange(); note.selectNode(ref);
+      const order = note.compareBoundaryPoints(backward ? Range.END_TO_END : Range.START_TO_START, caret);
+      if (backward ? order > 0 : order < 0) continue;
+      const gap = caret.cloneRange();
+      if (backward) gap.setStartAfter(ref); else gap.setEndBefore(ref);
+      if (!gap.toString() && !gap.cloneContents().querySelector('br, img, [data-docx-tab]')) return readCanvasRange(root, note);
+    }
+  }
+  return readCanvasRange(root);
 }
 
 function pointInNode(node: Node, offset: number): [Node, number] | null {

@@ -526,3 +526,122 @@ for (const sample of [
   expect(await nativeText(page)).toEqual(['First item.', 'Second item.', 'Third item.']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
+
+for (const kind of ['footnote', 'endnote'] as const) {
+  for (const gesture of ['Backspace after', 'Delete before', 'Backspace selection', 'Delete selection']) {
+    test(`${gesture} removes the ${kind} reference and definition in one undo step`, async ({ page }) => {
+      await open(page, 'Before after.');
+      await page.evaluate(kind => window.editorTest.controllers[0].run(s =>
+        kind === 'footnote' ? s.insertFootnote(window.editorTest.anchor, 6, 'Note to remove.')
+          : s.insertEndnote(window.editorTest.anchor, 6, 'Note to remove.')), kind);
+      const reference = page.locator(`#pagination-container a.${kind}-ref`);
+      await expect(reference).toHaveCount(1);
+      await settled(page);
+      await reference.evaluate((ref, gesture) => {
+        ref.closest<HTMLElement>('[contenteditable="true"]')!.focus();
+        const range = document.createRange();
+        range.selectNode(ref);
+        if (!gesture.endsWith('selection')) range.collapse(gesture.endsWith('before'));
+        const selection = (ref.getRootNode() as ShadowRoot & { getSelection(): Selection }).getSelection();
+        selection.removeAllRanges(); selection.addRange(range);
+      }, gesture);
+      await page.keyboard.press(gesture.split(' ')[0]);
+      const notes = () => page.evaluate(() => window.editorTest.controllers[0].read(s =>
+        Object.values(s.project().anchorIndex).filter(a => a.kind === 'fn' || a.kind === 'en').length));
+      await expect.poll(notes).toBe(0);
+      await expect(reference).toHaveCount(0);
+      expect(await nativeText(page)).toEqual(['Before after.']);
+      await page.keyboard.press('Control+z');
+      await expect.poll(notes).toBe(1);
+      await expect(reference).toHaveCount(1);
+      await page.keyboard.press('Control+y');
+      await expect.poll(notes).toBe(0);
+      await page.keyboard.press('Control+s');
+      const saved = await page.evaluate(async () => {
+        const controller = new window.rdv.DocxSessionController();
+        const session = await controller.open(window.editorTest.saved!, {}, '/wasm/');
+        const result = { text: session.getFormatting(window.editorTest.anchor)!.runs.map(r => r.text).join(''),
+          notes: Object.values(session.project().anchorIndex).filter(a => a.kind === 'fn' || a.kind === 'en').length,
+          valid: session.getPackageManifest().isValid };
+        controller.close(); return result;
+      });
+      expect(saved).toEqual({ text: 'Before after.', notes: 0, valid: true });
+      expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+    });
+  }
+}
+
+for (const targets of ['missing', 'empty'] as const) test(`Backspace removes a note when browser target ranges are ${targets}`, async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await open(page, 'Keep text.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => s.insertFootnote(window.editorTest.anchor, 4, 'Delete note.')));
+  const reference = page.locator('#pagination-container a.footnote-ref');
+  await expect(reference).toHaveCount(1);
+  await settled(page);
+  await reference.evaluate((ref, targets) => {
+    Object.defineProperty(InputEvent.prototype, 'getTargetRanges', { configurable: true, value: targets === 'missing' ? undefined : () => [] });
+    ref.closest<HTMLElement>('[contenteditable="true"]')!.focus();
+    const range = document.createRange(); range.setStartAfter(ref); range.collapse(true);
+    const selection = (ref.getRootNode() as ShadowRoot & { getSelection(): Selection }).getSelection();
+    selection.removeAllRanges(); selection.addRange(range);
+  }, targets);
+  await page.keyboard.press('Backspace');
+  await expect(reference).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.editorTest.controllers[0].read(s =>
+    Object.values(s.project().anchorIndex).filter(a => a.kind === 'fn').length))).toBe(0);
+  expect(await nativeText(page)).toEqual(['Keep text.']);
+  expect(errors).toEqual([]);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('deleting text with both note kinds keeps a reference at the selection boundary', async ({ page }) => {
+  await open(page, 'Left middle right.');
+  const original = await page.evaluate(() => window.editorTest.controllers[0].run(s => {
+    const anchor = window.editorTest.anchor;
+    s.insertFootnote(anchor, 4, 'Remove footnote.');
+    s.insertEndnote(anchor, 4, 'Remove endnote.');
+    s.insertFootnote(anchor, 11, 'Keep footnote.');
+    return s.getFormatting(anchor)!.runs;
+  }));
+  const references = page.locator('#pagination-container a.footnote-ref, #pagination-container a.endnote-ref');
+  await expect(references).toHaveCount(3);
+  await settled(page);
+  await references.first().evaluate(ref => {
+    const paragraph = ref.closest<HTMLElement>('[contenteditable="true"]')!;
+    paragraph.focus();
+    const range = document.createRange();
+    range.setStart(paragraph.querySelector('span')!.firstChild!, 2);
+    range.setEndBefore(paragraph.querySelectorAll('a.footnote-ref')[1]);
+    const selection = (ref.getRootNode() as ShadowRoot & { getSelection(): Selection }).getSelection();
+    selection.removeAllRanges(); selection.addRange(range);
+  });
+  await page.keyboard.press('Delete');
+  await expect.poll(() => nativeText(page)).toEqual(['Le right.']);
+  await expect(references).toHaveCount(1);
+  await expect(paragraphs(page).filter({ hasText: 'Keep footnote.' })).toHaveCount(1);
+  await expect(paragraphs(page).filter({ hasText: 'Remove ' })).toHaveCount(0);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(original);
+  await expect(references).toHaveCount(3);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('a note-only paragraph retains its reference and accepts typing after deletion', async ({ page }) => {
+  await open(page, '');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => s.insertFootnote(window.editorTest.anchor, 0, 'Only note.')));
+  const reference = page.locator('#pagination-container a.footnote-ref');
+  await expect(reference).toHaveCount(1);
+  await settled(page);
+  await reference.evaluate(ref => {
+    ref.closest<HTMLElement>('[contenteditable="true"]')!.focus();
+    const range = document.createRange(); range.setStartAfter(ref); range.collapse(true);
+    const selection = (ref.getRootNode() as ShadowRoot & { getSelection(): Selection }).getSelection();
+    selection.removeAllRanges(); selection.addRange(range);
+  });
+  await page.keyboard.press('Backspace');
+  await expect(reference).toHaveCount(0);
+  await page.keyboard.type('Still editable.');
+  await expect.poll(() => nativeText(page)).toEqual(['Still editable.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
