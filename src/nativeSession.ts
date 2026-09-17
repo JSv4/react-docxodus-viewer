@@ -15,6 +15,17 @@ export function openNativeSession(bytes: Uint8Array, settings: DocxSessionSettin
       const result = JSON.parse(bridge.RenderEditorBlocksHtml(handle, JSON.stringify(ids), JSON.stringify(options)));
       return result.error ? null : result;
     },
+    listLabels: (ids: readonly string[]): Record<string, string | undefined> => {
+      // 12.6.2 retains list-counter annotations after a split/merge. A read-only
+      // snapshot recomputes Word numbering without changing live history or settings.
+      const fresh = new DocxSession(bridge.OpenSession(bridge.SaveWithAnchorIds(handle), JSON.stringify({ captureInitialProjection: false, emitMarkdownPatch: false })), bridge);
+      try {
+        return Object.fromEntries(ids.map(id => {
+          const list = fresh.getListMembership(id);
+          return [id, list?.format === 'bullet' ? undefined : list?.generatedLabel];
+        }));
+      } finally { fresh.close(); }
+    },
   };
 }
 

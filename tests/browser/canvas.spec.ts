@@ -68,6 +68,39 @@ test('Enter splits at the caret, Backspace joins, and undo/redo restore native p
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
+for (const action of ['paste beside a numbered list', 'split a bullet item'] as const) test(`${action} avoids a numbering snapshot`, async ({ page }) => {
+  await open(page, 'List item.');
+  await page.evaluate(action => window.editorTest.controllers[0].run(s => {
+    const first = window.editorTest.anchor;
+    s.insertParagraph(first, 'after', 'Plain paragraph.');
+    s.applyListFormat(first, action.startsWith('paste') ? 'decimal' : 'bullet');
+  }), action);
+  await expect(paragraphs(page)).toHaveCount(2);
+  await expect(paragraphs(page).first().locator('[data-list-marker]').first()).toBeVisible();
+  await settled(page);
+  await paragraphs(page).nth(action.startsWith('paste') ? 1 : 0).click();
+  await page.keyboard.press('End');
+  await page.evaluate(() => {
+    const bridge = window.rdv.getWasmExports().DocxSessionBridge, save = bridge.SaveWithAnchorIds;
+    Reflect.set(window, 'numberingSnapshots', 0);
+    bridge.SaveWithAnchorIds = handle => {
+      Reflect.set(window, 'numberingSnapshots', Reflect.get(window, 'numberingSnapshots') + 1);
+      return save(handle);
+    };
+  });
+  if (action.startsWith('paste')) {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.evaluate(() => navigator.clipboard.writeText(' Pasted.'));
+    await page.keyboard.press('Control+v');
+    await expect.poll(() => nativeText(page)).toEqual(['List item.', 'Plain paragraph. Pasted.']);
+  } else {
+    await page.keyboard.press('Enter');
+    await expect.poll(() => nativeText(page)).toEqual(['List item.', '', 'Plain paragraph.']);
+  }
+  expect(await page.evaluate(() => Reflect.get(window, 'numberingSnapshots'))).toBe(0);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
 test('collapsed Enter uses one native undo unit and one batch render', async ({ page }) => {
   await open(page, 'Hello world.');
   await paragraphs(page).first().click();
@@ -455,5 +488,41 @@ test('select-all formats body paragraphs without changing their interleaved foot
     .filter(([, a]) => ['p', 'h', 'li'].includes(a.kind)).map(([id, a]) => ({ scope: a.scope, runs: s.getFormatting(id)!.runs }))));
   expect(formatted.filter(p => p.scope === 'body').every(p => p.runs.every(r => r.effective.bold))).toBe(true);
   expect(formatted.filter(p => p.scope === 'fn').every(p => p.runs.every(r => !r.effective.bold))).toBe(true);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+for (const sample of [
+  { name: 'decimal with a separate restart', format: 'decimal', start: 1, restart: 10, before: ['1.', '2.', '10.'], after: ['1.', '2.', '3.', '10.'] },
+  { name: 'Roman with custom start and parentheses', format: 'upperRomanParenthesis', start: 8, restart: null, before: ['(VIII)', '(IX)', '(X)'], after: ['(VIII)', '(IX)', '(X)', '(XI)'] },
+] as const) test(`Enter immediately renumbers ${sample.name} and Backspace restores the labels`, async ({ page }) => {
+  await open(page, 'First item.');
+  await page.evaluate(sample => window.editorTest.controllers[0].run(s => {
+    const first = window.editorTest.anchor;
+    const second = s.insertParagraph(first, 'after', 'Second item.').created[0].id;
+    const third = s.insertParagraph(second, 'after', 'Third item.').created[0].id;
+    s.applyListFormatRange(first, third, sample.format);
+    if (sample.start !== 1) s.setListStartOverride(first, sample.start);
+    if (sample.restart !== null) s.setListStartOverride(third, sample.restart);
+  }), sample);
+  const markers = page.locator('#pagination-container [data-rdv-editable] > [data-list-marker]');
+  await expect(markers).toHaveText([...sample.before]);
+  await settled(page);
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await paragraphs(page).first().evaluate(element => {
+    const root = element.getRootNode() as ShadowRoot;
+    const followingMarkers = Array.from(root.querySelectorAll('#pagination-container [data-rdv-editable] > [data-list-marker]')).slice(1);
+    root.addEventListener('beforeinput', () => {
+      // Observe the completed synchronous edit, before a later full render can hide stale labels.
+      Reflect.set(window, 'immediateListLabels', Array.from(root.querySelectorAll('#pagination-container [data-rdv-editable] > [data-list-marker]')).map(marker => marker.textContent?.trim()));
+      Reflect.set(window, 'retainedMarkers', followingMarkers.filter(marker => marker.isConnected && marker.querySelector('[data-docx-tab]')).length);
+    });
+  });
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => Reflect.get(window, 'immediateListLabels'))).toEqual(sample.after);
+  expect(await page.evaluate(() => Reflect.get(window, 'retainedMarkers'))).toBe(2);
+  await page.keyboard.press('Backspace');
+  expect(await page.evaluate(() => Reflect.get(window, 'immediateListLabels'))).toEqual(sample.before);
+  expect(await nativeText(page)).toEqual(['First item.', 'Second item.', 'Third item.']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });

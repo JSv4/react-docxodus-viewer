@@ -352,6 +352,24 @@ export class CanvasEditor {
     }
   }
 
+  private refreshListMarkers() {
+    if (!this.root) return;
+    const grouped = new Map<string, Element[]>();
+    for (const block of canvasParagraphs(this.root)) {
+      const markers = Array.from(block.querySelectorAll('[data-list-marker]')).filter(marker => !marker.querySelector('[data-list-marker]'));
+      if (!markers.length) continue;
+      const id = block.dataset.sourceAnchorId!;
+      if (!grouped.has(id) && this.controller.read(session => session.getListMembership(id)?.format) === 'bullet') continue;
+      grouped.set(id, [...grouped.get(id) ?? [], ...markers]);
+    }
+    const labels = this.controller.getListLabels([...grouped.keys()]);
+    for (const [id, markers] of grouped) {
+      const label = labels[id];
+      // Keep marker wrappers, tab spacing, run styling, and page fragments intact.
+      if (label !== undefined) for (const marker of markers) if (marker.textContent !== label) marker.textContent = label;
+    }
+  }
+
   /** Execute structural edits as one undo step, then restore the editing caret. */
   private mutate(action: string, operation: (session: DocxSession) => { results: EditResult[]; point: CanvasPoint; changed: string[]; removed?: string[] }, atomic = true) {
     if (this.callbacks?.readOnly || !this.beforeCommand()) return false;
@@ -368,6 +386,7 @@ export class CanvasEditor {
       this.range = collapsed(outcome.point); this.restoreFocus = true;
       outcome.removed?.forEach(id => this.root && canvasParagraphs(this.root, id).forEach(block => block.remove()));
       this.patchMany(outcome.changed);
+      if (outcome.results.some(result => result.created.length || result.removed.length)) this.refreshListMarkers();
       this.restore(); this.notifySelection();
       return true;
     } catch (cause) { return this.fail(cause); }
