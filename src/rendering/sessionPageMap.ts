@@ -1,6 +1,6 @@
 import type { DocxSession, PageCitation, PageCitationRequest, PageMap, PageMapStatus } from 'docxodus/core';
 
-// Portable constraints mirror Docxodus 12.6.1's MIT-licensed PageMapContract
+// Portable constraints mirror Docxodus 12.6.2's MIT-licensed PageMapContract
 // (Copyright John Scrudato IV). A failed/unknown case always uses native validation.
 // Native validation additionally proves anchor/story/table ownership. That proof
 // survives only journaled paragraph text/run edits with no created/removed anchors.

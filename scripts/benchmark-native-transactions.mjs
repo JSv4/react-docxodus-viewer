@@ -197,6 +197,7 @@ try {
         const note = Object.entries(s.project().anchorIndex).find(([id,item]) => /^(p|h|li):fn:/.test(id) && item.textPreview.startsWith('Consider adding other exceptions'))?.[0];
         if (!note) throw new Error('Missing NVCA footnote fixture');
         mixedRunInsertion = probeInsertion(note, 24, true);
+        if (!mixedRunInsertion.supported) throw new Error('The pinned engine must support interior insertion after leading tabs');
       }
       s.close();
       return {version,attempts,interiorInsertion,mixedRunInsertion,crossOriginIsolated};
@@ -208,6 +209,6 @@ try {
   await mkdir(dirname(output), {recursive:true});
   await writeFile(output,JSON.stringify({startedAt,sha256,packages,browser:browser.version(),
     machine:{cpu:cpus()[0]?.model, logicalCpus:cpus().length, platform:platform(), arch:arch()},
-    workload:insertionOnly ? 'Two fresh formatted contexts: ordinary body interior insertion, then insertion inside a footnote run with a leading tab and its atomic batch fallback.' : 'The same text-plus-Bold edit via executeBatch and replaceMatch(match, text, format); first attempt and two repeats after undo/redo, in fresh batch/formatted/formatted/batch browser contexts. Each formatted context then measures warm ordinary and mixed-run interior insertions and verifies neighboring formatting and undo/redo.',
+    workload:insertionOnly ? 'Two fresh formatted contexts: ordinary body interior insertion, then atomic insertion inside a footnote run with a leading tab.' : 'The same text-plus-Bold edit via executeBatch and replaceMatch(match, text, format); first attempt and two repeats after undo/redo, in fresh batch/formatted/formatted/batch browser contexts. Each formatted context then measures warm ordinary and leading-tab interior insertions and verifies neighboring formatting and undo/redo.',
     cpuThrottling:false,runs},null,2)+'\n');
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}

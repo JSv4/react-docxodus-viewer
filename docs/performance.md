@@ -1,8 +1,178 @@
 # Editor performance campaign
 
-## Published 12.6.1 integration
+Generated benchmark JSON and trace files stay outside version control. The
+scripts below write to ignored `test-results/` paths by default; local archives
+use the ignored `benchmark-results/` directory. This document retains the
+measurement summaries, including failed runs, and reproduction commands.
 
-The integration now pins the unmodified `docxodus@12.6.1` and matching export
+## Current 12.6.2 results
+
+All five final production NVCA runs at application revision `af634f9` pass the
+strict **150 ms input-response gate across all nine phases**. The largest
+observed response is **144 ms**. The module, studio, profiled studio, late-body,
+and footnote workloads retain their original targets and editing assertions.
+Runs were serial, with other local work paused and no application changes within
+the five-run matrix.
+
+| Maximum observed input response | Module | Studio | Studio, profiled | Late body, profiled | Footnote, profiled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Five ordinary interaction phases | 96 ms | 72 ms | 64 ms | 96 ms | 144 ms |
+| Collapsed Enter | 104 ms | 120 ms | 136 ms | 96 ms | 80 ms |
+| Original styled pause/resume phase | 24 ms | 48 ms | 24 ms | 40 ms | 32 ms |
+| Explicit run-boundary styled typing | 24 ms | 48 ms | 48 ms | 48 ms | 32 ms |
+| Explicit interior styled typing | 24 ms | 104 ms | 48 ms | 24 ms | 32 ms |
+| Full 150 ms gate | Pass | Pass | Pass | Pass | Pass |
+
+The unmodified `docxodus@12.6.2` and matching export companion resolve the
+leading-tab formatted-insertion exclusion through the supported atomic API.
+The previously blocked footnote interior phase falls from **816 ms on 12.6.1 to
+32 ms in the final run**. Two React-side changes address additional blocking
+work found after the upgrade:
+
+- Incoming document parsing and sanitization wait for idle input, yield during
+  traversal, and discard superseded preparation. Width readiness uses a delivered
+  ResizeObserver measurement, avoiding a forced full-document layout inside the
+  setup task. Pagination resumes in a separate browser task. In the traced
+  footnote pause/resume comparison, all incoming setup tasks shrink from
+  **55.5–80.9 ms to 15.5–20.5 ms**, with no style/layout events inside the new
+  setup tasks. Layout still occurs separately.
+- Canvas anchor resolution reuses the native formatting read instead of scanning
+  every document anchor after a version change. Canonical formatting aliases
+  share cached results and invalidate together; story identity and native
+  transaction guards remain enforced. A preceding 152 ms Enter trace included
+  13.3 ms scanning anchors and 86.2 ms rendering changed blocks. The minimal
+  canvas contract now performs zero full anchor scans before Enter's first
+  frame; the final profiled module Enter windows also contain none. Other
+  studio controls still use the inventory where needed.
+
+The follow-up included fourteen runs: four diagnostic traces, five runs after
+the preparation change, and five final runs after the anchor lookup change.
+Both intermediate 152 ms Enter failures remain part of these results. Local
+setup trace excerpts include verified source callsites, task CPU/wall time,
+layout events, and trace digests.
+The two original 184 ms events below were not captured again, and their exact
+causes remain unproven. These later findings do not retroactively attribute them.
+
+### Current validation and limits
+
+Lint, types, library/demo builds, the complete API identity audit, and generated
+pagination checks pass. All **82 unit tests and 55 browser contracts** pass,
+with two opt-in browser skips; the final application revision's
+[CI is green](https://github.com/JSv4/react-docxodus-viewer/actions/runs/35067742366).
+Regression coverage includes leading tabs, formatting alias invalidation, and
+incoming-layout cancellation during real IME composition, preserving text,
+caret, native versions, and undo behavior.
+
+The full NVCA integrity test and native/cooperative pagination differential both
+pass: 65 pages, 234 body paragraphs, 110 footnote paragraphs, 13 intentionally
+modified paragraphs, one added paragraph, and 31 native commits. Save/reopen
+preserves unrelated paragraph XML, fields, bookmarks, notes, sections, and
+package parts.
+Production studio/module smoke tests pass (seven tests, one source-only skip).
+Packed consumer imports, types, runtime-copy verification, and the Node export
+API pass. PDF rendering is skipped because this host denies the unprivileged
+user namespaces required by Chromium's process sandbox.
+
+These are quantized Chrome Event Timing samples on one Intel Core Ultra 7 258V,
+Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling, collected
+with a 16 ms reporting threshold. They do not establish population INP or an
+editor-wide maximum. A native call intersecting the rounded event window may
+begin after the actual paint; an overlap alone does not establish causality.
+Individual native calls and background layout can exceed 150 ms when no sampled
+input overlaps them. Structural layout after Enter still takes seconds.
+Excluded native structures, compound edits, opening, export, and slower devices
+remain outside the measured 150 ms result.
+
+## Initial 12.6.2 upgrade results
+
+The initial upgrade pinned the unmodified `docxodus@12.6.2` and matching export
+companion. [Upstream #802](https://github.com/JSv4/Docxodus/issues/802) extends the
+supported atomic formatted operation to runs with leading tabs, including the
+NVCA footnote that caused the remaining 816 ms stall. The full historical
+workloads remain the comparison; other excluded structures retain the public
+atomic batch. See the [12.6.2 upgrade notes](12.6.2-upgrade.md).
+
+Five serial production runs at application revision `357c8b6` retained all nine
+extended phases and the same NVCA targets used for 12.6.1. Every run passed its
+text, formatting, surrounding-text, key-count, and Enter-undo checks.
+
+| Maximum observed input response | Module | Studio | Studio, profiled | Late body, profiled | Footnote, profiled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Five ordinary interaction phases | 88 ms | 56 ms | 48 ms | 56 ms | 184 ms |
+| Collapsed Enter | 64 ms | 80 ms | 120 ms | 96 ms | 72 ms |
+| Original styled pause/resume phase | 24 ms | 24 ms | 24 ms | 64 ms | 56 ms |
+| Explicit run-boundary styled typing | 48 ms | 24 ms | 24 ms | 88 ms | 56 ms |
+| Explicit interior styled typing | 72 ms | 40 ms | 24 ms | 184 ms | 64 ms |
+| Full 150 ms gate | Pass | Pass | Pass | Fail | Fail |
+
+The previously blocked footnote interior phase improved from **816 ms to 64 ms**.
+Its two formatted native calls took 53.8 and 41.6 ms, with no transaction setup,
+package hash, or native page-map registration in that phase. The supported
+operation preserves the tab and original text formatting.
+
+**The strict 150 ms gate failed in two of the five original runs.** Both
+184 ms observations are primarily time queued before the key handler. The late
+body keyup waited 172.2 ms before the first native commit in that phase; no
+instrumented native call or recorded Long Task overlaps its delay. The footnote
+pause/resume keydown waited 163.3 ms during an unattributed 168 ms Long Task,
+also without an overlapping native call. A later 289.1 ms native formatted call
+in the late-body phase is outside the failed event's time window and does not
+explain that delay.
+
+Two diagnostic repeats added CPU profiles and paused other tool work during
+measurement. No application code changed:
+
+| Maximum observed input response | Late body, CPU profile | Footnote, CPU profile |
+| --- | ---: | ---: |
+| Entire nine-phase workload | 96 ms | 80 ms |
+| Explicit interior styled typing | 24 ms | 16 ms |
+| Full 150 ms gate | Pass | Pass |
+
+The outliers did not reproduce in these repeats, so their internal cause remains
+unproven. The repeats do not replace the failures: **five of all seven runs
+pass**. An after-run observation of other host CPU activity is insufficient to
+attribute either delay to contention. Local diagnostic records retain every
+phase, both failed event windows, native call summaries, and source/profile
+digests. These are quantized Chrome Event Timing samples on one Intel Core Ultra
+7 258V, Linux x64, Chromium 143.0.7499.4, at 1480×1050 without CPU throttling;
+they do not establish population INP or an editor-wide maximum. Individual native
+calls and background layout can exceed 150 ms even when no sampled key overlaps
+them. Structural layout after Enter still takes seconds. Excluded native
+structures, compound edits, opening, export, and slower devices remain limits.
+
+### Native operation checks
+
+Two fresh native contexts isolated the original NVCA footnote run containing
+`w:tab` followed by `w:t`, inserting at offset 24. The atomic formatted operation
+now succeeds in **29.5–32.7 ms**, compared with the 600.2–621.9 ms fallback on
+12.6.1. Only `ReplaceTextAtSpanWithFormat` executes for the edit. Both contexts
+also pass ordinary body insertion (67.9–69.9 ms), exact typed formatting,
+surrounding formatting, tab/reference count/order/attributes/text positions,
+one-version atomicity, and one-step undo/redo. Undo restores XML after equivalent
+namespace prefixes are normalized.
+
+### Validation
+
+Lint, types, library/demo builds, the complete API identity audit, and generated
+pagination checks pass. All **82 unit tests and 53 browser contracts** pass, with
+two opt-in browser skips; the application revision's
+[CI is green](https://github.com/JSv4/react-docxodus-viewer/actions/runs/35061889302).
+The new browser cases cover one and two leading tabs; the excluded hyperlink
+case still verifies the atomic fallback.
+
+The full NVCA integrity test passes with 65 pages, 234 body paragraphs, 110
+footnote paragraphs, 13 intentionally modified paragraphs, one added paragraph,
+and 31 native commits. Save/reopen preserves unrelated paragraph XML, fields,
+bookmarks, notes, sections, and package parts. Native and cooperative pagination
+match for pages, HTML, and fragment maps on the same fixture.
+The production studio and module pages pass seven smoke tests with one
+source-only skip. Packed consumer imports, types, runtime-copy verification,
+and the Node export API pass. PDF rendering is skipped because this host denies
+the unprivileged user namespaces required by Chromium's process sandbox.
+
+## Historical 12.6.1 results
+
+The preceding integration pinned the unmodified `docxodus@12.6.1` and matching export
 companion. The supported atomic text-plus-format operation now handles interior
 insertion in ordinary text runs, resolving
 [Docxodus #799](https://github.com/JSv4/Docxodus/issues/799). Excluded structures
@@ -25,7 +195,7 @@ Enter-undo checks.
 | Full 150 ms gate | Pass | Fail | Fail | Pass | Fail |
 
 The original unprofiled interior typing cases improved from 384–400 ms on 12.6.0
-to 40–48 ms. **The broader 150 ms goal is still unmet.** Both 152 ms observations
+to 40–48 ms. **The broader 150 ms goal was unmet at that revision.** Both 152 ms observations
 remain in the results; the profiled studio outlier overlapped a 189.2 ms native
 formatted operation. That measurement does not isolate the native internal
 cause of its variability.
@@ -38,8 +208,8 @@ preserves editing semantics and incurs 199.6 ms for native page-map registration
 The resumed key waited about 809 ms. Follow-up:
 [Docxodus #802](https://github.com/JSv4/Docxodus/issues/802).
 
-The [compact latency record](benchmarks/2026-09-16-latency.json) retains all five
-runs, actual target anchors/text, native call summaries, and the overlapping
+Local diagnostic records retain all five runs, actual target anchors/text,
+native call summaries, and the overlapping
 calls for failed gates. These are quantized Chrome Event Timing observations on
 one Intel Core Ultra 7 258V, Linux x64, Chromium 143.0.7499.4, at 1480×1050 with
 no CPU throttling. Full structural layout after Enter still takes seconds,
@@ -53,8 +223,7 @@ A serial batch/formatted/formatted/batch comparison measured the supported
 formatted replacement at 56.0–56.4 ms for the first edit and 26.6–29.8 ms on
 repeats. Ordinary warm interior insertion took 28.7–29.1 ms. The legacy batch
 took 624.3–625.8 ms initially and 523.7–526.9 ms on repeats. All twelve replacement
-checks and both insertion checks passed, including one-step undo/redo. See the
-[native comparison](benchmarks/2026-09-16-native-transactions.json).
+checks and both insertion checks passed, including one-step undo/redo.
 
 Two additional fresh native contexts isolated the real footnote structure.
 Ordinary interior insertion succeeded in 64.6–68.5 ms. Insertion into the
@@ -62,8 +231,7 @@ tab/text run was refused in 6.8–6.9 ms without changing its version, XML, or
 formatting. Its atomic fallback took 600.2–621.9 ms even without React, rendering,
 or a page map. Text, surrounding formatting, one-version atomicity, and undo/redo
 passed; undo restored the XML with equivalent namespace-prefix spellings
-normalized. See the [insertion contract record](benchmarks/2026-09-16-native-insertion-contract.json).
-A subsequent [marker integrity check](benchmarks/2026-09-16-native-marker-integrity.json)
+normalized. A subsequent marker integrity check
 also verified that the edited XML retains the tab and footnote-reference count,
 order, attributes, and positions relative to the text in both fresh contexts.
 
@@ -77,8 +245,7 @@ The full NVCA integrity test passed with 65 pages, 234 body paragraphs, 110
 footnote paragraphs, 13 intentionally modified paragraphs, one added paragraph,
 and 31 native commits. Save/reopen checks preserved unrelated paragraph XML,
 fields, bookmarks, notes, sections, and package parts. Native and cooperative
-pages, HTML, and fragment maps matched on the same fixture. See the
-[integrity record](benchmarks/2026-09-16-nvca-integrity.json).
+pages, HTML, and fragment maps matched on the same fixture.
 The built production studio and module pages passed seven smoke tests, with one
 source-only skip.
 Packed consumer imports, types, runtime-copy verification, and the Node export
@@ -106,7 +273,7 @@ standalone module, full studio, and a module run with native-call profiling:
 | Explicit middle-of-run styled typing | 400 ms | 384 ms | 384 ms |
 
 All text, formatting, surrounding-text, key-count, and Enter-undo checks passed.
-**The full 150 ms gate still fails in every run.** The native API accepts a
+**The full 150 ms gate failed in every run at that revision.** The native API accepts a
 zero-length insertion only at a run boundary. For an interior insertion, the
 editor must borrow a neighboring character for the text operation and apply
 formatting only to the new text. Those two operations retain the public atomic
@@ -117,12 +284,12 @@ page-map registration, 164–171 ms for `BeginTransaction`, and 169–170 ms for
 `GetPackageContentHash`. The next burst, now at a run boundary created by the
 first edit, used `ReplaceTextAtSpanWithFormat` in 26–28 ms. The unprofiled
 1,184 ms outlier was not individually profiled; it remains in the reported
-maximum. See the [compact 12.6.0 record](benchmarks/2026-09-15-latency.json).
+maximum.
 
 A direct probe against the published runtime confirms that an interior insertion
 returns `offset_out_of_range` without changing the native version, text, or run
-formatting. The [probe record](benchmarks/2026-09-15-native-insertion-contract.json)
-includes two fresh contexts and another native batch/formatted comparison.
+formatting. The probe used two fresh contexts and another native
+batch/formatted comparison.
 The supported-API follow-up is [Docxodus #799](https://github.com/JSv4/Docxodus/issues/799).
 
 These are quantized Chrome Event Timing samples on an Intel Core Ultra 7 258V,
@@ -137,7 +304,7 @@ tests passed in CI (two opt-in skips). The full NVCA integrity test passed with
 paragraphs, one added paragraph, and 31 native commits. It independently checked
 unrelated paragraph XML, fields, bookmarks, notes, sections, and package parts
 after save/reopen. Native/cooperative pagination also matched on the same NVCA
-fixture. See the [integrity report](benchmarks/2026-09-15-nvca-integrity.json).
+fixture.
 The built production pages also passed seven smoke tests (one source-only skip).
 Packed entry points, consumer types, runtime-copy verification, and the Node
 export API check passed. The PDF render test was skipped because this host denies
@@ -240,14 +407,12 @@ The full NVCA integrity test also passed on `8fd41f7`: 65 pages, 234 body and
 110 footnote paragraphs editable, 13 intentionally modified paragraphs, one added
 paragraph, and 31 native commits. Independent package inspection confirmed
 unchanged paragraph XML, fields, bookmarks, notes, sections, and unrelated parts.
-The [integrity record](benchmarks/2026-09-13-nvca-integrity.json) includes the
-revision and assertions. Its source-harness timings use native default Markdown
+The source-harness timings use native default Markdown
 patches and are not the production input-response metric.
 
 The machine was an Intel Core Ultra 7 258V with eight logical CPUs, Chromium
 143.0.7499.4, a 1480×1050 viewport, and no CPU throttling. The module rendered
-65 pages; the studio's different profile rendered 52. Compact results are in
-[the benchmark record](benchmarks/2026-09-13-latency.json).
+65 pages; the studio's different profile rendered 52.
 
 ## Native transaction reproduction
 
@@ -279,8 +444,7 @@ All twelve text, formatting, version, undo and redo checks passed, with no brows
 errors. The formatted path called `ReplaceTextAtSpanWithFormat` without
 `BeginTransaction` or `GetPackageContentHash` bridge calls; batches retained
 their receipt hashes. These are native-call timings, not browser input response
-times. See the [12.6.0 native record](benchmarks/2026-09-15-native-transactions.json)
-for exact measurements and fingerprints. Both paths in this comparison use the
+times. Both paths in this comparison use the
 same 12.6.0 package; the older measurements below are historical context.
 
 Before 12.6.0, twelve serial batch attempts on the published packages reproduced
@@ -299,9 +463,9 @@ begin and again when producing the package equivalence hash. The dependency
 upgrade alone did not eliminate this workload's stall; these measurements do not
 assess other 12.5.0 improvements or unreleased upstream builds. All twelve text,
 formatting, version, undo and redo checks passed, with no browser errors.
-The [native benchmark record](benchmarks/2026-09-13-native-transactions.json)
-contains the unrounded measurements and package fingerprints. This is a small
-diagnostic sample, not a percentile or cross-device latency guarantee.
+The local native benchmark reports contain the unrounded measurements and
+package fingerprints. This is a small diagnostic sample, not a percentile or
+cross-device latency guarantee.
 
 ```sh
 # From this repository, after npm ci and installing Playwright Chromium:
@@ -324,17 +488,19 @@ After the timed replacement attempts, each formatted context measures a warm
 interior insertion. Successful insertions must preserve surrounding formatting,
 advance the version once, and restore text and runs through one undo and redo.
 Rejected insertions must leave the native version and formatting unchanged.
-Each formatted context also probes the NVCA footnote's tab/text run and verifies
-its atomic fallback. `RDV_NATIVE_INSERTIONS_ONLY=1` skips the replacement workload
+Each formatted context also probes the NVCA footnote's leading-tab/text run and
+requires the pinned engine to accept the atomic insertion. A refusal fails the
+check. `RDV_NATIVE_INSERTIONS_ONLY=1` skips the replacement workload
 and runs only ordinary/mixed-run insertion probes in two fresh contexts. XML
 undo checks compare expanded namespace names, attribute values, and ordered
 children because the package snapshot can rename equivalent namespace prefixes.
 
 [Docxodus #788](https://github.com/JSv4/Docxodus/issues/788) was resolved in the
-published 12.6.0 release, and [#799](https://github.com/JSv4/Docxodus/issues/799)
-extends that operation to ordinary interior insertions in 12.6.1. Excluded
-structures and disjoint drafts retain the public atomic batch to preserve
-neighboring formatting and one-step undo. See the [upgrade notes](12.6.1-upgrade.md). No native runtime
+published 12.6.0 release. [#799](https://github.com/JSv4/Docxodus/issues/799)
+extends that operation to ordinary interior insertions in 12.6.1, and
+[#802](https://github.com/JSv4/Docxodus/issues/802) adds leading-tab runs in 12.6.2.
+Other excluded structures and disjoint drafts retain the public atomic batch to
+preserve neighboring formatting and one-step undo. See the [upgrade notes](12.6.2-upgrade.md). No native runtime
 patch or private editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements
@@ -346,7 +512,7 @@ updates run ahead of background layout tasks; owner/version checks discard
 superseded layouts before handoff. Zoom changes during preparation trigger fresh
 measurements at the final scale.
 
-The adapter is generated from the pinned 12.4.1 pagination implementation by
+The adapter is generated from the pinned 12.6.2 pagination implementation by
 `node scripts/generate-cooperative-pagination.mjs`. It uses the same engine
 instance and native helpers, with asynchronous traversal calls and checkpoints.
 The generator verifies the upstream file's SHA-256; `npm run check:api` also
@@ -382,7 +548,13 @@ untouched surrounding text and browser errors are checked.
 
 Reports and a screenshot go to `test-results/latency` (override with
 `RDV_BENCH_OUTPUT`). `RDV_BENCH_PROFILE=1` adds native/canvas call timings;
-`RDV_BENCH_CPU=1` independently adds CPU profiles. Use separate output directories
+`RDV_BENCH_CPU=1` independently adds CPU profiles. `RDV_BENCH_TRACE=1` records
+compressed Chrome traces per phase, including browser tasks, layout, GC, script
+samples and a clock-alignment marker. It also records Long Animation Frame
+attribution when supported. Traced runs are diagnostic: their instrumentation
+and between-phase trace export can affect timings. The report records trace
+filenames and data-loss status; lost trace data fails diagnostic validation.
+Use separate output directories
 for repeated runs. `RDV_BENCH_DOC=sample` selects the small sample, and
 `RDV_BENCH_URL` selects a deployed production build. Run browser benchmarks
 serially without concurrent builds or other CPU-heavy work.

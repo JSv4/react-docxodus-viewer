@@ -1,5 +1,37 @@
 import { expect, test } from '@playwright/test';
 
+test('formatting aliases share canonical reads and invalidate together after local edits', async ({ page }) => {
+  await page.goto('/api-test.html');
+  await page.waitForFunction(() => !!window.rdv);
+  const result = await page.evaluate(async () => {
+    const c = new window.rdv.DocxSessionController();
+    const s = await c.open('blank', { emitMarkdownPatch: false }, '/wasm/');
+    const original = Object.keys(c.getAnchorIndex())[0];
+    s.replaceText(original, 'Heading text.');
+    const changed = s.setParagraphStyle(original, 'Heading1');
+    if (!changed.success) throw new Error('Heading setup failed');
+    const heading = changed.modified[0].id;
+    const inserted = s.insertParagraph(heading, 'after', 'Other paragraph.');
+    if (!inserted.success) throw new Error('Paragraph setup failed');
+    const other = inserted.created[0].id;
+    const alias = c.getFormatting(original), untouched = c.getFormatting(other);
+    const shared = alias?.anchorId === heading && alias === c.getFormatting(heading);
+    if (!s.applyFormat(heading, { start: 0, length: 7 }, { bold: true }).success) throw new Error('Formatting failed');
+    const refreshed = c.getFormatting(original);
+    const invalidated = refreshed !== alias && refreshed === c.getFormatting(heading) &&
+      JSON.stringify(refreshed) === JSON.stringify(s.getFormatting(original));
+    const unrelatedRetained = c.getFormatting(other) === untouched;
+    if (!s.applyFormat(other, { start: 0, length: 5 }, { italic: true }).success) throw new Error('Unrelated formatting failed');
+    const aliasRetained = c.getFormatting(original) === refreshed;
+    s.undo();
+    const undoInvalidated = c.getFormatting(original) !== refreshed &&
+      JSON.stringify(c.getFormatting(original)) === JSON.stringify(s.getFormatting(original));
+    c.close();
+    return { shared, invalidated, unrelatedRetained, aliasRetained, undoInvalidated };
+  });
+  expect(Object.values(result)).toEqual(Array(5).fill(true));
+});
+
 test('split metadata caches match native style and revision reads while ownership changes', async ({ page }) => {
   await page.goto('/api-test.html');
   await page.waitForFunction(() => !!window.rdv);

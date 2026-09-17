@@ -78,7 +78,17 @@ test('collapsed Enter uses one native undo unit and one batch render', async ({ 
     const original = bridge.BeginTransaction;
     const renderOne = bridge.RenderBlockHtml;
     const renderMany = bridge.RenderEditorBlocksHtml;
-    if (!renderMany) throw new Error('The pinned native batch renderer is unavailable');
+    const listAnchors = bridge.ListAnchors;
+    if (!renderMany || !listAnchors) throw new Error('The pinned native editor bridge is unavailable');
+    let measuring = false, scans = 0;
+    document.addEventListener('beforeinput', () => {
+      measuring = true;
+      requestAnimationFrame(() => { measuring = false; Reflect.set(window, 'splitAnchorScansBeforePaint', scans); });
+    }, { once: true, capture: true });
+    bridge.ListAnchors = handle => {
+      if (measuring) scans++;
+      return listAnchors(handle);
+    };
     Reflect.set(window, 'splitTransactions', 0);
     Reflect.set(window, 'splitSingleRenders', 0);
     Reflect.set(window, 'splitBatchRenders', 0);
@@ -100,6 +110,7 @@ test('collapsed Enter uses one native undo unit and one batch render', async ({ 
   expect(await page.evaluate(() => Reflect.get(window, 'splitTransactions'))).toBe(0);
   expect(await page.evaluate(() => Reflect.get(window, 'splitSingleRenders'))).toBe(0);
   expect(await page.evaluate(() => Reflect.get(window, 'splitBatchRenders'))).toBe(1);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window, 'splitAnchorScansBeforePaint'))).toBe(0);
   await page.keyboard.press('Control+z');
   await expect.poll(() => nativeText(page)).toEqual(['Hello world.']);
   await page.keyboard.press('Control+y');
@@ -144,14 +155,32 @@ for (const sample of [
   { name: 'paragraph start', text: 'Plain text.', offset: 0, fast: true },
   { name: 'empty paragraph', text: '', offset: 0, fast: true },
   { name: 'inside a run', text: 'Plain text.', offset: 3, fast: true },
+  { name: 'inside a run with one leading tab', text: 'Plain text.', offset: 3, fast: true, leadingTabs: 1 },
+  { name: 'inside a run with two leading tabs', text: 'Plain text.', offset: 3, fast: true, leadingTabs: 2 },
   { name: 'before an identical space', text: 'Plain text.', offset: 5, fast: true },
   { name: 'before identical text', text: ' *B* original', offset: 0, fast: true },
   { name: 'inside a hyperlink', text: 'Plain link text.', markdown: 'Plain [link text.](https://example.com)', offset: 8, fast: false },
 ]) test(`formatted typing at ${sample.name} preserves surrounding runs and one-step undo`, async ({ page }) => {
-  await open(page, sample.markdown ?? sample.text.replace(/\*/g, '\\*'));
+  await open(page, sample.leadingTabs ? 'Source' : sample.markdown ?? sample.text.replace(/\*/g, '\\*'));
+  if (sample.leadingTabs) {
+    await page.evaluate(({tabs, text}) => window.editorTest.controllers[0].run(s => {
+      const id = window.editorTest.anchor;
+      const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+      const xml = new DOMParser().parseFromString(s.raw.getXml(id), 'application/xml');
+      const node = xml.getElementsByTagNameNS(w, 't')[0];
+      node.textContent = text;
+      for (let index = 0; index < tabs; index++) node.before(xml.createElementNS(w, 'w:tab'));
+      return s.raw.replaceXml(id, new XMLSerializer().serializeToString(xml));
+    }), { tabs: sample.leadingTabs, text: sample.text });
+    await expect(paragraphs(page).first()).toContainText(sample.text);
+    await settled(page);
+  }
   await paragraphs(page).first().click();
-  await page.keyboard.press('Home');
-  for (let i = 0; i < sample.offset; i++) await page.keyboard.press('ArrowRight');
+  // Native text offsets omit the tab's rendered padding. Approach these
+  // interior positions from the text's end rather than counting that padding.
+  await page.keyboard.press(sample.leadingTabs ? 'End' : 'Home');
+  const movements = sample.leadingTabs ? sample.text.length - sample.offset : sample.offset;
+  for (let i = 0; i < movements; i++) await page.keyboard.press(sample.leadingTabs ? 'ArrowLeft' : 'ArrowRight');
   await page.keyboard.press('Control+b');
   const before = await page.evaluate(() => {
     const controller = window.editorTest.controllers[0], s = controller.getSnapshot().session!;
@@ -173,6 +202,19 @@ for (const sample of [
   expect(after.version).toBe(before.version + 1);
   expect(after.runs.filter(run => run.effective.bold).map(run => run.text).join('')).toBe(typed);
   expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(sample.text);
+  if (sample.leadingTabs) {
+    const markers = await page.evaluate(() => {
+      const xml = new DOMParser().parseFromString(window.editorTest.controllers[0].read(s => s.raw.getXml(window.editorTest.anchor)), 'application/xml');
+      let offset = 0;
+      const positions = [];
+      for (const node of xml.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', '*')) {
+        if (node.localName === 't') offset += node.textContent!.length;
+        else if (node.localName === 'tab') positions.push(offset);
+      }
+      return positions;
+    });
+    expect(markers).toEqual(Array(sample.leadingTabs).fill(0));
+  }
   expect(await page.evaluate(() => Reflect.get(window, 'typingCalls'))).toEqual(sample.fast
     ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 1, transaction: 1, hash: 1 });
   if (sample.markdown) expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.listHyperlinks()))).toMatchObject([{ target: 'https://example.com/' }]);
@@ -236,6 +278,44 @@ test('IME composition remains on the page until confirmed', async ({ page }) => 
   await page.keyboard.press('Control+s');
   expect(await nativeText(page)).toEqual(['Say: 日本語!']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('incoming layout waits for composition and discards superseded preparation', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await open(page, 'Say: ');
+  await settled(page);
+  const firstPage = page.locator('#pagination-container .page-box').first();
+  await firstPage.evaluate(element => { (element as HTMLElement).dataset.layoutRetained = 'true'; });
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.imeSetComposition', { text: '日本', selectionStart: 2, selectionEnd: 2 });
+  // A host layout setting may change while the active canvas has an IME draft.
+  // Both requests must wait before creating another document tree; the second
+  // cancels the first without disturbing the active page or its composition.
+  for (const gap of ['32px', '40px']) {
+    await page.locator('.rdv-viewer').evaluate((element, gap) => {
+      (element as HTMLElement).style.setProperty('--rdv-page-gap', gap);
+      window.dispatchEvent(new Event('resize'));
+    }, gap);
+    await expect(page.locator('.rdv-paginated-document[aria-busy="true"]')).toHaveCount(1);
+    await page.waitForTimeout(100);
+    await expect(page.locator('.rdv-document-html')).toHaveCount(1);
+    await expect(firstPage).toHaveAttribute('data-layout-retained', 'true');
+  }
+  expect(await nativeText(page)).toEqual(['Say: ']);
+  await cdp.send('Input.imeSetComposition', { text: '日本語', selectionStart: 3, selectionEnd: 3 });
+  await cdp.send('Input.insertText', { text: '日本語' });
+  await expect.poll(() => nativeText(page)).toEqual(['Say: 日本語']);
+  await settled(page);
+  await expect(page.locator('.rdv-document-html')).toHaveCount(1);
+  await expect(firstPage).not.toHaveAttribute('data-layout-retained');
+  await page.keyboard.type('!');
+  await page.keyboard.press('Control+s');
+  expect(await nativeText(page)).toEqual(['Say: 日本語!']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+  expect(pageErrors).toEqual([]);
 });
 
 test('conflicting external text edits preserve typing for recovery', async ({ page }) => {

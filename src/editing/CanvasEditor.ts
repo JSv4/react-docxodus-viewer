@@ -34,7 +34,6 @@ export class CanvasEditor {
   private listeners = new Set<() => void>();
   private selectionGuards = new Set<() => boolean>();
   private baselines = new Map<string, string>();
-  private anchorCache: { owner: DocxSession | null; version: number; ids: Map<string, string> } | null = null;
   private root: HTMLElement | null = null;
   private renderedOwner: DocxSession | null = null;
   private renderedVersion = 0;
@@ -77,13 +76,13 @@ export class CanvasEditor {
   }
   private text(anchorId: string) { return editableText(this.controller.getFormatting(anchorId)); }
   private canonical(anchorId: string) {
-    const { session: owner, version } = this.controller.getSnapshot();
-    if (!this.anchorCache || this.anchorCache.owner !== owner || this.anchorCache.version !== version) {
-      const ids = Object.keys(this.controller.getAnchorIndex());
-      this.anchorCache = { owner, version, ids: new Map(ids.filter(id => /^(p|h|li):/.test(id)).map(id => [id.slice(id.indexOf(':')), id])) };
-    }
+    // The formatting read needed to prepare/edit a paragraph already resolves its
+    // canonical ID. Avoid rebuilding the document-wide anchor inventory on Enter.
+    const canonical = this.controller.getFormatting(anchorId)?.anchorId;
     const identity = anchorId.slice(anchorId.indexOf(':'));
-    return this.anchorCache.ids.get(identity);
+    // Native formatting can resolve an ID across stories by UNID. The canvas
+    // must retain its stronger story identity check, including for stale kinds.
+    return canonical && /^(p|h|li):/.test(canonical) && canonical.slice(canonical.indexOf(':')) === identity ? canonical : undefined;
   }
   private ownsFocus() {
     if (!this.root) return false;

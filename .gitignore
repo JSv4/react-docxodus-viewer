@@ -13,6 +13,9 @@ dist-demo
 dist-ssr
 test-results
 playwright-report
+# Generated benchmark reports and local archives
+/docs/benchmarks/
+/benchmark-results/
 *.local
 
 # Editor directories and files

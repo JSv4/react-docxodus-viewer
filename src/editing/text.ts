@@ -1,7 +1,7 @@
 import type { CharSpan, DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
 
 /**
- * ExactVisibleText in Docxodus 12.6.1 is descendant w:t text plus native list
+ * ExactVisibleText in Docxodus 12.6.2 is descendant w:t text plus native list
  * numbering for body paragraphs. Keep that contract without Markdown projection.
  * Requires a canonical anchor; unknown XML retains the native metadata fallback.
  */
@@ -107,9 +107,9 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const changes = selected ? [borrowInsertion(before, selected)] : textChanges(before, after);
   if (!changes.length) return [];
   const exact = selected ?? textChange(before, after, false)!;
-  // 12.6.1 inserts inside ordinary text runs and formats exactly the replacement
-  // in one undo/version unit. Let native code decide whether a particular run's
-  // field/container structure allows this operation.
+  // 12.6.2 inserts inside text runs, including runs with leading tabs, and formats
+  // exactly the replacement in one undo/version unit. Let native code decide
+  // whether a particular run's field/container structure allows this operation.
   const atomicFormat = atomicTyping && typingFormat && exact.inserted.length && changes.length === 1
     ? typingFormat : undefined;
   if (atomicFormat) changes.splice(0, changes.length, exact);
@@ -123,7 +123,7 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const steps: Array<Parameters<DocxSession['executeBatch']>[0][number]> = changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const current = editableText(session.getFormatting(anchorId));
     if (current.slice(change.start, change.start + change.removed.length) !== change.removed) throw new Error('This text changed before the edit could be applied.');
-    // 12.6.1 replaceMatch addresses only enclosingAnchor.id + span (its
+    // 12.6.2 replaceMatch addresses only enclosingAnchor.id + span (its
     // ReplaceTextAtSpan bridge). We already have those verified native offsets.
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.

@@ -28,6 +28,7 @@ if (doc === 'nvca') {
 }
 const instrument = process.env.RDV_BENCH_PROFILE === '1';
 const cpu = process.env.RDV_BENCH_CPU === '1';
+const trace = process.env.RDV_BENCH_TRACE === '1';
 const formatting = process.env.RDV_BENCH_FORMAT !== '0';
 const wrapping = process.env.RDV_BENCH_WRAP !== '0';
 const extended = process.env.RDV_BENCH_EXTENDED === '1';
@@ -65,7 +66,7 @@ try {
       snapshot.session.getPageMapStatus().availability === 'available' && !canvas.getSnapshot().suspended;
   });
   await page.waitForTimeout(200);
-  const info = await page.evaluate(async ({instrument, targetRegion}) => {
+  const info = await page.evaluate(async ({instrument, targetRegion, trace}) => {
     const toolbar = document.querySelector('.rdv-format-toolbar');
     let fiber = toolbar[Object.keys(toolbar).find(k=>k.startsWith('__reactFiber'))];
     while (fiber && !fiber.memoizedProps?.editor) fiber = fiber.return;
@@ -75,9 +76,9 @@ try {
     const canvas = editor.canvasEditor;
     const native = controller.read(s=>s);
     const root = canvas.root;
-    window.latency = { editor, controller, native, canvas, root, active: false, events: [], frames: [], longTasks: [], interactions: [], calls: [], versions: [] };
+    window.latency = { editor, controller, native, canvas, root, active: false, events: [], frames: [], longTasks: [], longAnimationFrames: [], interactions: [], calls: [], versions: [] };
     const state = window.latency;
-    state.reset = name => { state.name = name; state.start = performance.now(); state.events = []; state.frames = []; state.longTasks = []; state.interactions = []; state.calls = []; state.versions = []; state.active = true; };
+    state.reset = name => { state.name = name; state.start = performance.now(); state.events = []; state.frames = []; state.longTasks = []; state.longAnimationFrames = []; state.interactions = []; state.calls = []; state.versions = []; state.active = true; };
     for (const type of ['keydown', 'keyup', 'beforeinput', 'input']) {
       document.addEventListener(type, event => {
         if (!state.active) return;
@@ -91,6 +92,11 @@ try {
     requestAnimationFrame(frame);
     new PerformanceObserver(list=>{ if (state.active) state.longTasks.push(...list.getEntries().filter(e=>e.startTime>=state.start).map(e=>({ at:e.startTime, ms:e.duration }))); }).observe({ type:'longtask' });
     new PerformanceObserver(list=>{ if (state.active) state.interactions.push(...list.getEntries().filter(e=>e.startTime>=state.start).map(e=>({ type:e.name, id:e.interactionId, at:e.startTime, duration:e.duration, delay:e.processingStart-e.startTime, processing:e.processingEnd-e.processingStart }))); }).observe({ type:'event', durationThreshold:16 });
+    if (trace && PerformanceObserver.supportedEntryTypes.includes('long-animation-frame')) {
+      new PerformanceObserver(list => {
+        if (state.active) state.longAnimationFrames.push(...list.getEntries().filter(e => e.startTime >= state.start).map(e => e.toJSON()));
+      }).observe({ type: 'long-animation-frame' });
+    }
     controller.subscribe(()=>{ if(state.active) state.versions.push({at:performance.now(), version:controller.getSnapshot().version, change:controller.getSnapshot().change, map:controller.read(session=>session.getPageMapStatus())}); });
     if (instrument) {
       let depth=0;
@@ -117,15 +123,23 @@ try {
     state.target = target.dataset.sourceAnchorId;
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',controller.originalBytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
     return {target:state.target,targetRegion,text:target.textContent.slice(0,100), nativeText:native.getFormatting(state.target).runs.map(run=>run.text).join(''), hash, pages:root.querySelectorAll('.page-box').length, version:controller.getSnapshot().version, crossOriginIsolated, userAgent:navigator.userAgent, hardwareConcurrency:navigator.hardwareConcurrency};
-  }, {instrument, targetRegion});
+  }, {instrument, targetRegion, trace});
   if(doc==='nvca' && info.hash!=='d75600769c12724990de48149d7a2bb161f3522daa54b1783672f93697d87d29') throw new Error(`Wrong NVCA document: ${info.hash}`);
   const block = () => page.locator(`#pagination-container [data-source-anchor-id="${info.target}"][data-rdv-editable="true"]`).last();
   await block().click(); await page.keyboard.press('End'); await page.waitForTimeout(700);
-  const cdp = cpu ? await page.context().newCDPSession(page) : null;
+  const cdp = cpu || trace ? await page.context().newCDPSession(page) : null;
   const phases=[];
   const runPhase = async (name, action) => {
-    await page.evaluate(name=>window.latency.reset(name), name);
-    if (cdp) {await cdp.send('Profiler.enable'); await cdp.send('Profiler.start');}
+    if (trace) await cdp.send('Tracing.start', {
+      categories: '-*,toplevel,devtools.timeline,v8,blink.user_timing,input,latencyInfo,disabled-by-default-devtools.timeline,disabled-by-default-devtools.timeline.stack,disabled-by-default-v8.cpu_profiler',
+      options: 'record-as-much-as-possible',
+      transferMode: 'ReturnAsStream', streamFormat: 'json', streamCompression: 'gzip',
+    });
+    await page.evaluate(({name, trace}) => {
+      window.latency.reset(name);
+      if (trace) performance.mark(`rdv-latency:${name}`, { startTime: window.latency.start });
+    }, {name, trace});
+    if (cpu) {await cdp.send('Profiler.enable'); await cdp.send('Profiler.start');}
     const start=performance.now(); await action(); const actionMs=performance.now()-start;
     await page.waitForTimeout(2000);
     await page.waitForFunction(()=>{
@@ -140,9 +154,27 @@ try {
     const phase = await page.evaluate(()=>{
       const s=window.latency; s.active=false;
       const after = s.native.getFormatting(s.target)?.runs.map(r=>r.text).join('');
-      return { name:s.name,start:s.start,events:s.events,frames:s.frames,longTasks:s.longTasks,interactions:s.interactions,calls:s.calls,versions:s.versions,after,canvasState:s.canvas.getSnapshot() };
+      return { name:s.name,start:s.start,events:s.events,frames:s.frames,longTasks:s.longTasks,longAnimationFrames:s.longAnimationFrames,interactions:s.interactions,calls:s.calls,versions:s.versions,after,canvasState:s.canvas.getSnapshot() };
     });
-    if(cdp) {const profile=await cdp.send('Profiler.stop'); await writeFile(`${directory}/${label}-${name}.cpuprofile`,JSON.stringify(profile.profile));}
+    if(cpu) {const profile=await cdp.send('Profiler.stop'); await writeFile(`${directory}/${label}-${name}.cpuprofile`,JSON.stringify(profile.profile));}
+    if (trace) {
+      const complete = new Promise(resolve => cdp.once('Tracing.tracingComplete', resolve));
+      await cdp.send('Tracing.end');
+      const {stream, dataLossOccurred} = await complete;
+      if (!stream) throw new Error('Chrome did not return a trace stream');
+      const chunks = [];
+      try {
+        for (;;) {
+          const chunk = await cdp.send('IO.read', {handle: stream});
+          chunks.push(Buffer.from(chunk.data, chunk.base64Encoded ? 'base64' : 'utf8'));
+          if (chunk.eof) break;
+        }
+      } finally { await cdp.send('IO.close', {handle: stream}); }
+      const file = `${label}-${name}.trace.json.gz`;
+      await writeFile(`${directory}/${file}`, Buffer.concat(chunks));
+      phase.trace = {file, marker: `rdv-latency:${name}`, dataLossOccurred};
+      if (dataLossOccurred) errors.push(`Trace data lost in ${name}`);
+    }
     const keys=phase.events.filter(e=>e.type==='keydown');
     const inputs=phase.events.filter(e=>e.type==='input');
     const lastInput=inputs.at(-1)?.at;
@@ -260,7 +292,7 @@ try {
   }
   if(await page.getByRole('alert').count()) errors.push('Visible editor alert');
   await page.screenshot({path:`${directory}/${label}.png`});
-  const result={label,base,mode,doc,instrument,extended,buildRevision:process.env.RDV_BENCH_REVISION || null,workspaceCommit:execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim(),workspaceDirty:!!execFileSync('git', ['status', '--porcelain'], { encoding:'utf8' }).trim(),browser:browser.version(),info,errors,phases};
+  const result={label,base,mode,doc,instrument,cpu,trace,extended,buildRevision:process.env.RDV_BENCH_REVISION || null,workspaceCommit:execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim(),workspaceDirty:!!execFileSync('git', ['status', '--porcelain'], { encoding:'utf8' }).trim(),browser:browser.version(),info,errors,phases};
   await writeFile(`${directory}/${label}.json`,JSON.stringify(result,null,2));
   console.log(JSON.stringify({label,info,errors,output:`${directory}/${label}.json`}));
   if (errors.length) throw new Error(errors.join('; '));
