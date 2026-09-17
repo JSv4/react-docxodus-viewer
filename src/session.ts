@@ -374,6 +374,12 @@ export class DocxSessionController {
     return this.bridge.renderBlocks(ids, options);
   }
 
+  /** Recompute generated list labels after structural edits without stale native counters. */
+  getListLabels(ids: readonly string[]) {
+    if (!this.bridge) throw new Error('Open a document session first.');
+    return ids.length ? this.bridge.listLabels(ids) : {};
+  }
+
   /** Read-only selectors run without emitting mutation notifications. */
   read<T>(selector: (session: DocxSession) => T): T {
     if (!this.native) throw new Error('Open a document session first.');

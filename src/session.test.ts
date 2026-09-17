@@ -40,7 +40,7 @@ class NativeSession {
 }
 
 function nativeBridge(session: NativeSession): bridge.NativeSession {
-  return { session: session as unknown as DocxSession, anchorIndex: () => ({}), renderBlocks: () => null };
+  return { session: session as unknown as DocxSession, anchorIndex: () => ({}), renderBlocks: () => null, listLabels: () => ({}) };
 }
 
 afterEach(() => vi.restoreAllMocks());
