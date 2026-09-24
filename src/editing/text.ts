@@ -28,6 +28,7 @@ export function editableText(formatting: FormattingInspection | null) {
 }
 
 type TextChange = { start: number; removed: string; inserted: string };
+/** Older native text matches needed a nonempty range; borrow one adjacent code point. */
 function borrowInsertion(before: string, change: TextChange): TextChange {
   if (change.removed.length || !before.length) return change;
   if (change.start) {
@@ -63,15 +64,16 @@ export function textChange(before: string, after: string, expandInsertion = true
   return expandInsertion ? borrowInsertion(before, change) : change;
 }
 
-/** Keep unchanged words between separate edits intact, including their run formatting. */
+/**
+ * Keep unchanged words between separate edits intact, including their run formatting.
+ * Pure insertions stay zero-width: replacing a borrowed neighbour would record a
+ * spurious tracked deletion and reinsertion of that character.
+ */
 export function textChanges(before: string, after: string) {
-  const changed = textChange(before, after);
+  const changed = textChange(before, after, false);
   if (!changed) return [];
-  // A single insertion/deletion is already the smallest native edit. Running LCS
-  // over its borrowed neighbour can match a space inside the pasted text instead,
-  // splitting one keystroke burst into multiple writes and an expensive transaction.
-  const exact = textChange(before, after, false)!;
-  if (!exact.removed.length || !exact.inserted.length) return [changed];
+  // A single insertion/deletion is already the smallest native edit.
+  if (!changed.removed.length || !changed.inserted.length) return [changed];
   const tokenize = (value: string) => value.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
   const old = tokenize(changed.removed), next = tokenize(changed.inserted);
   // Bound work for unusually large pasted paragraphs.
@@ -91,8 +93,8 @@ export function textChanges(before: string, after: string) {
       if (i < old.length && (j === next.length || common[(i + 1) * width + j] >= common[i * width + j + 1])) { removed += old[i]; offset += old[i++].length; }
       else inserted += next[j++];
     }
-    const local = textChange(removed, inserted)!;
-    changes.push(borrowInsertion(before, { ...local, start: start + local.start }));
+    const local = textChange(removed, inserted, false)!;
+    changes.push({ ...local, start: start + local.start });
   }
   return changes;
 }
@@ -104,7 +106,7 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const canonical = formatting.anchorId;
   const [kind, scope] = canonical.split(':');
   const selected = typingFormat && selection ? textChangeAtSelection(before, after, selection) : null;
-  const changes = selected ? [borrowInsertion(before, selected)] : textChanges(before, after);
+  const changes = selected ? [selected] : textChanges(before, after);
   if (!changes.length) return [];
   const exact = selected ?? textChange(before, after, false)!;
   // 12.6.2 inserts inside text runs, including runs with leading tabs, and formats
@@ -127,11 +129,20 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
     // ReplaceTextAtSpan bridge). We already have those verified native offsets.
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.
-    return session.replaceMatch({ text: change.removed,
+    const replace = (edit: TextChange) => session.replaceMatch({ text: edit.removed,
       enclosingAnchor: { id: canonical, kind, scope, unid: canonical.split(':').at(-1)! },
-      span: { start: change.start, length: change.removed.length }, fragments: [],
-      contextBefore: current.slice(0, change.start), contextAfter: current.slice(change.start + change.removed.length), groups: [change.removed],
-    }, change.inserted, atomicFormat);
+      span: { start: edit.start, length: edit.removed.length }, fragments: [],
+      contextBefore: current.slice(0, edit.start), contextAfter: current.slice(edit.start + edit.removed.length), groups: [edit.removed],
+    }, edit.inserted, atomicFormat);
+    if (change.removed.length || atomicFormat) return replace(change);
+    // A zero-width span inserts into the neighbouring run and records one clean w:ins.
+    // Keep the borrowed-neighbour write for inline structures that refuse a point insert.
+    const version = session.getVersion();
+    try {
+      const result = replace(change);
+      if (result.success || session.getVersion() !== version) return result;
+    } catch (cause) { if (session.getVersion() !== version) throw cause; }
+    return replace(borrowInsertion(current, change));
   } }));
   // Unsupported inline structures and disjoint drafts retain the atomic batch.
   // Format only the actual new span, excluding any borrowed boundary character.

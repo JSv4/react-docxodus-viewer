@@ -87,3 +87,6 @@
 .rdv-verification-card li + li { margin-top: 12px; }
 .rdv-verification-card ul { padding-left: 14px; }
 .rdv-verification-card[data-decision="failed"], .rdv-verification-card[data-decision="notEvaluated"] { color: #9d7246; border-color: #eedcbe; background: #fff8ed; }
+.rdv-selection-target, .rdv-comment-context { margin: 12px 0 0; padding: 8px 11px; border-left: 3px solid #b8c9a4; border-radius: 0 6px 6px 0; background: #f6f8f1; color: #5b6b4e; font: italic 12px/1.6 Georgia, serif; max-height: 7.2em; overflow: hidden; overflow-wrap: anywhere; }
+.rdv-selection-target > span { display: block; color: #89977c; font: 600 8px/1.8 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.rdv-comment-context { margin: 10px 0 0; }

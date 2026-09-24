@@ -18,7 +18,7 @@ export function readTextSelection(root: HTMLElement, documentVersion?: number): 
   const anchorId = first.dataset.sourceAnchorId!;
   const textWithoutMarkers = (node: Node) => {
     const copy = node.cloneNode(true) as ParentNode & Node;
-    copy.querySelectorAll?.('[data-list-marker="true"]').forEach(marker => marker.remove());
+    copy.querySelectorAll?.('[data-list-marker="true"], a.comment-marker, .annot-label').forEach(marker => marker.remove());
     return copy.textContent ?? '';
   };
   const fragments = Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})`))

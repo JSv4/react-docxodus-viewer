@@ -1,4 +1,5 @@
 import { initialize, createBlankDocx, TrackedChangeMode } from 'docxodus/core';
+import { documentTracksRevisions } from './documentSettings';
 import type { DocxSession, DocxSessionSettings, EditResult, EditorRenderOptions } from 'docxodus/core';
 import { openNativeSession } from './nativeSession';
 import type { NativeSession } from './nativeSession';
@@ -172,11 +173,14 @@ export class DocxSessionController {
     this.publish({ isLoading: true, error: null });
     try {
       const bytes = source === 'blank' ? null : await documentBytes(source);
+      // Word's Track Changes setting travels with the document; explicit host settings win.
+      const tracked = !settings.trackedChanges && !!bytes && await documentTracksRevisions(bytes);
       await initialize(wasmBasePath);
       if (generation !== this.generation) throw new DOMException('Document open was superseded', 'AbortError');
       const input = bytes ?? createBlankDocx();
+      const effective: DocxSessionSettings = tracked ? { ...settings, trackedChanges: 'render_inline' } : settings;
       // Full-render fallbacks and saved checkpoints retain the live anchor identities.
-      const bridge = openNativeSession(input, { persistAnchorIds: true, ...settings });
+      const bridge = openNativeSession(input, { persistAnchorIds: true, ...effective });
       const native = bridge.session;
       const setTrackedChanges = native.setTrackedChanges.bind(native);
       native.setTrackedChanges = mode => {
@@ -244,7 +248,7 @@ export class DocxSessionController {
       this.original = input.slice();
       this.settings = { ...settings };
       this.wasmBasePath = wasmBasePath;
-      this.trackedChanges = settings.trackedChanges === 'render_inline' ? TrackedChangeMode.RenderInline : settings.trackedChanges === 'strip_deletions' ? TrackedChangeMode.StripDeletions : TrackedChangeMode.Accept;
+      this.trackedChanges = effective.trackedChanges === 'render_inline' ? TrackedChangeMode.RenderInline : effective.trackedChanges === 'strip_deletions' ? TrackedChangeMode.StripDeletions : TrackedChangeMode.Accept;
       this.revisionTrackingKnownOff = this.trackedChanges === TrackedChangeMode.Accept;
       previous?.close();
       this.publish({ session: observed, version: native.getVersion(), change: this.snapshot.change + 1, isLoading: false, lastResult: null, trackedChanges: this.trackedChanges });
