@@ -49,6 +49,11 @@ describe('paragraph text changes', () => {
     const [change] = changes;
     expect(before.slice(0, change.start) + change.inserted + before.slice(change.start + change.removed.length)).toBe(after);
   });
+  it.each([
+    ['A clause.', 'A clause. Added.', 9], ['A clause.', 'New A clause.', 0], ['A clause.', 'A new clause.', 2],
+  ])('keeps pure insertions zero-width so tracked edits record no neighbour deletion: %j → %j', (before, after, start) => {
+    expect(textChanges(before, after)).toEqual([{ start, removed: '', inserted: after.slice(start, start + after.length - before.length) }]);
+  });
   it('preserves the words between independent changes', () => {
     const before = 'alpha alpha omega.';
     const after = 'alpha bravo omega. Added.';

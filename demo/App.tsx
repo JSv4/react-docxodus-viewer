@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnnotationsPanel, CommentsPanel, DocxodusProvider, DocumentViewer, EditorToolbar, ExportPanel, HistoryPanel, SessionEditorPanel, VerificationPanel, downloadDocument, useDocxSession, useDocumentEditor, useDocumentHistory, useSessionQuery } from '../src';
+import { TrackedChangeMode } from 'docxodus/core';
+import type { CommentListEntry } from 'docxodus/core';
+import { AnnotationsPanel, CommentsPanel, DocxodusProvider, DocumentViewer, EditorToolbar, ExportPanel, HistoryPanel, SessionEditorPanel, VerificationPanel, downloadDocument, useDocxSession, useDocumentEditor, useDocumentHistory, useSelectionTarget, useSessionQuery } from '../src';
 import type { DocxSession, PageCitation } from '../src';
 import { Icon } from '../src/components/Icon';
 import type { IconName } from '../src/components/Icon';
@@ -14,6 +16,9 @@ import './App.css';
 
 const WASM_BASE_PATH = import.meta.env.BASE_URL + 'wasm/';
 const FINGERPRINT = 'react-studio-v12.6.2';
+// One identity for tracked changes, comments and labels made in this workspace.
+const REVIEWER = 'Reviewer';
+const UNAVAILABLE = 'This location is not available in the current page layout. Wait for pagination to finish and try again.';
 const snapshotBytes = (session: DocxSession) => session.save();
 const docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 type Panel = 'edit' | 'review' | 'comments' | 'annotations' | 'history' | 'verify' | 'export';
@@ -27,8 +32,14 @@ const tabs: { id: Panel; label: string; icon: IconName; hint: string }[] = [
 function Workspace() {
   const [tab, setTab] = useState('document');
   const [panel, setPanel] = useState<Panel>('edit');
-  const [requestedAnchor, setAnchor] = useState<string>();
-  const [quickActions, setQuickActions] = useState(true);
+  // A click on read-only content picks a block without an editor text selection.
+  // It is cleared whenever the editor's own selection changes, so the newest wins.
+  const [requested, setRequested] = useState<{ anchorId: string; after: unknown }>();
+  const [dismissedTarget, setDismissedTarget] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const [layoutVersion, setLayoutVersion] = useState(0);
+  const pendingCitation = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const documentArea = useRef<HTMLDivElement>(null);
   const [citation, setCitation] = useState<PageCitation>();
   const [preview, setPreview] = useState<Uint8Array | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +55,18 @@ function Workspace() {
   const input = useRef<HTMLInputElement>(null);
   const previewDialog = useRef<HTMLDialogElement>(null);
   const openSequence = useRef(0);
-  const session = useDocxSession(undefined, { settings: { emitMarkdownPatch: false } });
+  const session = useDocxSession(undefined, { settings: { emitMarkdownPatch: false, revisionAuthor: REVIEWER } });
   const { controller, open: openSession } = session;
   const editor = useDocumentEditor(controller, { onError: cause => setError(cause.message) });
-  const { canvasEditor, select } = editor;
-  const anchor = editor.selection?.anchorId ?? requestedAnchor;
+  const { canvasEditor, select, selectText } = editor;
+  const requestedAnchor = requested && requested.after === editor.selection ? requested.anchorId : undefined;
+  const setAnchor = useCallback((anchorId?: string) => setRequested(anchorId ? { anchorId, after: editor.selection } : undefined), [editor.selection]);
+  const anchor = requestedAnchor ?? editor.selection?.anchorId;
+  const span = !requestedAnchor && editor.selection?.span?.length ? editor.selection.span : null;
+  const target = useSelectionTarget(controller, anchor, span);
+  const targetKey = anchor ? `${anchor}:${span?.start ?? ''}:${span?.length ?? ''}` : '';
+  const quickActions = !!target && dismissedTarget !== targetKey;
+  const tracking = editor.state.trackedChanges === TrackedChangeMode.RenderInline;
   const bytes = useSessionQuery(panel === 'verify' || panel === 'export' ? controller : undefined, snapshotBytes).data;
   const documentCounts = useCallback((session: DocxSession) => ({ comments: session.listComments().length, revisions: controller.getRevisions().length }), [controller]);
   const counts = useSessionQuery(controller, documentCounts, { scope: 'document' }).data;
@@ -56,20 +74,44 @@ function Workspace() {
   const busy = session.isLoading || sampleLoading;
   const ready = !!session.session;
 
-  const showPanel = useCallback((next: Panel) => { setPanel(next); setFocused(false); setTab('document'); }, []);
+  const showPanel = useCallback((next: Panel, focusInput = false) => { setPanel(next); setFocused(false); setTab('document'); setFocusRequest(value => focusInput ? value + 1 : 0); }, []);
+  /** Resolve a page citation, waiting for an in-flight re-pagination before reporting failure. */
+  const cite = useCallback((id: string, final: boolean) => {
+    const current = controller.getSnapshot();
+    if (!current.session) return true;
+    const next = current.session.getPageCitation(id, { documentVersion: current.version, rendererFingerprint: FINGERPRINT });
+    if (next.availability === 'available') { setCitation(next); setError(null); return true; }
+    if (final) setError(UNAVAILABLE);
+    return false;
+  }, [controller]);
   const showAnchor = useCallback((id: string) => {
     if (!canvasEditor.commit()) return;
-    select(id);
-    setAnchor(id); setQuickActions(true);
+    // Comments and other stories only navigate; the paragraph selection stays put.
+    if (/^(p|h|li):/.test(id)) { select(id); setAnchor(id); setDismissedTarget(null); }
+    if (pendingCitation.current) clearTimeout(pendingCitation.current.timer);
+    pendingCitation.current = null;
     try {
-      const current = controller.getSnapshot();
-      if (current.session) {
-        const next = current.session.getPageCitation(id, { documentVersion: current.version, rendererFingerprint: FINGERPRINT });
-        if (next.availability === 'available') { setCitation(next); setError(null); }
-        else setError('This location is not available in the current page layout. Wait for pagination to finish and try again.');
-      }
+      // An edit (a reply, a resolved thread) re-paginates; retry once that layout lands.
+      if (!cite(id, false)) pendingCitation.current = { id, timer: setTimeout(() => { if (pendingCitation.current?.id === id) { pendingCitation.current = null; setError(UNAVAILABLE); } }, 10_000) };
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
-  }, [controller, canvasEditor, select]);
+  }, [canvasEditor, select, setAnchor, cite]);
+  const paginated = useCallback(() => {
+    setLayoutVersion(value => value + 1);
+    const pending = pendingCitation.current;
+    if (!pending) return;
+    clearTimeout(pending.timer); pendingCitation.current = null;
+    try { cite(pending.id, true); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+  }, [cite]);
+  useEffect(() => () => { if (pendingCitation.current) clearTimeout(pendingCitation.current.timer); }, []);
+  /** Quote each thread's highlighted text and order threads as they appear on the pages. */
+  const describeComment = useCallback((comment: CommentListEntry) => {
+    void layoutVersion;
+    const root = Array.from(documentArea.current?.querySelectorAll('div') ?? []).find(node => node.shadowRoot)?.shadowRoot;
+    const highlights = Array.from(root?.querySelectorAll<HTMLElement>('#pagination-container .comment-highlight[data-comment-id]') ?? []);
+    const own = highlights.filter(node => node.dataset.commentId === String(comment.id));
+    if (!own.length) return undefined;
+    return { text: own.map(node => node.textContent ?? '').join('').replace(/\s+/g, ' ').trim(), order: highlights.indexOf(own[0]) };
+  }, [layoutVersion]);
   const open = useCallback(async (source: File | Uint8Array | 'blank', name?: string, restore = false) => {
     const sequence = ++openSequence.current;
     try {
@@ -82,7 +124,7 @@ function Workspace() {
         setDocumentId(source instanceof File ? `${source.name}:${source.size}:${source.lastModified}` : crypto.randomUUID());
         setPanel('edit'); setPreview(null);
       }
-      setAnchor(undefined); setCitation(undefined); setPage(1); setPages(0); setTab('document');
+      setRequested(undefined); setCitation(undefined); setPage(1); setPages(0); setTab('document');
     } catch (cause) { if (sequence === openSequence.current) setError(cause instanceof Error ? cause.message : String(cause)); }
   }, [openSession, canvasEditor]);
   const download = useCallback(() => { if (controller.getSnapshot().session && canvasEditor.commit()) downloadDocument(controller.save(), filename, docxMime); }, [controller, filename, canvasEditor]);
@@ -104,7 +146,7 @@ function Workspace() {
     { id: 'new', label: 'New document', hint: 'Start with a blank page', icon: 'plus', run: create, disabled: busy },
     { id: 'find', label: 'Find in document', hint: 'Search text and jump to its page', icon: 'search', run: find, shortcut: '⌘ F', disabled: !ready },
     ...tabs.map(item => ({ id: item.id, label: item.label === 'Edit' ? 'Edit a paragraph' : item.label === 'Review' ? 'Review changes' : item.label, hint: item.hint, icon: item.icon, run: () => showPanel(item.id), disabled: !ready })),
-    { id: 'annotations', label: 'Label selected text', hint: 'Add structured annotations', icon: 'label', run: () => showPanel('annotations'), disabled: !ready },
+    { id: 'annotations', label: 'Label selected text', hint: 'Add structured annotations', icon: 'label', run: () => showPanel('annotations', true), disabled: !ready },
     { id: 'verify', label: 'Verify the document', hint: 'Inspect package integrity and deliverable findings', icon: 'shield', run: () => showPanel('verify'), disabled: !ready },
     { id: 'export', label: 'Export options', hint: 'Create a standalone, paginated HTML document', icon: 'download', run: () => showPanel('export'), disabled: !ready },
     { id: 'download', label: 'Download DOCX', hint: 'Keep a Word copy of your current document', icon: 'document', run: download, shortcut: '⌘ S', disabled: !ready },
@@ -148,18 +190,18 @@ function Workspace() {
         {!ready && !busy ? <section className="welcome"><div className="welcome-copy"><p className="eyebrow">A NEW PERSPECTIVE ON DOCUMENTS</p><h2>Your document.<br />A clearer view.</h2><p className="welcome-description">A place to shape ideas, follow every change, and move a document forward.</p><div className="welcome-actions"><button className="primary-button" onClick={openFile}><Icon name="open" />Choose a DOCX file<Icon name="arrow" size={17} /></button><button className="quiet-button" onClick={create}>Start a blank document</button></div><p className="drop-hint">Or drop a Word document anywhere.</p><div className="welcome-privacy"><Icon name="lock" size={16} /><span>Your documents are processed in your browser.</span></div></div>
           <button className="sample-preview" onClick={() => void loadSample()} aria-label="Explore a sample document"><span className="sample-paper"><span className="sample-kicker">STUDIO NOTES <span>NO. 001</span></span><span className="sample-title">Good work<br />takes shape.</span><span className="sample-rule" /><span className="sample-paragraph">A launch brief. A new perspective.<br />A few changes worth a closer look.</span><span className="sample-lines"><i /><i /><i /></span><span className="sample-redline"><del>Another draft.</del><ins>A shared direction.</ins></span><span className="sample-paper-footer">THE LAUNCH BRIEF <span>01</span></span></span><span className="sample-note"><span className="sample-avatar">M</span><span><strong>One thought…</strong><small>Let's make the next step clear.</small></span></span><span className="sample-cta">Explore a sample document <Icon name="arrow" size={17} /></span></button>
           <div className="welcome-capabilities">{[['review', 'A better review', 'Track the words, structure and details.'], ['history', 'Room to explore', 'Checkpoint a draft. Try a change. Go back.'], ['shield', 'A confident handoff', 'Inspect the document before you export.']].map(([icon, title, detail]) => <div key={title}><Icon name={icon as IconName} size={20} /><strong>{title}</strong><p>{detail}</p></div>)}</div>
-        </section> : <><div className="document-actionbar"><div className="actionbar-left"><button className={`quiet-button ${navigating ? 'is-active' : ''}`} aria-label="Find in document" aria-pressed={navigating} disabled={!ready} onClick={() => { setNavigating(value => !value); setFocused(false); }}><Icon name="search" size={16} /><span>Find</span></button><span className="header-divider" /><span className="document-state" role="status"><i className={busy ? 'is-busy' : ''} />{busy ? 'Opening your document…' : session.version > 0 ? 'Edited in this session' : 'Local document'}</span></div><div className="actionbar-right"><span className="selection-hint">{editor.canvasState.pending ? 'Editing on the page…' : 'Click on the page to type'}</span><button className={`quiet-button ${focused ? 'is-active' : ''}`} aria-label="Focus mode" aria-pressed={focused} onClick={() => { setFocused(value => !value); setNavigating(false); }}><Icon name="focus" size={16} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button></div></div>
+        </section> : <><div className="document-actionbar"><div className="actionbar-left"><button className={`quiet-button ${navigating ? 'is-active' : ''}`} aria-label="Find in document" aria-pressed={navigating} disabled={!ready} onClick={() => { setNavigating(value => !value); setFocused(false); }}><Icon name="search" size={16} /><span>Find</span></button><span className="header-divider" /><span className="document-state" role="status"><i className={busy ? 'is-busy' : ''} />{busy ? 'Opening your document…' : session.version > 0 ? 'Edited in this session' : 'Local document'}</span>{ready && <button type="button" className={`tracking-state ${tracking ? 'is-tracking' : ''}`} aria-label="Track changes" aria-pressed={tracking} title={tracking ? 'Edits are recorded as tracked changes' : 'Edits change the document directly'} onClick={() => { if (canvasEditor.commit()) editor.trackChanges(!tracking); }}><Icon name="edit" size={13} /><span>{tracking ? 'Tracking changes' : 'Not tracking'}</span></button>}</div><div className="actionbar-right"><span className="selection-hint">{editor.canvasState.pending ? 'Editing on the page…' : 'Click on the page to type'}</span><button className={`quiet-button ${focused ? 'is-active' : ''}`} aria-label="Focus mode" aria-pressed={focused} onClick={() => { setFocused(value => !value); setNavigating(false); }}><Icon name="focus" size={16} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button></div></div>
           <div className={`workspace-layout ${navigating ? 'with-navigator' : ''}`}>
             {navigating && !focused && <DocumentNavigator session={controller} onSelect={showAnchor} onClose={() => setNavigating(false)} />}
-            <div className="workspace-document">{panel === 'edit' && !focused && <EditorToolbar editor={editor} groups={['font', 'paragraph', 'insert']} />}<DocumentViewer session={controller} canvasEditor={canvasEditor} rendererFingerprint={FINGERPRINT} citation={citation} selectedAnchorId={focused ? undefined : anchor} onAnchorSelect={id => { setAnchor(id); setQuickActions(true); }} onError={cause => setError(cause.message)} onPageChange={(next, total) => { setPage(next); setPages(total); }} onPaginationComplete={result => setPages(result.totalPages)} showUploadButton={false} showRevisionsTab={false} fitMode="page-width" defaultSettings={{ renderTrackedChanges: true, commentMode: 'inline', annotationMode: 'above' }} />
-              {anchor && quickActions && !focused && <div className="selection-actions" role="toolbar" aria-label="Selected paragraph"><span className="selection-dot" /><button onClick={() => showPanel('edit')}><Icon name="edit" size={14} />Edit paragraph</button><button onClick={() => showPanel('comments')}><Icon name="comment" size={14} />Comment</button><button onClick={() => showPanel('annotations')}><Icon name="label" size={14} />Label</button><button className="selection-dismiss" aria-label="Dismiss quick actions" onClick={() => setQuickActions(false)}><Icon name="close" size={13} /></button></div>}
+            <div className="workspace-document" ref={documentArea}>{!focused && <EditorToolbar editor={editor} groups={['font', 'paragraph', 'insert']} />}<DocumentViewer session={controller} canvasEditor={canvasEditor} rendererFingerprint={FINGERPRINT} citation={citation} selectedAnchorId={focused ? undefined : anchor} onAnchorSelect={id => { setAnchor(id); setDismissedTarget(null); }} onTextSelectionChange={selected => { if (selected) selectText(selected); }} onError={cause => setError(cause.message)} onPageChange={(next, total) => { setPage(next); setPages(total); }} onPaginationComplete={result => { setPages(result.totalPages); paginated(); }} showUploadButton={false} showRevisionsTab={false} fitMode="page-width" defaultSettings={{ renderTrackedChanges: true, commentMode: 'inline', annotationMode: 'tooltip' }} />
+              {target && quickActions && !focused && <div className="selection-actions" role="toolbar" aria-label={target.span ? 'Selected text' : 'Selected paragraph'}><span className="selection-dot" /><span className="selection-target" title={target.text}>{target.span ? `“${target.text}”` : 'Paragraph'}</span><button onClick={() => showPanel('edit')}><Icon name="edit" size={14} />Edit paragraph</button><button onClick={() => showPanel('comments', true)}><Icon name="comment" size={14} />Comment</button><button onClick={() => showPanel('annotations', true)}><Icon name="label" size={14} />Label</button><button className="selection-dismiss" aria-label="Dismiss quick actions" onClick={() => setDismissedTarget(targetKey)}><Icon name="close" size={13} /></button></div>}
             </div>
             <aside className="workspace-sidebar" hidden={focused}><nav className="inspector-tabs" aria-label="Document tools">{tabs.map(item => <button type="button" key={item.id} aria-label={item.id} aria-pressed={panel === item.id} onClick={() => showPanel(item.id)}><Icon name={item.icon} size={16} /><span>{item.label}</span>{item.id === 'review' && !!counts?.revisions && <b>{counts.revisions}</b>}{item.id === 'comments' && !!counts?.comments && <b>{counts.comments}</b>}</button>)}</nav>
               <div className="inspector-body" key={documentId}>
                 {panel === 'edit' && <SessionEditorPanel session={controller} anchorId={anchor} onAnchorSelect={showAnchor} />}
                 {panel === 'review' && <ReviewInspector session={controller} onSelect={showAnchor} />}
-                {panel === 'comments' && <CommentsPanel session={controller} anchorId={anchor} onSelect={showAnchor} />}
-                {panel === 'annotations' && <AnnotationsPanel session={controller} anchorId={anchor} onSelect={showAnchor} />}
+                {panel === 'comments' && <CommentsPanel session={controller} anchorId={anchor} span={span} author={REVIEWER} focusRequest={focusRequest} describeComment={describeComment} onSelect={showAnchor} />}
+                {panel === 'annotations' && <AnnotationsPanel session={controller} anchorId={anchor} span={span} author={REVIEWER} focusRequest={focusRequest} onSelect={showAnchor} />}
                 {panel === 'history' && <HistoryPanel history={history} getDocument={ready ? () => controller.save() : undefined} onPreview={setPreview} onRestore={async document => { await open(document, undefined, true); }} />}
                 {panel === 'verify' && <VerificationPanel document={bytes} baseline={controller.originalBytes ?? undefined} />}
                 {panel === 'export' && <ExportPanel document={bytes} options={{ documentVersion: session.version }} filename={filename.replace(/\.docx$/i, '')} />}

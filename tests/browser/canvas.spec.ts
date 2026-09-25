@@ -645,3 +645,39 @@ test('a note-only paragraph retains its reference and accepts typing after delet
   await expect.poll(() => nativeText(page)).toEqual(['Still editable.']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
+
+test('tracked typing at a paragraph end records one insertion without deleting the neighbouring period', async ({ page }) => {
+  await open(page, 'A clause ends here.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(session => session.setTrackedChanges(1)));
+  await paragraphs(page).first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Added.');
+  await expect.poll(() => nativeText(page)).toEqual(['A clause ends here. Added.']);
+  await expect.poll(() => page.evaluate(() => window.editorTest.controllers[0].read(session => session.listRevisions().map(revision => `${revision.type}:${revision.text}`))))
+    .toEqual(['insert: Added.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('an annotated paragraph stays editable and its label is not document text', async ({ page }) => {
+  await page.goto('/api-test.html');
+  await page.waitForFunction(() => !!window.mountEditors);
+  await page.evaluate(async () => {
+    const controller = new window.rdv.DocxSessionController();
+    const session = await controller.open('blank', {}, '/wasm/');
+    const anchor = Object.keys(session.project().anchorIndex)[0];
+    session.replaceText(anchor, 'Preferred rights are described here.');
+    const canonical = session.getFormatting(anchor)!.anchorId;
+    session.addAnnotation(canonical, { start: 0, length: 16 }, { id: 'a1', labelId: 'Key term', label: 'Key term', color: '#ffeb3b', author: 'Reviewer', created: new Date(0).toISOString(), bookmarkName: '' });
+    window.editorTest = { controllers: [controller], anchor, errors: [], changes: 0 };
+    window.mountEditors([{ session: controller, wasmBasePath: '/wasm/', viewerProps: { defaultSettings: { annotationMode: 'above' } },
+      onError: error => window.editorTest.errors.push(error.message) }]);
+  });
+  await expect(page.locator('.annot-label').first()).toHaveText('Key term');
+  const paragraph = paragraphs(page).first();
+  await expect(paragraph).toHaveAttribute('contenteditable', 'true');
+  await paragraph.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Still editable.');
+  await expect.poll(() => nativeText(page)).toEqual(['Preferred rights are described here. Still editable.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});

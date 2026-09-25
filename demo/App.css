@@ -41,6 +41,9 @@ kbd, .keycap { font-family: inherit; font-size: 10px; line-height: 1.3; border: 
 .document-state { display: inline-flex; align-items: center; gap: 7px; color: #758268; font-size: 10px; }
 .document-state i { width: 5px; height: 5px; border-radius: 50%; background: #8eaa72; }
 .document-state i.is-busy { animation: pulse 1s ease-in-out infinite; }
+.tracking-state { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; padding: 4px 9px; border: 1px solid #e3e8dc; border-radius: 99px; background: transparent; color: #87937b; font-size: 10px; cursor: pointer; }
+.tracking-state:hover { border-color: #c8d4ba; color: #4f6341; }
+.tracking-state.is-tracking { border-color: #e6b8b0; background: #fbefec; color: #9b3f31; }
 .selection-hint { color: #89957d; font-size: 10px; }
 .workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; flex: 1; min-height: 0; }
 .workspace-layout.with-navigator { grid-template-columns: 235px minmax(0, 1fr) 360px; }
@@ -53,6 +56,7 @@ kbd, .keycap { font-family: inherit; font-size: 10px; line-height: 1.3; border: 
 .selection-actions button:hover { background: #f0f5e8; color: #34512a; }
 .selection-dot { width: 5px; height: 5px; background: #9db985; border-radius: 50%; margin: 0 5px 0 8px; }
 .selection-actions .selection-dismiss { padding: 7px 4px; color: #97a48a; }
+.selection-target { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px 0 2px; margin-right: 2px; border-right: 1px solid #e7ecdf; color: #4f6341; font: italic 11px/1.4 Georgia, serif; }
 .app .rdv-viewer { --rdv-background: #eaece5; --rdv-toolbar-bg: #f4f5ef; --rdv-toolbar-border: #e1e4d9; --rdv-btn-bg: transparent; --rdv-btn-bg-hover: #e2e6d9; --rdv-btn-color: #697363; --rdv-btn-radius: 5px; --rdv-input-bg: #e9ecdf; --rdv-input-color: #4c5947; --rdv-input-muted: #7b896c; --rdv-separator-color: #dbdfd2; --rdv-shadow: none; --rdv-border-radius: 0px; --rdv-toolbar-padding: 8px 22px; --rdv-min-height: 0px; --rdv-max-height: none; --rdv-page-gap: 24px; }
 .workspace-document .rdv-viewer { height: 100%; width: 100%; }
 .workspace-document .rdv-toolbar { min-height: 46px; }
@@ -199,3 +203,4 @@ kbd, .keycap { font-family: inherit; font-size: 10px; line-height: 1.3; border: 
   .workspace-document .rdv-zoom-group { gap: 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+@media (max-width: 720px) { .tracking-state { margin-left: 8px; padding: 5px 7px; } .tracking-state > span { display: none; } }

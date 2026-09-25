@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
-import type { DocxSession } from 'docxodus/core';
+import { useCallback, useMemo } from 'react';
+import type { CharSpan, DocxSession } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
 import { useSessionQuery } from './useDocxSession';
+import { editableText } from '../editing/text';
 
 export type SessionMethod = {
   [K in keyof DocxSession]-?: DocxSession[K] extends (...args: never[]) => unknown ? K : never
@@ -25,6 +26,21 @@ export function useDocumentComments(controller: DocxSessionController) {
   const query = useSessionQuery(controller, listComments);
   const commands = useSessionCommands(controller, ['addComment', 'addCommentToRevision', 'addCommentReply', 'updateComment', 'setCommentResolved', 'removeComment'] as const);
   return { comments: query.data ?? [], error: query.error, ...commands };
+}
+
+export interface SelectionTarget { anchorId: string; span: CharSpan | null; text: string }
+/** The exact text a comment or annotation will attach to: the selected span, or the whole block. */
+export function useSelectionTarget(controller: DocxSessionController, anchorId?: string, span?: CharSpan | null): SelectionTarget | null {
+  const start = span?.length ? span.start : undefined, length = span?.length || undefined;
+  const selector = useCallback((session: DocxSession): SelectionTarget | null => {
+    if (!anchorId) return null;
+    let text: string | null = null;
+    try { text = editableText(session.getFormatting(anchorId)); } catch { /* Tables and other blocks have no native run text. */ }
+    const target = start !== undefined && length !== undefined && text !== null && start + length <= text.length ? { start, length } : null;
+    const preview = text ?? session.getAnchorInfo(anchorId)?.textPreview ?? '';
+    return { anchorId, span: target, text: target ? preview.slice(target.start, target.start + target.length) : preview };
+  }, [anchorId, start, length]);
+  return useSessionQuery(controller, selector).data ?? null;
 }
 
 export function useSessionAnnotations(controller: DocxSessionController): Pick<DocxSession, 'addAnnotation' | 'removeAnnotation' | 'updateAnnotation' | 'moveAnnotation' | 'findByAnnotation' | 'findByLabel'> & { annotations: ReturnType<DocxSession['listAnnotations']>; error: Error | null } {

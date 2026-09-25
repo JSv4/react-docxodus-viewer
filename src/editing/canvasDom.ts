@@ -5,7 +5,8 @@ export interface CanvasRange {
   start: CanvasPoint; end: CanvasPoint; backward: boolean;
   notes?: { kind: 'fn' | 'en'; id: string }[];
 }
-export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-ref, a[class$="-backref"], a.comment-marker';
+// Annotation labels are presentation injected into the highlighted run, not document text.
+export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-ref, a[class$="-backref"], a.comment-marker, .annot-label';
 const ignored = `${generatedContent}, [data-rdv-empty], [data-rdv-presentation], [data-docx-tab], br, del, [data-revision-type="deleted"]`;
 
 export function canvasParagraphs(root: HTMLElement, anchorId?: string) {

@@ -228,7 +228,9 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       wrapper.inert = true;
       shadow.append(wrapper);
       const selectionStyles = document.createElement('style');
-      selectionStyles.textContent = '[data-rdv-selected="true"] { outline: 1.5px solid var(--rdv-selection-color, #93aa79); outline-offset: 5px; border-radius: 1px; }';
+      // Annotation highlights are split at every run boundary; horizontal padding on each
+      // fragment would open visible gaps inside words and before punctuation.
+      selectionStyles.textContent = '[data-rdv-selected="true"] { outline: 1.5px solid var(--rdv-selection-color, #93aa79); outline-offset: 5px; border-radius: 1px; } .annot-highlight { padding-inline: 0; }';
       wrapper.append(selectionStyles);
       for (const stylesheet of wrapper.querySelectorAll('style')) {
         if (stylesheet.sheet) adaptRootSelectors(stylesheet.sheet.cssRules);
@@ -254,8 +256,10 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
         }
       };
       documentBody.addEventListener('click', onClick);
-      const onSelection = () => {
-        if (canvasEditor) return;
+      const onSelection = (event: Event) => {
+        // The canvas editor reports selections in editable text itself. Read-only
+        // blocks (generated, annotated or unsupported content) still select here.
+        if (canvasEditor && event.target instanceof Element && event.target.closest('[data-rdv-editable="true"]')) return;
         const selection = shadowSelection(documentBody);
         if (callbacksRef.current.onTextSelectionChange && selection && !selection.isCollapsed) {
           callbacksRef.current.onTextSelectionChange(readTextSelection(documentBody, activeLayout.current?.documentVersion));

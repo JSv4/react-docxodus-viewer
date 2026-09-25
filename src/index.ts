@@ -56,10 +56,10 @@ export { useDocumentHistory, createMemoryCheckpointJournal } from './hooks/useDo
 export type { DocumentHistory, HistoryContext, UseDocumentHistoryOptions } from './hooks/useDocumentHistory';
 export { RevisionPanel } from './components/RevisionPanel';
 export type { RevisionPanelProps, ViewerRevision } from './components/RevisionPanel';
-export { useSessionCommands, useDocumentComments, useSessionAnnotations, useDocumentImages, useContentControls, useDocumentProjection } from './hooks/useSessionFeatures';
-export type { SessionMethod } from './hooks/useSessionFeatures';
+export { useSessionCommands, useDocumentComments, useSessionAnnotations, useDocumentImages, useContentControls, useDocumentProjection, useSelectionTarget } from './hooks/useSessionFeatures';
+export type { SessionMethod, SelectionTarget } from './hooks/useSessionFeatures';
 export { CommentsPanel } from './components/CommentsPanel';
-export type { CommentsPanelProps } from './components/CommentsPanel';
+export type { CommentsPanelProps, CommentContext } from './components/CommentsPanel';
 export { SemanticChangesPanel } from './components/SemanticChangesPanel';
 export { PaginatedDocument } from './components/PaginatedDocument';
 export type { PaginatedDocumentProps } from './components/PaginatedDocument';
