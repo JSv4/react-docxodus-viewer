@@ -32,10 +32,14 @@ test('live blocks retain pages for text/formatting, reflow wrapping from source,
   const firstPage = page.locator('#pagination-container .page-box').first();
   await firstPage.evaluate(element => { (element as HTMLElement).dataset.liveRetained = 'true'; });
   const first = page.getByRole('textbox', { name: 'Document paragraph', exact: true }).first();
+  // Pagination measures each normal line height; a live block must keep that measurement.
+  const measured = await first.evaluate(element => (element as HTMLElement).style.lineHeight);
+  expect(measured).toMatch(/px$/);
   await first.click(); await page.keyboard.press('End'); await page.keyboard.type(' More.');
   await expect.poll(() => page.evaluate(() => window.liveTest.controller.getSnapshot().version)).toBe(3);
   await settled(page);
   await expect(firstPage).toHaveAttribute('data-live-retained', 'true');
+  expect(await first.evaluate(element => (element as HTMLElement).style.lineHeight)).toBe(measured);
   await expect(first).toContainText('Alpha beta. More.');
   await page.keyboard.press('Home');
   for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');

@@ -33,6 +33,9 @@ export function prepareLineHeights(fresh: HTMLElement, displayed: Element | unde
   host.removeAttribute('id');
   Object.assign(host.style, { display: 'block', visibility: 'hidden', position: 'absolute', left: '-9999px' });
   const shell = section ? section.cloneNode(false) as HTMLElement : host;
+  // Native preparation read every style before writing line heights onto all of
+  // staging, the section included. Its paragraphs never inherited that value.
+  shell.style.removeProperty('line-height');
   if (shell !== host) host.append(shell);
   shell.append(fresh);
   root.append(host);
