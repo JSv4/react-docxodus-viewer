@@ -1,12 +1,12 @@
 # react-docxodus-viewer
 
 React components and hooks for viewing, editing, reviewing, comparing, verifying,
-and exporting Word documents with **Docxodus 12.6.2**. The viewer uses the core
+and exporting Word documents with **Docxodus 17.0.0**. The viewer uses the core
 engine and a React-owned pagination component; it does not load the upstream
 browser editor or ribbon.
 
 [Demo](https://jsv4.github.io/react-docxodus-viewer/) ·
-[API guide](docs/API.md) · [Embedding modules](docs/embedding.md) · [Migration from 0.6–0.7](docs/MIGRATION-0.8.md) ·
+[API guide](docs/API.md) · [Embedding modules](docs/embedding.md) · [Migration from 0.6–0.7](docs/MIGRATION-0.8.md) · [17.0.0 notes](docs/17.0.0-upgrade.md) ·
 [Runtime deployment](WASM_CDN_ISSUES.md)
 
 ## Install
@@ -14,7 +14,7 @@ browser editor or ribbon.
 Requires React 18+ and an ESM-capable application bundler.
 
 ```sh
-npm install react-docxodus-viewer docxodus@12.6.2
+npm install react-docxodus-viewer docxodus@17.0.0
 npx rdv-copy-runtime public/docxodus
 ```
 
@@ -122,7 +122,7 @@ option remains available for applications that supply their own controls. See
 | `wasmBasePath`, `useWorker`, `warmup` | auto, true, false | Runtime location, conversion worker and optional warmup |
 | `theme` | `classic` | `classic` or the light `studio` palette for viewer controls |
 | `canvasEditor` | — | Direct typing binding from `useDocumentEditor().viewerProps` |
-| `onTextSelectionChange` | — | Single-paragraph UTF-16 selection, including page fragments |
+| `onTextSelectionChange` | — | Single-paragraph selection in native UTF-16 offsets, including page fragments. Tabs and breaks count as one character |
 | `className`, `style`, `placeholder` | — | Container customization |
 
 Use `onFileChange={setFile}` to control the input. Omit `html` when the viewer
@@ -159,7 +159,7 @@ continue to style the viewer controls and panels.
 - `/export-browser`: complete upstream browser export contracts/helpers. Keep the
   materializer bundle static; use `loadBrowserExporter()` for actual bundled apps.
 - `/server`: complete `@docxodus/export` Node/PDF API. Install the optional companion
-  with `npm install @docxodus/export@12.6.2`.
+  with `npm install @docxodus/export@17.0.0`.
 - `/assets`: Node build helper `copyDocxodusRuntime(directory)`.
 - `/styles.css`: viewer, editor, and feature-panel styles.
 
@@ -192,7 +192,7 @@ for each opened file. Downloads retain the document name.
 npm install
 npm run dev              # sync verified assets, then start Vite
 npm run check            # lint, unit tests, types, library/demo builds, API audit
-npm run test:browser     # actual 12.6.2 WASM workflows
+npm run test:browser     # actual 17.0.0 WASM workflows
 npm run test:performance # NVCA opening, zoom, typing and layout benchmark
 npm run test:stress      # NVCA editing and independent DOCX integrity checks
 npm run test:package     # packed consumer imports, types and runtime-copy command
@@ -203,7 +203,7 @@ Set `DOCXODUS_REQUIRE_PDF=1` to make an unavailable PDF environment fail that te
 Set `RDV_TEST_PORT` to run browser checks on a different local port. Use
 `RDV_TEST_PREVIEW=1` after building to exercise the production demo. This runs the
 studio and module examples; source-only API harness tests remain development checks.
-The API audit compares every published export against the installed 12.6.2
+The API audit compares every published export against the installed 17.0.0
 TypeScript declarations and checks identity of the built runtime exports.
 See the [performance campaign](docs/performance.md) for measurements, regression
 guards, and the next optimization targets.

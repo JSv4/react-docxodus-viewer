@@ -1,13 +1,13 @@
 # Migrating from 0.6–0.7 / Docxodus 6.2–7.0.1
 
-Version 0.8 integrates Docxodus **12.4.1**, including its .NET 10 WASM runtime.
+Version 0.8 integrates Docxodus **17.0.0**, including its .NET 10 WASM runtime.
 The earlier peer range accepted engine versions whose revision contracts were
 incompatible with the viewer. Both the peer and development dependency are now
-pinned to 12.4.1. Replace the entire runtime asset set during deployment.
+pinned to 17.0.0. Replace the entire runtime asset set during deployment.
 
 ## Required changes
 
-1. Install `docxodus@12.4.1`; run `npx rdv-copy-runtime public/docxodus` and set
+1. Install `docxodus@17.0.0`; run `npx rdv-copy-runtime public/docxodus` and set
    `wasmBasePath="/docxodus/wasm/"`. Deploy the generated static files unchanged.
 2. Use ESM imports. The new engine only publishes ESM import conditions, so the
    viewer no longer advertises a nonworking CommonJS bundle. A CommonJS application
@@ -17,10 +17,14 @@ pinned to 12.4.1. Replace the entire runtime asset set during deployment.
    Use the current DocxDiff settings instead.
 5. Review document-content CSS: pages now use an open ShadowRoot. Pass content
    styles through `additionalCss`; viewer/chrome CSS customization stays outside it.
+6. Recompute stored text offsets. Tabs, breaks, special hyphens and symbols now count
+   as one character each in selections, spans and search results. Discard stored page
+   numbers and PageMaps. See the [17.0.0 notes](17.0.0-upgrade.md) for these and other
+   changed results.
 
 ## Native revisions and comparison records are distinct
 
-| 6.2 native revision | 12.4.1 native revision |
+| 6.2 native revision | Current native revision |
 | --- | --- |
 | `revisionType` | `type`: insert/delete/move/format/structure |
 | `date` | Optional `date`, plus `dateUtc` when carried by the markup |
@@ -44,7 +48,7 @@ expansion while filters change and disables unsupported/ambiguous resolution.
 | --- | --- | --- |
 | Native revision review | Display only | Structural families, grouped moves, diagnostics, selective/bulk resolution |
 | Comparison | Basic two-document demo | All DocxDiff settings/products, semantic changes, fan-out batches, consolidation/conflicts |
-| Editing | No React session ownership | Complete 140-method native session API; observed changes, queries and commands |
+| Editing | No React session ownership | Complete native session API; observed changes, queries and commands |
 | Document manipulation | Not integrated | Text/formatting, tables, lists, page setup, fields, notes, images, content controls, links/bookmarks |
 | Comments and annotations | Display/basic annotation demo | Native comment lifecycle/replies, native annotation editing, external validation/projection/OpenContracts |
 | Pagination | Upstream React paginator | React-owned core pagination, paragraph fragments, exact PageMaps/citations and invalidation |
@@ -86,8 +90,8 @@ Applications can implement their own controls without losing upstream operations
 
 ## Verification scope
 
-The integration's API audit covers all 363 core exports, six worker exports, 57
-browser-export exports and 48 Node-companion exports. All 118 core runtime exports
+The integration's API audit covers all 390 core exports, nine worker exports, 67
+browser-export exports and 50 Node-companion exports. All 120 core runtime exports
 retain identity in the built package. Browser tests exercise the actual WASM
 runtime across viewing, editing, rollback, comparison, history, verification and
 standalone HTML export. These checks cover representative operations in each

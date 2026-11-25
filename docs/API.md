@@ -14,7 +14,9 @@ direct page typing, optional paragraph authoring, and custom layouts, see [embed
 `DocxodusProvider` shares the conversion worker across descendants. Set
 `wasmBasePath`, `useWorker` and optional `warmup` on the provider; its configuration
 applies to descendants. Without a provider, a hook/viewer owns its runtime.
-Workers terminate on unmount, including initialization still in progress.
+Workers terminate on unmount, including initialization still in progress. A worker
+you create accepts `requestTimeoutMs`, and `withRequestOptions({ signal, timeoutMs })`
+bounds individual requests; work already running in the worker still finishes.
 Full editable sessions use the main-thread core because the worker session only
 supports annotation mutations, manifests, verification and semantic changes.
 
@@ -79,21 +81,28 @@ block update can advance the displayed version. `onConversionStart` and
 | Family | Native operations available through the session |
 | --- | --- |
 | Projection and inspection | `project`, `projectAnchor`, `renderBlock`, `exists`, anchor/block metadata and bulk lookups, inline spans, formatting, styles, section info |
-| Search | `findByText`, `findAllByText`, `findByRegex`, `findByKind`, `grep`, `grepCrossBlock`, bookmark/annotation/label discovery |
+| Search | `findByText`, `findAllByText`, `findByRegex`, `findByKind`, `grep`, `grepCrossBlock`, bookmark/annotation/label discovery, `getAnchorLocations` |
 | Text and templates | `replaceText`, `replaceTextRange`, `replaceMatch`, `replaceInner`, placeholder discovery/filling/remaining placeholders |
 | Blocks | insert/split/merge paragraphs, delete/move blocks, delete ranges/sections, horizontal rules |
-| Formatting | whole-block/span/substring/match formatting, paragraph format/style, font, size, highlight, capitals and script position |
-| Lists | apply/remove membership, ranges, nesting, numbering start overrides and inspection |
-| Tables | insert table/rows/columns, delete rows/columns, replace cell content, merge/unmerge, widths, borders, shading, repeat headers, row options and coordinate/anchor resolution |
+| Formatting | whole-block/span/substring/match formatting, paragraph format/style, absolute indents, keep/widow/contextual-spacing options, font, size, highlight, capitals and script position |
+| Lists | apply/remove membership, ranges, nesting, numbering start overrides and inspection, `getListLevels`/`setListLevels`, `continueNumbering`, `setListMembership` |
+| Tables | insert table/rows/columns, delete rows/columns, replace cell content, merge/unmerge, widths, borders, shading, repeat headers, row options and coordinate/anchor resolution, table styles, `setTableProperties`/`getTableProperties`, `setCellProperties` |
 | Pages and running stories | page setup/numbering, header/footer text, first/even/default visibility, page-number fields |
-| Reference fields and notes | table of contents/figures/authorities, cross-references, footnotes/endnotes |
+| Reference fields and notes | table of contents/figures/authorities, cross-references, footnotes/endnotes, `listNotes` |
 | Images | capabilities, insert/replace/remove, dimensions, alt text/title, floating layout and occurrence inspection |
 | Content controls | plain/rich text, checkbox/date/choice/picture values, repeating-section add/remove, binding/lock/capability inspection |
 | Hyperlinks and bookmarks | list/add/update/rename/move/remove, external/internal links and ranges |
-| Review | native revisions, selective/all accept/reject, tracked changes and author, comments/replies/resolve/delete, annotations/update/move/remove |
+| Review | native revisions and filters, selective/all accept/reject, tracked changes, author and account identities, comments/replies/resolve/delete, annotations/update/move/remove |
 | Transactions | precondition checks, guarded mutations, atomic/best-effort batches, shadow previews, undo/redo |
 | Changes and verification | edit summary, JSON/unified/side-by-side diff, semantic changes, manifest and deliverable verification |
 | Citations | PageMap registration/status and page citations |
+
+Offsets are native UTF-16 positions in a block's visible text. A tab counts as `\t`,
+each line, page or column break as `\n`, and special hyphens and symbols as their
+characters; generated list labels, note numbers and removed text count as nothing.
+Editor selections, `onTextSelectionChange`, `getFormatting` and search results share
+these positions. Offsets stored by versions before 15.0.0 must be recomputed; see the
+[17.0.0 notes](17.0.0-upgrade.md).
 
 `SessionEditorPanel` supplies a compact form-based editing UI. The focused hooks
 `useDocumentProjection`, `useDocumentImages`, `useContentControls`,
@@ -167,6 +176,12 @@ controller.run(s => {
 separately obtained formatting details keyed by native revision ID. Unsupported,
 malformed and ambiguous native revisions retain diagnostics and disable resolution.
 Live `DocumentViewer` wires selective and bulk resolution automatically.
+Paragraph-mark formatting arrives as `mark`-prefixed properties (`markFontSize`), which
+the panel labels "Paragraph Mark …". `setRevisionIdentities` configures the accounts
+that own revisions and notifies subscribers like the other review settings.
+`conversionOptions` accepts `revisionPresentation`, `showFormattingChanges` and
+`showInsertionsAndDeletions`; edits to a document with revisions then use the complete
+converter instead of block updates.
 
 ```tsx
 <CommentsPanel session={controller} anchorId={selectedAnchor} author="Reviewer" />
@@ -214,7 +229,10 @@ const consolidated = await review.consolidate(before,
 
 A batch failure is attached to that candidate; other candidates retain their
 products. `compare()` and `compareBatch()` accept a product list when only some
-outputs are needed. Every `DocxDiffSettings` option is forwarded. Single-product
+outputs are needed. Every `DocxDiffSettings` option is forwarded, including
+`minimumAnchorWordCount`, `trackNumberingChanges` and `trackCellInsertionsAndDeletions`.
+The default author is `Docxodus`; set `authorForRevisions` to choose one. Consolidation
+accepts existing revisions first unless `preserveInputRevisions` is true. Single-product
 functions, comparison aliases, consolidation conflict queries, and accepted/
 rejected projections remain available through `review.call` or direct imports.
 `ComparisonPanel` provides file selection and all three review modes.
@@ -286,13 +304,17 @@ downloadDocument(html.html, 'agreement.html', 'text/html');
 ```
 
 Profiles: `final`/`original`/`markup`; comments: `hidden`/`inline`/`endnotes`/`margin`.
+With markup, `markupPresentation: 'word'` draws Word's author colors and change bars,
+`markupVisibility` hides formatting, text revisions or comments independently, and
+`commentColumnPlacement: 'balloons'` prints Word-style balloons (`balloonOverflow`,
+`markupMode`). `additionalCss` is applied before pagination.
 All native font, resource-limit, timeout, signal and digest options are supported.
 Render errors retain structured diagnostics and any failed render report.
 `ExportPanel` accepts native options plus an optional `pdfExporter` callback.
 That callback is host-owned; the browser package never imports Node PDF tooling.
 
 ```ts
-// Node ESM: install @docxodus/export@12.6.2
+// Node ESM (22.13 or later): install @docxodus/export@17.0.0
 import { checkExportEnvironment, convertDocxToPdf, renderDocxArtifacts,
   renderDocxFile } from 'react-docxodus-viewer/server';
 const environment = await checkExportEnvironment();

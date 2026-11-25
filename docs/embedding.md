@@ -9,7 +9,7 @@ Explore all three layouts in the demo at `?example=modules`.
 ## Runtime setup
 
 ```sh
-npm install react-docxodus-viewer docxodus@12.6.2
+npm install react-docxodus-viewer docxodus@17.0.0
 npx rdv-copy-runtime public/docxodus
 ```
 
@@ -68,7 +68,7 @@ takes precedence over `document` and remains open when the block unmounts.
 
 **Click on the page and type.** Headings, paragraphs, list text, and table cells
 are editable directly. Enter splits a paragraph at the caret; Backspace and Delete
-join adjacent paragraphs at their boundaries. Paste inserts plain text, including
+join adjacent paragraphs at their boundaries, except while changes are tracked. Paste inserts plain text, including
 multiple paragraphs. Arrow keys move between paragraphs, and Ctrl/⌘ A selects
 the document text. Double-click selects a word normally.
 
@@ -76,8 +76,9 @@ Selecting text applies character formatting to that range, including selections
 across paragraphs and page fragments. With only a caret, font controls change
 what you type next. Paragraph controls affect the current paragraph. Generated
 list labels and comment/note markers stay outside native character offsets.
-Existing Word tabs, line breaks, and nonbreaking hyphens also retain their source
-structure while editing surrounding text. See the [NVCA stress test](editor-stress-test.md)
+Each Word tab, line/page/column break, special hyphen and symbol is one character:
+the caret crosses it in one step, Backspace or Delete removes it, and undo restores
+its source XML. Editing beside one never rewrites it. See the [NVCA stress test](editor-stress-test.md)
 for a reproducible test against a substantial document with footnotes and fields.
 
 Typing appears immediately, then commits to the native DOCX after a short pause.
@@ -94,8 +95,8 @@ structural operations use native undo steps.
 commits its pending draft. The pane is not required for on-page typing.
 
 The canvas is not a full Word replacement: it edits text that maps exactly to
-native paragraph runs. Complex generated content and paragraphs with inline
-objects that change text coordinates remain viewable with the advanced text and
+native paragraph runs. Fields such as page numbers, unsupported-content placeholders,
+and paragraphs joined by hidden marks remain viewable with the advanced text and
 session controls available. Cross-cell structural deletion is rejected. Enter
 and Shift+Enter currently create paragraph breaks.
 
@@ -126,7 +127,8 @@ TypeScript editor. React does not need a Markdown projection after each edit.
 For a host-owned session, pass `settings: { emitMarkdownPatch: false }` to
 `useDocxSession`, or to `controller.open`. The general controller keeps the upstream
 default for applications that consume `EditResult.patch`; editor callers can also
-opt back in through `sessionSettings`.
+opt back in through `sessionSettings`. Patches carry changed blocks rather than the
+whole document; see the [17.0.0 notes](17.0.0-upgrade.md).
 
 Without `onSave`, the header downloads a DOCX. With it, your application controls
 storage and receives errors through `onError`. A ref exposes `controller`,
@@ -189,8 +191,8 @@ sidebar or below the page. It coordinates selection with the canvas. Pass
 `beforeAction={() => textRef.current?.commit() ?? true}` to the toolbar and commit
 both the canvas and pane before host save/navigation actions.
 
-`editor.select(anchorId, span)` selects native UTF-16 character offsets; `null`
-selects the whole paragraph. Common commands include `format`, `paragraph`,
+`editor.select(anchorId, span)` selects native UTF-16 character offsets, counting
+tabs and breaks; `null` selects the whole paragraph. Common commands include `format`, `paragraph`,
 `setStyle`, `setList`, `addLink`, `insertTable`, `insertImage`, `insertParagraph`,
 `replaceText`, `undo`, and `redo`.
 
