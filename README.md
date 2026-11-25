@@ -159,7 +159,7 @@ continue to style the viewer controls and panels.
 - `/export-browser`: complete upstream browser export contracts/helpers. Keep the
   materializer bundle static; use `loadBrowserExporter()` for actual bundled apps.
 - `/server`: complete `@docxodus/export` Node/PDF API. Install the optional companion
-  with `npm install @docxodus/export@17.0.0`.
+  with `npm install @docxodus/export@17.0.0` (Node 22.13 or later).
 - `/assets`: Node build helper `copyDocxodusRuntime(directory)`.
 - `/styles.css`: viewer, editor, and feature-panel styles.
 

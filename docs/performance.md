@@ -7,9 +7,11 @@ measurement summaries, including failed runs, and reproduction commands.
 
 ## Current 17.0.0 results
 
-All nine interaction phases pass the **150 ms input-response gate** in four serial
-production runs on 17.0.0. The largest response is **120 ms**. The preceding revision
-(`3c99c41`, 12.6.2) was measured the same way on the same machine and failed on Enter.
+All nine interaction phases pass the **150 ms input-response gate** in six serial
+production runs on 17.0.0. The largest response is **144 ms**, for Enter in the profiled
+late-body run; the largest in the four runs compared below is **120 ms**. The preceding
+revision (`3c99c41`, 12.6.2) was measured the same way on the same machine for those
+four runs and failed on Enter.
 
 | Maximum observed input response | Module, 12.6.2 | Module, 17.0.0 | Studio, 12.6.2 | Studio, 17.0.0 |
 | --- | ---: | ---: | ---: | ---: |
@@ -24,9 +26,15 @@ recompute labels, a cost added by the list-numbering fix after the 12.6.2 measur
 below. Live labels are now correct, so that snapshot is gone: reading 171 NVCA labels
 takes 61–73 ms against 168–204 ms, a large part of the improvement.
 
-The runs use the default target region only. The profiled late-body and footnote
-workloads below were not repeated on 17.0.0. Samples are quantized Chrome Event Timing
+The comparison uses the default target region. One profiled studio run each covers the
+other regions on 17.0.0: the footnote reaches 120 ms and the late body 144 ms, both on
+Enter, with every other phase at 72 ms or less. Samples are quantized Chrome Event Timing
 from Chromium 143.0.7499.4 on Linux x64 at 1480×1050 without CPU throttling.
+
+The native benchmark passes every text, formatting, marker and undo check. Formatted
+insertion inside the footnote run with a leading tab takes **8.6 ms** (29.5–32.7 ms on
+12.6.2), and ordinary body insertion 46.5–47.0 ms. Its fixture lookup and offsets now
+count that tab.
 
 The NVCA performance guards pass: unchanged paragraphs are not reformatted, an
 insertion is one native write and one block render without a conversion or save, and
@@ -91,7 +99,7 @@ layout events, and trace digests.
 The two original 184 ms events below were not captured again, and their exact
 causes remain unproven. These later findings do not retroactively attribute them.
 
-### Current validation and limits
+### Validation and limits
 
 Lint, types, library/demo builds, the complete API identity audit, and generated
 pagination checks pass. All **82 unit tests and 55 browser contracts** pass,
