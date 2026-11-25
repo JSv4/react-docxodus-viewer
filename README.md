@@ -138,7 +138,9 @@ const [file, setFile] = useState<File | null>(null);
 `ViewerSettings` includes all earlier rendering options plus `fragmentParagraphs`
 and `stampAnchors` (both default true). Comment modes are `disabled`, `endnote`,
 `inline`, `margin`; annotation modes are `disabled`, `above`, `inline`, `tooltip`,
-`none`. Documents render in an open ShadowRoot to isolate their styles. Set
+`none`. Documents render in an open ShadowRoot to isolate their styles, and lay out
+as on a page of their own: text styles the host inherits (font, line height, spacing,
+direction) do not reach them, while CSS custom properties do. Set
 `conversionOptions.additionalCss` to customize document content; host selectors
 continue to style the viewer controls and panels.
 

@@ -212,7 +212,12 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       const documentBody = document.createElement('div');
       for (const attribute of Array.from(parsed.body.attributes)) documentBody.setAttribute(attribute.name, attribute.value);
       documentBody.classList.add('rdv-document-body');
-      wrapper.append(...Array.from(parsed.head.querySelectorAll('style')), documentBody);
+      // A document lays out as it would on a page of its own. Nothing the host inherits
+      // (font, line height, spacing, direction) reaches it; the document's own root
+      // rules follow and still apply. Custom properties inherit, so themes still work.
+      const isolation = document.createElement('style');
+      isolation.textContent = '.rdv-document-html { all: initial; display: block; } .rdv-document-html:not([dir]) { direction: ltr; unicode-bidi: isolate; }';
+      wrapper.append(isolation, ...Array.from(parsed.head.querySelectorAll('style')), documentBody);
       documentBody.append(...Array.from(parsed.body.childNodes));
       // Converted HTML sometimes contains a legacy bootstrap script. React owns execution.
       wrapper.querySelectorAll('script, iframe, object, embed').forEach(node => node.remove());

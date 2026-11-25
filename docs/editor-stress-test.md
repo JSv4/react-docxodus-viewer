@@ -57,11 +57,12 @@ with `npm run test:performance`, along with guards against redundant pagination
 and native formatting work. The timings above describe the pre-optimization run
 merged in PR #40.
 
-On Docxodus 17.0.0 (November 2026) the full workload passes with 59 pages, 31 native
+On Docxodus 17.0.0 (November 2026) the full workload passes with 49 pages, 31 native
 commits, 13 intentionally modified paragraphs, and one added paragraph. Opening and
-pagination took 6.1 seconds; edit-to-reflow cycles took 1.0–3.6 seconds. Tabs, breaks
-and special hyphens count as characters in the compared paragraph text. The page count
-includes a known editor line-height issue; see the [17.0.0 notes](17.0.0-upgrade.md).
+pagination took 6.3 seconds; edit-to-reflow cycles took 1.0–2.0 seconds. Tabs, breaks
+and special hyphens count as characters in the compared paragraph text. Earlier runs
+showed 65 pages (12.6.2) and 59 (17.0.0) because the editor's interface line height
+reached the document; see the [17.0.0 notes](17.0.0-upgrade.md#document-style-isolation).
 
 After the live-session/block-rendering change, the full workload passed again
 with the same 65 pages and integrity results. Median typing-to-settled-layout was

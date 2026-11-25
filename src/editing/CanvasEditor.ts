@@ -5,7 +5,7 @@ import { shadowSelection } from './selection';
 import { canvasParagraphs, caretAtPoint, domPoint, normalizedText, prepareCanvasBreaks, readCanvasDeletion, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
 import { canvasText, generatedContent, inlineAtoms, isAtomCharacter, noteNumber } from './textModel';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
-import { keepNoteNumber, prepareLineHeights } from '../rendering/liveBlocks';
+import { keepNoteNumber } from '../rendering/liveBlocks';
 
 export interface CanvasEditorSnapshot { suspended: boolean; pending: boolean; composing: boolean; conflict: boolean; format: FormatOp | null }
 interface CanvasCallbacks {
@@ -356,8 +356,9 @@ export class CanvasEditor {
       const block = parsed.body.firstElementChild as HTMLElement | null;
       if (!block) throw new Error('The edited paragraph could not be rendered.');
       block.dataset.sourceAnchorId = canonical;
+      // No line metrics here: these edits repaginate, and measuring would add a full
+      // layout of the changed page to the keystroke.
       keepNoteNumber(old[0], block);
-      prepareLineHeights(block, old[0] ?? (after ? canvasParagraphs(this.root, after).at(-1) : undefined));
       if (old[0]) { old[0].replaceWith(block); old.slice(1).forEach(fragment => fragment.remove()); }
       else if (after) canvasParagraphs(this.root, after).at(-1)?.after(block);
       this.prepareParagraphs(canonical);
