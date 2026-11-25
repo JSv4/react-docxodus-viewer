@@ -17,6 +17,7 @@ pinned to 17.0.0. Replace the entire runtime asset set during deployment.
    Use the current DocxDiff settings instead.
 5. Review document-content CSS: pages now use an open ShadowRoot. Pass content
    styles through `additionalCss`; viewer/chrome CSS customization stays outside it.
+   Fonts, colors and line heights inherited from the host no longer reach documents.
 6. Recompute stored text offsets. Tabs, breaks, special hyphens and symbols now count
    as one character each in selections, spans and search results. Discard stored page
    numbers and PageMaps. See the [17.0.0 notes](17.0.0-upgrade.md) for these and other

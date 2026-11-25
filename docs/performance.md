@@ -7,28 +7,32 @@ measurement summaries, including failed runs, and reproduction commands.
 
 ## Current 17.0.0 results
 
-All nine interaction phases pass the **150 ms input-response gate** in six serial
-production runs on 17.0.0. The largest response is **144 ms**, for Enter in the profiled
-late-body run; the largest in the four runs compared below is **120 ms**. The preceding
-revision (`3c99c41`, 12.6.2) was measured the same way on the same machine for those
-four runs and failed on Enter.
+In the default target region, every interaction phase stays under the **150 ms
+input-response gate** in all runs on 17.0.0; the largest response is **112 ms**. The
+12.6.2 revision (`3c99c41`) was measured the same way on the same machine and failed on
+Enter. The 17.0.0 columns include the [document style isolation](17.0.0-upgrade.md#document-style-isolation)
+change, under which the module example lays NVCA out on 49 pages instead of 59.
 
 | Maximum observed input response | Module, 12.6.2 | Module, 17.0.0 | Studio, 12.6.2 | Studio, 17.0.0 |
 | --- | ---: | ---: | ---: | ---: |
 | Continuous typing and caret movement | 24 ms | 24 ms | 24 ms | 24 ms |
-| Pause/resume, Bold and reflow | 40 ms | 32 ms | 48 ms | 72 ms |
-| Collapsed Enter | 288 ms | 120 ms | 320 ms | 112 ms |
-| Styled typing phases | 24 ms | 40 ms | 24 ms | 80 ms |
-| Full 150 ms gate (two runs each) | Fail | Pass | Fail | Pass |
+| Pause/resume, Bold and reflow | 40 ms | 32 ms | 48 ms | 40 ms |
+| Collapsed Enter | 288 ms | 104 ms | 320 ms | 112 ms |
+| Styled typing phases | 24 ms | 64 ms | 24 ms | 64 ms |
+| Runs | 2 | 2 | 2 | 3 |
+| Full 150 ms gate | Fail | Pass | Fail | Pass |
 
 Enter in a document with numbered lists previously saved and reopened the package to
 recompute labels, a cost added by the list-numbering fix after the 12.6.2 measurements
 below. Live labels are now correct, so that snapshot is gone: reading 171 NVCA labels
 takes 61–73 ms against 168–204 ms, a large part of the improvement.
 
-The comparison uses the default target region. One profiled studio run each covers the
-other regions on 17.0.0: the footnote reaches 120 ms and the late body 144 ms, both on
-Enter, with every other phase at 72 ms or less. Samples are quantized Chrome Event Timing
+The late-body region was measured in six profiled studio runs interleaved with the
+17.0.0 revision before style isolation (`18f460a`). Its median maximum response is
+**128 ms**, against 136 ms. Neither strictly passes the gate there: Enter exceeded
+150 ms in one run (192 ms) and in two runs of the earlier revision (152 ms). In each of
+those runs every native call was uniformly slower, which points to host load rather than
+a code path; the cause is unproven. A profiled footnote run peaks at 104 ms. Samples are quantized Chrome Event Timing
 from Chromium 143.0.7499.4 on Linux x64 at 1480×1050 without CPU throttling.
 
 The native benchmark passes every text, formatting, marker and undo check. Formatted
@@ -42,11 +46,11 @@ unchanged geometry keeps its pages. Single runs of both versions:
 
 | NVCA phase | 12.6.2 | 17.0.0 |
 | --- | ---: | ---: |
-| Open to first complete layout | 3.6 s | 4.7 s |
+| Open to first complete layout | 3.6 s | 4.8 s |
 | Full conversion within open | 1.1 s | 1.6 s |
-| Zoom change | 134–184 ms | 135–176 ms |
-| Body edit, typing start to settled layout | 777–826 ms | 784–825 ms |
-| Footnote edit, typing start to settled layout | 1.1 s | 1.5 s |
+| Zoom change | 134–184 ms | 138–181 ms |
+| Body edit, typing start to settled layout | 777–826 ms | 808–847 ms |
+| Footnote edit, typing start to settled layout | 1.1 s | 1.6 s |
 
 Opening and footnote reflow are slower: 17.0.0 measures line heights before flow and
 its layout does more work. Edits that keep their geometry are unaffected.

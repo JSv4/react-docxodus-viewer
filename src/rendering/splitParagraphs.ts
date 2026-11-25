@@ -8,7 +8,8 @@ import { generatedContent } from '../editing/textModel';
  */
 export function markSplitBreaks(staging: HTMLElement) {
   for (const owner of staging.querySelectorAll('[data-docx-break-paragraph]')) {
-    // Splitting in 17.0.0 writes the direction mark after a line break as its entity name.
+    // Splitting in 16.0.0–17.0.0 writes the direction mark after a line break as its
+    // entity name (https://github.com/JSv4/Docxodus/issues/1862).
     for (const br of owner.querySelectorAll('br[data-docx-break]')) {
       const mark = br.nextSibling;
       if (mark?.nodeType === Node.TEXT_NODE) mark.textContent = mark.textContent!.replace(/^#x(200[ef])/, (_, code: string) => String.fromCharCode(parseInt(code, 16)));
