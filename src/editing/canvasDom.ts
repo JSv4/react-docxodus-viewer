@@ -1,14 +1,11 @@
 import { paragraphSelector, shadowSelection } from './selection';
+import { canvasText, directionMark, generatedContent, inlineAtoms } from './textModel';
 
 export interface CanvasPoint { anchorId: string; offset: number }
 export interface CanvasRange {
   start: CanvasPoint; end: CanvasPoint; backward: boolean;
   notes?: { kind: 'fn' | 'en'; id: string }[];
 }
-// Annotation labels are presentation injected into the highlighted run, not document text.
-export const generatedContent = '[data-list-marker], a.footnote-ref, a.endnote-ref, a[class$="-backref"], a.comment-marker, .annot-label';
-const ignored = `${generatedContent}, [data-rdv-empty], [data-rdv-presentation], [data-docx-tab], br, del, [data-revision-type="deleted"]`;
-
 export function canvasParagraphs(root: HTMLElement, anchorId?: string) {
   const anchor = anchorId === undefined ? '' : `[data-source-anchor-id="${anchorId.replace(/["\\\n\r\f]/g, char => `\\${char.charCodeAt(0).toString(16)} `)}"]`;
   return Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})${anchor}`))
@@ -16,57 +13,20 @@ export function canvasParagraphs(root: HTMLElement, anchorId?: string) {
       !Array.from(node.querySelectorAll<HTMLElement>(paragraphSelector)).some(child => child.dataset.sourceAnchorId === node.dataset.sourceAnchorId));
 }
 
-/** Text in the native UTF-16 coordinate space; generated labels are not editable. */
-export function canvasText(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
-  if (node instanceof Element) {
-    if (node.matches(ignored)) return '';
-  }
-  return Array.from(node.childNodes).map(canvasText).join('');
-}
-
-/** The converter emits a directional sentinel after a Word break. Neither that
- * sentinel nor w:br / w:tab occupies a character in native formatting spans. */
+/** The converter emits a directional sentinel after a Word break. Unlike the
+ * break itself, the sentinel occupies no character in native formatting spans. */
 export function prepareCanvasBreaks(block: HTMLElement) {
   for (const br of block.querySelectorAll('br:not([data-rdv-empty])')) {
     br.setAttribute('contenteditable', 'false');
     const next = br.nextSibling;
-    if (next?.nodeType === Node.TEXT_NODE && /^[\u200e\u200f]/.test(next.textContent ?? '')) {
+    if (next instanceof HTMLElement && next.textContent?.length === 1 && directionMark.test(next.textContent)) {
+      next.dataset.rdvPresentation = 'true'; next.contentEditable = 'false';
+    } else if (next?.nodeType === Node.TEXT_NODE && directionMark.test(next.textContent ?? '')) {
       const marker = block.ownerDocument.createElement('span');
       marker.dataset.rdvPresentation = 'true'; marker.contentEditable = 'false';
       marker.textContent = next.textContent![0];
       next.textContent = next.textContent!.slice(1);
       br.after(marker);
-    }
-  }
-}
-
-/** w:noBreakHyphen renders a glyph but, like tabs, has no native text offset.
- * Consult the source XML before excluding it so literal hyphens remain editable. */
-export function prepareCanvasHyphens(blocks: HTMLElement[], xml: string, nativeText: string) {
-  const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-  const parsed = new DOMParser().parseFromString(xml, 'application/xml');
-  const offsets: number[] = [];
-  let text = '';
-  for (const element of parsed.getElementsByTagNameNS(word, '*')) {
-    if (element.localName === 't') text += element.textContent;
-    else if (element.localName === 'noBreakHyphen') offsets.push(text.length);
-  }
-  if (text !== nativeText) return;
-  for (const offset of offsets) {
-    let remaining = offset;
-    const nodes: Text[] = [];
-    for (const block of blocks) {
-      const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-      while (walker.nextNode()) if (!walker.currentNode.parentElement?.closest(ignored)) nodes.push(walker.currentNode as Text);
-    }
-    for (const node of nodes) {
-      if (remaining >= node.length) { remaining -= node.length; continue; }
-      if (node.data[remaining] !== '-') break;
-      const glyph = node.splitText(remaining); glyph.splitText(1);
-      const marker = node.ownerDocument.createElement('span');
-      marker.dataset.rdvPresentation = 'true'; marker.contentEditable = 'false'; marker.textContent = '-';
-      glyph.replaceWith(marker); break;
     }
   }
 }
@@ -121,7 +81,7 @@ export function readCanvasDeletion(root: HTMLElement, event: InputEvent): Canvas
       if (backward ? order > 0 : order < 0) continue;
       const gap = caret.cloneRange();
       if (backward) gap.setStartAfter(ref); else gap.setEndBefore(ref);
-      if (!gap.toString() && !gap.cloneContents().querySelector('br, img, [data-docx-tab]')) return readCanvasRange(root, note);
+      if (!gap.toString() && !gap.cloneContents().querySelector(`br, img, ${inlineAtoms}`)) return readCanvasRange(root, note);
     }
   }
   return readCanvasRange(root);
@@ -134,12 +94,27 @@ function pointInNode(node: Node, offset: number): [Node, number] | null {
     const length = canvasText(child).length;
     if (!length) continue;
     if (offset <= length) {
-      if (child instanceof Element && child.matches('br, [data-docx-tab]')) return [node, index + (offset ? 1 : 0)];
+      if (child instanceof Element && child.matches(inlineAtoms)) return [node, index + (offset ? 1 : 0)];
       return pointInNode(child, offset);
     }
     offset -= length;
   }
   return offset === 0 ? [node, node.childNodes.length] : null;
+}
+
+/** Put a caret that follows an atom into the text after it, not the atom's layout wrapper. */
+function textAfter(block: HTMLElement, point: [Node, number]): [Node, number] {
+  const rest = block.ownerDocument.createRange();
+  rest.selectNodeContents(block); rest.setStart(...point);
+  const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_ALL);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!rest.intersectsNode(node) || node.contains(point[0])) continue;
+    if (node instanceof Element ? node.matches(inlineAtoms) : node.nodeType === Node.TEXT_NODE && canvasText(node).length > 0) {
+      const usable = node.nodeType === Node.TEXT_NODE && rest.comparePoint(node, 0) >= 0 && !node.parentElement!.closest(`[contenteditable="false"], ${generatedContent}, ${inlineAtoms}`);
+      return usable ? [node, 0] : point;
+    }
+  }
+  return point;
 }
 
 export function domPoint(root: HTMLElement, point: CanvasPoint): { block: HTMLElement; node: Node; offset: number } | null {
@@ -149,7 +124,9 @@ export function domPoint(root: HTMLElement, point: CanvasPoint): { block: HTMLEl
     const block = fragments[i], length = canvasText(block).length;
     if (offset < length || i === fragments.length - 1) {
       const found = pointInNode(block, Math.min(offset, length));
-      return found ? { block, node: found[0], offset: found[1] } : null;
+      if (!found) return null;
+      const [node, index] = found[0].nodeType === Node.TEXT_NODE ? found : textAfter(block, found);
+      return { block, node, offset: index };
     }
     offset -= length;
   }

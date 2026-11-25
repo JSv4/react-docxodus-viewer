@@ -35,6 +35,15 @@ describe('RevisionPanel', () => {
     ...updates,
   });
 
+  it('names paragraph-mark formatting for reviewers', async () => {
+    const revision = native({ type: 'format', family: 'properties_change' });
+    render(<RevisionPanel revisions={[revision]} formatDetails={{ [revision.id]: {
+      oldProperties: { markFontSize: '22' }, newProperties: { markFontSize: '40', markBold: 'true' }, changedPropertyNames: ['markBold', 'markFontSize'],
+    } }} />);
+    expect(screen.getByText('Paragraph Mark Font Size')).toBeInTheDocument();
+    expect(screen.getByText('Paragraph Mark Bold')).toBeInTheDocument();
+  });
+
   it('renders a native move once and resolves it by its atomic revision id', async () => {
     const onAccept = vi.fn();
     render(<RevisionPanel revisions={[native()]} onAccept={onAccept} />);

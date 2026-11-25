@@ -1,4 +1,5 @@
 import type { DocumentTextSelection } from '../types';
+import { canvasText } from './textModel';
 
 export const paragraphSelector = 'p[data-source-anchor-id], h1[data-source-anchor-id], h2[data-source-anchor-id], h3[data-source-anchor-id], h4[data-source-anchor-id], h5[data-source-anchor-id], h6[data-source-anchor-id], li[data-source-anchor-id]';
 export function shadowSelection(root: HTMLElement) {
@@ -6,7 +7,7 @@ export function shadowSelection(root: HTMLElement) {
   return tree.getSelection?.() ?? root.ownerDocument.getSelection();
 }
 
-/** Map a single paragraph selection across its page fragments using UTF-16 offsets. */
+/** Map a single paragraph selection across its page fragments using native UTF-16 offsets. */
 export function readTextSelection(root: HTMLElement, documentVersion?: number): DocumentTextSelection | null {
   const selection = shadowSelection(root);
   if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
@@ -16,11 +17,6 @@ export function readTextSelection(root: HTMLElement, documentVersion?: number): 
   const last = blockFor(range.endContainer);
   if (!first || !last || !root.contains(first) || !root.contains(last) || first.dataset.sourceAnchorId !== last.dataset.sourceAnchorId) return null;
   const anchorId = first.dataset.sourceAnchorId!;
-  const textWithoutMarkers = (node: Node) => {
-    const copy = node.cloneNode(true) as ParentNode & Node;
-    copy.querySelectorAll?.('[data-list-marker="true"], a.comment-marker, .annot-label').forEach(marker => marker.remove());
-    return copy.textContent ?? '';
-  };
   const fragments = Array.from(root.querySelectorAll<HTMLElement>(`#pagination-container :is(${paragraphSelector})`))
     .filter(node => node.dataset.sourceAnchorId === anchorId && !Array.from(node.querySelectorAll<HTMLElement>(paragraphSelector)).some(child => child.dataset.sourceAnchorId === anchorId));
   const offset = (block: HTMLElement, node: Node, offset: number) => {
@@ -28,11 +24,11 @@ export function readTextSelection(root: HTMLElement, documentVersion?: number): 
     if (index < 0) return -1;
     const prefix = root.ownerDocument.createRange();
     prefix.selectNodeContents(block); prefix.setEnd(node, offset);
-    return fragments.slice(0, index).reduce((length, fragment) => length + textWithoutMarkers(fragment).length, 0) + textWithoutMarkers(prefix.cloneContents()).length;
+    return fragments.slice(0, index).reduce((length, fragment) => length + canvasText(fragment).length, 0) + canvasText(prefix.cloneContents()).length;
   };
   const start = offset(first, range.startContainer, range.startOffset);
   const end = offset(last, range.endContainer, range.endOffset);
   if (start < 0 || end <= start) return null;
-  const blockText = fragments.map(textWithoutMarkers).join('');
+  const blockText = fragments.map(canvasText).join('');
   return { anchorId, blockText, span: { start, length: end - start }, text: blockText.slice(start, end), documentVersion };
 }

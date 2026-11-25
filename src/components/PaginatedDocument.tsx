@@ -8,8 +8,9 @@ import type { DocumentTextSelection } from '../types';
 import type { CanvasEditor } from '../editing/CanvasEditor';
 import { canvasParagraphs } from '../editing/canvasDom';
 import type { LiveBlockUpdate } from '../rendering/liveBlocks';
-import { replaceBlockPresentation } from '../rendering/liveBlocks';
+import { prepareLineHeights, replaceBlockPresentation } from '../rendering/liveBlocks';
 import { cooperativePagination, yieldToBrowser } from '../rendering/cooperativePagination';
+import { markSplitBreaks, restoreSplitBreaks } from '../rendering/splitParagraphs';
 
 export interface PaginatedDocumentProps extends Pick<PaginationOptions, 'scale' | 'showPageNumbers' | 'pageGap' | 'cssPrefix' | 'fragmentParagraphs' | 'layoutToken'> {
   html: string;
@@ -167,8 +168,10 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       if (ids.length && ids.every(id => active.geometry.get(id)?.element.isConnected)) {
         const patch = () => {
           for (const id of ids) {
-            const fresh = new DOMParser().parseFromString(liveBlocks.blocks[id], 'text/html').body.firstElementChild!;
-            replaceBlockPresentation(active.geometry.get(id)!.element, fresh);
+            const fresh = new DOMParser().parseFromString(liveBlocks.blocks[id], 'text/html').body.firstElementChild as HTMLElement;
+            const { element } = active.geometry.get(id)!;
+            prepareLineHeights(fresh, element);
+            replaceBlockPresentation(element, fresh);
           }
         };
         if (canvasEditor) canvasEditor.updateLayout(ids, patch); else patch();
@@ -298,15 +301,17 @@ export function PaginatedDocument({ html, canvasEditor, canvasOwner, liveBlocks,
       // The converter supplies its own default canvas color inside the ShadowRoot.
       // Apply the host's theme to the canvas without changing the document pages.
       container.style.backgroundColor = backgroundColor;
-      // Docxodus 12.6.2 measures note/header reserves while creating pages. Zooming
+      // Docxodus measures note/header reserves while creating pages (through 17.0.0). Zooming
       // those pages during measurement mixes scaled pixels with document points,
       // clipping body paragraphs in documents with substantial footnotes.
+      markSplitBreaks(staging);
       const engine = new PaginationEngine(staging, container, {
         scale: 1, showPageNumbers, pageGap, cssPrefix, fragmentParagraphs,
       });
       const cooperative = cooperativePagination(engine, check, idle);
       const result = await cooperative.paginate();
       await idle(); check();
+      restoreSplitBreaks(container);
       const pause = async () => { await yieldToBrowser(); check(); await idle(); check(); };
       await canvasEditor?.prepareLayout(documentBody, canvasOwner ?? null, documentVersion, pause);
       let renderedScale: number;

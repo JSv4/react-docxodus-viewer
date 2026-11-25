@@ -1,6 +1,8 @@
 import type { ConversionOptions, DocxSession, EditorRenderOptions } from 'docxodus/core';
 import { CommentRenderMode } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
+import { noteNumber } from '../editing/textModel';
+import { applyUnroundedNormalLineHeights, prepareMixedLineHeights } from './cooperativePagination.generated.js';
 
 export interface LiveBlockUpdate {
   owner: DocxSession;
@@ -10,9 +12,43 @@ export interface LiveBlockUpdate {
   blocks: Record<string, string>;
 }
 
+/** A note's number comes from the whole document; isolated blocks render without it. */
+export function keepNoteNumber(original: Element | undefined, fresh: Element) {
+  const number = original?.querySelector(noteNumber);
+  if (number && !fresh.querySelector(noteNumber)) fresh.prepend(number.cloneNode(true));
+}
+
+/**
+ * Give a re-rendered paragraph the line heights pagination measured it with.
+ * Native measures unscaled, at the section's width; displayed pages are zoomed.
+ * A shell of the staging area reproduces that without laying out its content.
+ */
+export function prepareLineHeights(fresh: HTMLElement, displayed: Element | undefined) {
+  const root = displayed?.closest<HTMLElement>('.rdv-document-body');
+  const staging = root?.querySelector<HTMLElement>('#pagination-staging, [data-docx-compatibility-mode]');
+  if (!displayed || !root || !staging) return;
+  const index = displayed.getAttribute('data-pagination-section') ?? displayed.closest('[data-section-index]')?.getAttribute('data-section-index');
+  const section = Array.from(staging.querySelectorAll<HTMLElement>('[data-section-index]')).find(node => node.dataset.sectionIndex === index);
+  const host = staging.cloneNode(false) as HTMLElement;
+  host.removeAttribute('id');
+  Object.assign(host.style, { display: 'block', visibility: 'hidden', position: 'absolute', left: '-9999px' });
+  const shell = section ? section.cloneNode(false) as HTMLElement : host;
+  if (shell !== host) host.append(shell);
+  shell.append(fresh);
+  root.append(host);
+  try {
+    // Native gives these flows no line metrics; the shell cannot show it why.
+    const ordinary = section && displayed.getAttribute('data-source-anchor-id')?.includes(':body:') && !displayed.closest('td, th, [data-footnote-id], [data-endnote-id]') &&
+      !section.querySelector('[data-docx-text-frame], [data-docx-wrap-text], [data-docx-edge-picture]');
+    if (ordinary) prepareMixedLineHeights(fresh);
+    applyUnroundedNormalLineHeights(fresh);
+  } finally { fresh.remove(); host.remove(); }
+}
+
 /** Retain source/page identities, while taking presentation from the native block. */
 export function replaceBlockPresentation(target: Element, fresh: Element) {
-  for (const name of ['style', 'class', 'dir', 'lang']) {
+  // Line metrics belong to the runs they measured.
+  for (const name of ['style', 'class', 'dir', 'lang', 'data-docx-mixed-lines']) {
     const value = fresh.getAttribute(name);
     if (value === null) target.removeAttribute(name); else target.setAttribute(name, value);
   }
@@ -26,7 +62,9 @@ export function liveRenderOptions(options: ConversionOptions, controller: DocxSe
     (options.commentRenderMode !== CommentRenderMode.Disabled && options.commentRenderMode !== CommentRenderMode.Inline) ||
     (options.commentCssClassPrefix && options.commentCssClassPrefix !== 'comment-')) return null;
   if (options.renderAnnotations && controller.read(session => session.listAnnotations()).length) return null;
-  if (options.renderTrackedChanges && (options.showDeletedContent === false || options.renderMoveOperations === false) &&
+  // The block bridge always draws every revision, in the default presentation.
+  if (options.renderTrackedChanges && (options.showDeletedContent === false || options.renderMoveOperations === false ||
+    options.showFormattingChanges === false || options.showInsertionsAndDeletions === false || options.revisionPresentation) &&
     controller.read(session => session.listRevisions()).length) return null;
   return { cssPrefix: options.cssPrefix, fabricateClasses: false, comments: options.commentRenderMode === CommentRenderMode.Inline,
     renderTrackedChanges: options.renderTrackedChanges };
@@ -45,6 +83,8 @@ export function patchSourceBlocks(html: string, rendered: Record<string, string 
     const originals = indexed.get(id);
     if (!markup || originals?.length !== 1) return null;
     const original = originals[0];
+    // An isolated block renders its page/column breaks as line breaks.
+    if (original.closest('[data-docx-break-paragraph]')) return null;
     const parsed = new DOMParser().parseFromString(markup, 'text/html');
     const fresh = parsed.body.firstElementChild;
     if (!fresh || parsed.body.children.length !== 1 || fresh.tagName !== original.tagName ||
@@ -61,6 +101,7 @@ export function patchSourceBlocks(html: string, rendered: Record<string, string 
     if (oldRefs.length !== newRefs.length || oldRefs.some((ref, i) =>
       ['id', 'data-footnote-id', 'data-endnote-id', 'data-comment-id'].some(attr => ref.getAttribute(attr) !== newRefs[i].getAttribute(attr)))) return null;
     newRefs.forEach((ref, i) => ref.replaceWith(oldRefs[i].cloneNode(true)));
+    keepNoteNumber(original, fresh);
     for (const node of [fresh, ...fresh.querySelectorAll('*')]) {
       for (const attribute of Array.from(node.attributes)) {
         if (/^on/i.test(attribute.name) || (/^(href|src|xlink:href)$/i.test(attribute.name) && /^\s*javascript:/i.test(attribute.value))) node.removeAttribute(attribute.name);

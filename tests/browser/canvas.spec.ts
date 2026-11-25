@@ -68,12 +68,12 @@ test('Enter splits at the caret, Backspace joins, and undo/redo restore native p
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
-for (const action of ['paste beside a numbered list', 'split a bullet item'] as const) test(`${action} avoids a numbering snapshot`, async ({ page }) => {
+for (const action of ['paste beside a numbered list', 'split a bullet item', 'split a numbered item'] as const) test(`${action} avoids a numbering snapshot`, async ({ page }) => {
   await open(page, 'List item.');
   await page.evaluate(action => window.editorTest.controllers[0].run(s => {
     const first = window.editorTest.anchor;
     s.insertParagraph(first, 'after', 'Plain paragraph.');
-    s.applyListFormat(first, action.startsWith('paste') ? 'decimal' : 'bullet');
+    s.applyListFormat(first, action === 'split a bullet item' ? 'bullet' : 'decimal');
   }), action);
   await expect(paragraphs(page)).toHaveCount(2);
   await expect(paragraphs(page).first().locator('[data-list-marker]').first()).toBeVisible();
@@ -209,11 +209,10 @@ for (const sample of [
     await settled(page);
   }
   await paragraphs(page).first().click();
-  // Native text offsets omit the tab's rendered padding. Approach these
-  // interior positions from the text's end rather than counting that padding.
-  await page.keyboard.press(sample.leadingTabs ? 'End' : 'Home');
-  const movements = sample.leadingTabs ? sample.text.length - sample.offset : sample.offset;
-  for (let i = 0; i < movements; i++) await page.keyboard.press(sample.leadingTabs ? 'ArrowLeft' : 'ArrowRight');
+  // Each tab is one native character, and one step of the caret.
+  const lead = '\t'.repeat(sample.leadingTabs ?? 0);
+  await page.keyboard.press('Home');
+  for (let i = 0; i < lead.length + sample.offset; i++) await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Control+b');
   const before = await page.evaluate(() => {
     const controller = window.editorTest.controllers[0], s = controller.getSnapshot().session!;
@@ -228,13 +227,14 @@ for (const sample of [
   });
   const typed = ' *B* ';
   await page.keyboard.type(typed);
-  await expect.poll(() => nativeText(page)).toEqual([sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset)]);
+  const edited = lead + sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset);
+  await expect.poll(() => nativeText(page)).toEqual([edited]);
   const after = await page.evaluate(() => window.editorTest.controllers[0].read(s => ({
     version: s.getVersion(), runs: s.getFormatting(window.editorTest.anchor)!.runs,
   })));
   expect(after.version).toBe(before.version + 1);
   expect(after.runs.filter(run => run.effective.bold).map(run => run.text).join('')).toBe(typed);
-  expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(sample.text);
+  expect(after.runs.filter(run => !run.effective.bold).map(run => run.text).join('')).toBe(lead + sample.text);
   if (sample.leadingTabs) {
     const markers = await page.evaluate(() => {
       const xml = new DOMParser().parseFromString(window.editorTest.controllers[0].read(s => s.raw.getXml(window.editorTest.anchor)), 'application/xml');
@@ -252,10 +252,10 @@ for (const sample of [
     ? { formatted: 1, transaction: 0, hash: 0 } : { formatted: 1, transaction: 1, hash: 1 });
   if (sample.markdown) expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.listHyperlinks()))).toMatchObject([{ target: 'https://example.com/' }]);
   await page.keyboard.press('Control+z');
-  await expect.poll(() => nativeText(page)).toEqual([sample.text]);
+  await expect.poll(() => nativeText(page)).toEqual([lead + sample.text]);
   expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(before.runs);
   await page.keyboard.press('Control+y');
-  await expect.poll(() => nativeText(page)).toEqual([sample.text.slice(0, sample.offset) + typed + sample.text.slice(sample.offset)]);
+  await expect.poll(() => nativeText(page)).toEqual([edited]);
   expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.getFormatting(window.editorTest.anchor)!.runs))).toEqual(after.runs);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
@@ -456,7 +456,7 @@ test('Word breaks, tabs, and nonbreaking hyphens stay intact while editing surro
     const tokens = ['br', 'tab', 'noBreakHyphen'].map(name => xml.getElementsByTagNameNS(w, name).length);
     controller.close(); return { text, tokens };
   });
-  expect(saved).toEqual({ text: 'FirstSecondNonbreaking last. Typed.', tokens: [1, 1, 1] });
+  expect(saved).toEqual({ text: 'First\nSecond\tNon\u2011breaking last. Typed.', tokens: [1, 1, 1] });
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });
 
@@ -472,6 +472,31 @@ test('Backspace rejoins a split word without adding a space', async ({ page }) =
   await page.keyboard.press('Control+z');
   await expect.poll(() => nativeText(page)).toEqual(['Alpha', 'beta']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('a tracked paragraph join is refused without recording part of it', async ({ page }) => {
+  await open(page, 'Alpha');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => {
+    s.insertParagraph(window.editorTest.anchor, 'after', 'beta');
+    s.setTrackedChanges(window.rdv.TrackedChangeMode.RenderInline);
+  }));
+  await expect(paragraphs(page)).toHaveCount(2);
+  await settled(page);
+  // Serialization picks the metadata namespace's prefix; it is not content.
+  const source = () => page.evaluate(() => window.editorTest.controllers[0].read(s => ({ version: s.getVersion(),
+    body: Object.keys(s.project().anchorIndex).filter(id => id.startsWith('p:')).map(id => s.raw.getXml(id).replace(/\bp\d+(?=:Unid|=)/g, 'pt')) })));
+  const before = await source();
+  await paragraphs(page).nth(1).click();
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Backspace');
+  await expect.poll(() => page.evaluate(() => window.editorTest.errors)).toEqual([expect.stringContaining('while changes are tracked')]);
+  expect(await source()).toEqual(before);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.listRevisions()))).toEqual([]);
+  await expect(paragraphs(page)).toHaveText(['Alpha', 'beta']);
+  // The paragraph is still editable, and typing is still tracked.
+  await page.keyboard.type('!');
+  await expect.poll(() => nativeText(page)).toEqual(['Alpha', '!beta']);
+  expect(await page.evaluate(() => window.editorTest.controllers[0].read(s => s.listRevisions().map(revision => revision.type)))).toEqual(['insert']);
 });
 
 test('select-all formats body paragraphs without changing their interleaved footnotes', async ({ page }) => {
@@ -679,5 +704,99 @@ test('an annotated paragraph stays editable and its label is not document text',
   await page.keyboard.press('End');
   await page.keyboard.type(' Still editable.');
   await expect.poll(() => nativeText(page)).toEqual(['Preferred rights are described here. Still editable.']);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+for (const atom of [
+  { name: 'tab', xml: '<w:tab/>', text: '\t', token: 'tab' },
+  { name: 'positional tab', xml: '<w:ptab w:relativeTo="margin" w:alignment="right" w:leader="none"/>', text: '\t', token: 'ptab' },
+  { name: 'line break', xml: '<w:br/>', text: '\n', token: 'br' },
+  { name: 'page break', xml: '<w:br w:type="page"/>', text: '\n', token: 'br:page' },
+  { name: 'column break', xml: '<w:br w:type="column"/>', text: '\n', token: 'br:column' },
+  { name: 'symbol', xml: '<w:sym w:font="Wingdings" w:char="F0FE"/>', text: '\uf0fe', token: 'sym' },
+  { name: 'nonbreaking hyphen', xml: '<w:noBreakHyphen/>', text: '\u2011', token: 'noBreakHyphen' },
+]) test(`a ${atom.name} is one caret step, deletes as one character, and undo restores its own XML`, async ({ page }) => {
+  await open(page, 'Source');
+  await page.evaluate(atom => window.editorTest.controllers[0].run(s => {
+    const id = window.editorTest.anchor;
+    s.insertParagraph(id, 'after', 'Following.');
+    return s.raw.replaceXml(id, s.raw.getXml(id).replace('Source', `AB</w:t>${atom.xml}<w:t>CD`));
+  }), atom);
+  await expect.poll(() => nativeText(page)).toEqual([`AB${atom.text}CD`, 'Following.']);
+  await expect(paragraphs(page).first()).toContainText('AB');
+  await settled(page);
+  const tokens = () => page.evaluate(() => Array.from(new DOMParser().parseFromString(window.editorTest.controllers[0].read(s => s.raw.getXml(window.editorTest.anchor)), 'application/xml').querySelectorAll('r > tab, r > ptab, r > br, r > sym, r > noBreakHyphen'),
+    node => [node.localName, node.getAttributeNS(node.namespaceURI, 'type')].filter(Boolean).join(':')));
+  expect(await tokens()).toEqual([atom.token]);
+  const caretAt = async (offset: number) => {
+    await paragraphs(page).first().click({ position: { x: 2, y: 4 } });
+    await page.keyboard.press('Home');
+    for (let i = 0; i < offset; i++) await page.keyboard.press('ArrowRight');
+  };
+  // Stepping across the atom reaches the text on its other side.
+  await caretAt(3);
+  await page.keyboard.type('x');
+  await expect.poll(() => nativeText(page)).toEqual([`AB${atom.text}xCD`, 'Following.']);
+  expect(await tokens()).toEqual([atom.token]);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => nativeText(page)).toEqual([`AB${atom.text}CD`, 'Following.']);
+  await settled(page);
+  for (const [key, offset] of [['Backspace', 3], ['Delete', 2]] as const) {
+    await caretAt(offset);
+    await page.keyboard.press(key);
+    await expect.poll(() => nativeText(page)).toEqual(['ABCD', 'Following.']);
+    expect(await tokens()).toEqual([]);
+    await page.keyboard.press('Control+z');
+    await expect.poll(() => nativeText(page)).toEqual([`AB${atom.text}CD`, 'Following.']);
+    expect(await tokens()).toEqual([atom.token]);
+    await settled(page);
+  }
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('deleting one of two adjacent breaks removes the one at the caret', async ({ page }) => {
+  await open(page, 'Source');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => {
+    const id = window.editorTest.anchor;
+    return s.raw.replaceXml(id, s.raw.getXml(id).replace('Source', 'AB</w:t><w:br w:type="page"/><w:br/><w:t>CD'));
+  }));
+  await expect.poll(() => nativeText(page)).toEqual(['AB\n\nCD']);
+  await expect(paragraphs(page).first()).toContainText('AB');
+  await settled(page);
+  const types = () => page.evaluate(() => Array.from(new DOMParser().parseFromString(window.editorTest.controllers[0].read(s => s.raw.getXml(window.editorTest.anchor)), 'application/xml').querySelectorAll('r > br'), node => node.getAttributeNS(node.namespaceURI, 'type')));
+  expect(await types()).toEqual(['page', null]);
+  await paragraphs(page).first().click({ position: { x: 2, y: 4 } });
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Delete');
+  await expect.poll(() => nativeText(page)).toEqual(['AB\nCD']);
+  expect(await types()).toEqual([null]);
+  expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
+});
+
+test('a footnote paragraph is edited without its number, which stays on the page', async ({ page }) => {
+  await open(page, 'Body text.');
+  await page.evaluate(() => window.editorTest.controllers[0].run(s => {
+    s.insertFootnote(window.editorTest.anchor, 4, 'First note.');
+    s.insertFootnote(window.editorTest.anchor, 9, 'Second note.');
+  }));
+  const note = paragraphs(page).filter({ hasText: 'Second note.' });
+  await expect(note).toHaveCount(1);
+  await settled(page);
+  await expect(note.locator('.footnote-number')).toHaveText('2');
+  await note.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Edited.');
+  const noteText = () => page.evaluate(() => window.editorTest.controllers[0].read(s => Object.entries(s.project().anchorIndex)
+    .filter(([id]) => /^p:fn:/.test(id)).map(([id]) => s.getFormatting(id)!.runs.map(run => run.text).join('').trim())));
+  await expect.poll(noteText).toEqual(['First note.', 'Second note. Edited.']);
+  await settled(page);
+  await expect(paragraphs(page).filter({ hasText: 'Second note. Edited.' }).locator('.footnote-number')).toHaveText('2');
+  // Splitting keeps the number with the note's first paragraph.
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('More.');
+  await expect.poll(noteText).toEqual(['First note.', 'Second note. Edited.', 'More.']);
+  await settled(page);
+  await expect(page.locator('#pagination-container .footnote-number')).toHaveText(['1', '2']);
   expect(await page.evaluate(() => window.editorTest.errors)).toEqual([]);
 });

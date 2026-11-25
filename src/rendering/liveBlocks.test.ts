@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { patchSourceBlocks } from './liveBlocks';
+import type { ConversionOptions } from 'docxodus/core';
+import type { DocxSessionController } from '../session';
+import { liveRenderOptions, patchSourceBlocks, replaceBlockPresentation } from './liveBlocks';
 
 describe('native block source reconciliation', () => {
   const paragraph = '<p data-anchor="a" data-source-anchor-id="p:body:a" data-keep-next="true" class="docx-p">old<a class="footnote-ref" id="fn-ref-52" data-footnote-id="52">51</a></p>';
@@ -46,5 +48,37 @@ describe('native block source reconciliation', () => {
     expect(p.style.fontSize).toBe('24pt');
     expect(p.style.lineHeight).toBe('115%');
     expect(p.dataset.keepNext).toBe('true');
+  });
+
+  it('keeps the document-wide number of a note its isolated render omits', () => {
+    const number = '<span class="footnote-number" data-note-run="true"><sup>7</sup></span>';
+    const source = `<p data-anchor="n" data-source-anchor-id="p:fn:n">${number}<span> old</span></p>`;
+    const result = patchSourceBlocks(source, { 'p:fn:n': '<p data-anchor="n"><span> new</span></p>' })!;
+    expect(result.blocks['p:fn:n']).toContain(`${number}<span> new</span>`);
+    const repeated = patchSourceBlocks(result.html, { 'p:fn:n': '<p data-anchor="n"><span> again</span></p>' })!;
+    expect(repeated.blocks['p:fn:n'].match(/footnote-number/g)).toHaveLength(1);
+  });
+
+  it('keeps a paragraph split by a page break on the complete conversion path', () => {
+    const source = `<div data-docx-break-paragraph="a">${paragraph}<div data-page-break="true"></div></div>`;
+    expect(patchSourceBlocks(source, { 'p:body:a': block })).toBeNull();
+  });
+
+  it('drops line metrics measured for the replaced runs', () => {
+    const target = document.createElement('p');
+    target.dataset.docxMixedLines = '468';
+    replaceBlockPresentation(target, document.createElement('p'));
+    expect(target.dataset.docxMixedLines).toBeUndefined();
+  });
+
+  it.each([
+    [{ showDeletedContent: false }], [{ renderMoveOperations: false }], [{ showFormattingChanges: false }],
+    [{ showInsertionsAndDeletions: false }], [{ revisionPresentation: 1 }],
+  ] as Partial<ConversionOptions>[][])('requires the full converter for revisions shown with %j', profile => {
+    const controller = (revisions: unknown[]) => ({ read: (select: (session: unknown) => unknown) => select({ listAnnotations: () => [], listRevisions: () => revisions }) }) as unknown as DocxSessionController;
+    const options: ConversionOptions = { stampAnchors: true, commentRenderMode: -1, renderTrackedChanges: true, ...profile };
+    expect(liveRenderOptions(options, controller([{}]))).toBeNull();
+    expect(liveRenderOptions(options, controller([]))).not.toBeNull();
+    expect(liveRenderOptions({ ...options, renderTrackedChanges: false }, controller([{}]))).not.toBeNull();
   });
 });

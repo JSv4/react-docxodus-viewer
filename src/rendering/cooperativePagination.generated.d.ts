@@ -6,3 +6,7 @@ export function createCooperativePagination(engine: PaginationEngine, checkpoint
   normalizePageMapFragmentIdentities(): Promise<void>;
   materializePageMap(version: number, fingerprint: string): Promise<PageMap>;
 };
+
+/** Native line-height preparation, for blocks re-rendered after pagination. */
+export function applyUnroundedNormalLineHeights(root: Element): number;
+export function prepareMixedLineHeights(root: HTMLElement, checkpoint?: () => void): number;

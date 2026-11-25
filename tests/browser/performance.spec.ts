@@ -104,7 +104,7 @@ test('NVCA performance: cold open, zoom, typing, native commit, and complete pag
   await settled(page);
   const phases: Phase[] = [await capture(page, 'open')];
   const pageCount = await page.evaluate(() => window.performanceTest.map!.pages.length);
-  expect(pageCount).toBe(65);
+  expect(pageCount).toBe(59);
   // Count-based guards are portable across machines. Timings are reported, not
   // asserted against arbitrary wall-clock budgets on shared CI runners.
   expect(phases[0].calls.parseHeaderFooterRegistry.count).toBe(1);

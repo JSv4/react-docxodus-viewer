@@ -82,3 +82,54 @@ test('live blocks retain pages for text/formatting, reflow wrapping from source,
   expect(await page.evaluate(() => window.liveTest.conversions)).toBeGreaterThanOrEqual(2);
   expect(await page.evaluate(() => window.liveTest.errors)).toEqual([]);
 });
+
+test('live blocks keep measured line heights on a zoomed page, and a draft line never overlaps', async ({ page }) => {
+  await page.goto('/api-test.html');
+  await page.waitForFunction(() => !!window.mountEditors);
+  await page.evaluate(async () => {
+    const controller = new window.rdv.DocxSessionController();
+    const s = await controller.open('blank', { emitMarkdownPatch: false }, '/wasm/');
+    const anchor = Object.keys(controller.getAnchorIndex())[0];
+    s.replaceText(anchor, 'Alpha beta gamma');
+    s.insertParagraph(anchor, 'after', 'Following paragraph.');
+    s.raw.replaceXml(anchor, s.raw.getXml(anchor).replace('<w:r ', '<w:pPr><w:spacing w:line="276" w:lineRule="auto"/></w:pPr><w:r '));
+    s.applyFormat(anchor, { start: 0, length: 5 }, { fontSizePts: 20, fontFamily: 'Times New Roman' });
+    window.liveTest = { controller, anchor, conversions: 0, errors: [] };
+    window.mountEditors([{ session: controller, wasmBasePath: '/wasm/', viewerProps: {
+      rendererFingerprint: 'live-line-test',
+      onConversionStart: () => window.liveTest.conversions++, onPageMap: map => { window.liveTest.map = map; },
+    }, onError: error => window.liveTest.errors.push(error.message) }]);
+  });
+  await settled(page);
+  const firstPage = page.locator('#pagination-container .page-box').first();
+  // Pagination measures unscaled; the displayed page is fitted to the window.
+  expect(Number(await firstPage.evaluate(element => getComputedStyle(element).zoom))).toBeGreaterThan(1.1);
+  const first = page.getByRole('textbox', { name: 'Document paragraph', exact: true }).first();
+  const metrics = first.locator('[data-docx-line-metric]');
+  await expect(metrics).toHaveCount(1);
+  const height = () => first.evaluate(element => element.getBoundingClientRect().height);
+  const line = await height();
+  await firstPage.evaluate(element => { (element as HTMLElement).dataset.liveRetained = 'true'; });
+  const version = await page.evaluate(() => window.liveTest.controller.getSnapshot().version);
+  await first.click(); await page.keyboard.press('End'); await page.keyboard.type(' typed');
+  await expect.poll(() => page.evaluate(() => window.liveTest.controller.getSnapshot().version)).toBe(version + 1);
+  await settled(page);
+  await expect(firstPage).toHaveAttribute('data-live-retained', 'true');
+  await expect(metrics).toHaveCount(1);
+  expect(await metrics.allTextContents()).toEqual(['']);
+  expect(Math.abs(await height() - line)).toBeLessThan(0.5);
+
+  // The new lines of an uncommitted draft have no line metrics yet.
+  await page.keyboard.insertText(' words that wrap'.repeat(20));
+  const draft = await height();
+  expect(draft).toBeGreaterThan(line * 2);
+  await expect.poll(() => page.evaluate(() => window.liveTest.controller.getSnapshot().version)).toBe(version + 2);
+  await settled(page);
+  expect(draft).toBeGreaterThan(await height() * 0.75);
+  expect(await page.evaluate(() => {
+    const { controller, anchor } = window.liveTest;
+    return controller.getFormatting(anchor)!.runs.map(run => run.text).join('');
+  })).toBe(`Alpha beta gamma typed${' words that wrap'.repeat(20)}`);
+  expect(await page.evaluate(() => window.liveTest.conversions)).toBe(1);
+  expect(await page.evaluate(() => window.liveTest.errors)).toEqual([]);
+});

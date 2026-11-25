@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://docxodus.dev/schemas/render/render-report/v2",
-  "title": "Docxodus render report v1",
+  "title": "Docxodus render report v2",
   "oneOf": [
     {
       "$ref": "#/$defs/complete"
@@ -83,6 +83,31 @@
           "required": [
             "derivedProfileSource"
           ]
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "options"
+        ],
+        "properties": {
+          "options": {
+            "required": [
+              "markupPresentation"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "properties": {
+              "reviewProfile": {
+                "const": "markup"
+              }
+            }
+          }
         }
       }
     }
@@ -625,6 +650,39 @@
           "reviewProfileAlreadyApplied": {
             "type": "boolean"
           },
+          "markupPresentation": {
+            "description": "Present only when the markup profile drew tracked changes in Word's All Markup style (issue #851); absent means Docxodus's own style.",
+            "const": "word"
+          },
+          "markupVisibility": {
+            "description": "Non-default display choices; omitted flags are visible. Text revisions hidden in markup display current text without changing the input package.",
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "formatting": {
+                "const": false
+              },
+              "insertionsAndDeletions": {
+                "const": false
+              },
+              "comments": {
+                "const": false
+              }
+            }
+          },
+          "commentColumnPlacement": {
+            "description": "Present only when the export printed Word's All Markup balloon layout (issue #1300): each page shrunk beside a markup area holding its comments and formatting changes; absent means comments in the page margin.",
+            "const": "balloons"
+          },
+          "balloonOverflow": {
+            "description": "Present only when the balloon layout printed every comment cut short to fit beside its page in full, on pages added after the last (Word's Print to PDF); absent means the rest of a cut comment is printed nowhere (Word's Save as PDF).",
+            "const": "appendix"
+          },
+          "markupMode": {
+            "description": "Present only when the balloon layout used Word's \"Show All Revisions Inline\" balloon setting (issue #1552): the balloons held comments only, so formatting changes kept their change bars without balloons; absent means Word's default, \"Show Only Comments and Formatting in Balloons\".",
+            "const": "inline"
+          },
           "commentProfile": {
             "enum": [
               "hidden",
@@ -694,6 +752,11 @@
                 "$ref": "#/$defs/limits"
               }
             }
+          },
+          "additionalCss": {
+            "description": "The nonempty stylesheet appended before layout; omitted for the default stylesheet.",
+            "type": "string",
+            "minLength": 1
           }
         }
       },
@@ -821,7 +884,9 @@
               "enum": [
                 "browser",
                 "configured",
-                "attested"
+                "attested",
+                "local",
+                "document"
               ]
             },
             "format": {
@@ -975,6 +1040,13 @@
         "items": {
           "$ref": "#/$defs/warning"
         }
+      },
+      "fontObservation": {
+        "$ref": "#/$defs/fontObservation"
+      },
+      "fontObservationDigest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
       }
     },
     "complete": {
@@ -998,10 +1070,10 @@
       ],
       "properties": {
         "schema": {
-          "const": "https://docxodus.dev/schemas/render/render-report/v1"
+          "$ref": "#/$defs/baseProperties/schema"
         },
         "schemaVersion": {
-          "const": 1
+          "$ref": "#/$defs/baseProperties/schemaVersion"
         },
         "source": {
           "$ref": "#/$defs/baseProperties/source"
@@ -1136,6 +1208,12 @@
         },
         "bindings": {
           "$ref": "#/$defs/bindings"
+        },
+        "fontObservation": {
+          "$ref": "#/$defs/baseProperties/fontObservation"
+        },
+        "fontObservationDigest": {
+          "$ref": "#/$defs/baseProperties/fontObservationDigest"
         }
       },
       "allOf": [
@@ -1222,8 +1300,37 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "required": [
+              "fontObservation"
+            ],
+            "properties": {
+              "fontObservation": {
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "const": "observed"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "fontObservationDigest"
+            ]
+          }
         }
-      ]
+      ],
+      "dependentRequired": {
+        "fontObservationDigest": [
+          "fontObservation"
+        ]
+      }
     },
     "failed": {
       "type": "object",
@@ -1244,10 +1351,10 @@
       ],
       "properties": {
         "schema": {
-          "const": "https://docxodus.dev/schemas/render/render-report/v1"
+          "$ref": "#/$defs/baseProperties/schema"
         },
         "schemaVersion": {
-          "const": 1
+          "$ref": "#/$defs/baseProperties/schemaVersion"
         },
         "source": {
           "$ref": "#/$defs/baseProperties/source"
@@ -1530,6 +1637,12 @@
               "maxContains": 1
             }
           ]
+        },
+        "fontObservation": {
+          "$ref": "#/$defs/baseProperties/fontObservation"
+        },
+        "fontObservationDigest": {
+          "$ref": "#/$defs/baseProperties/fontObservationDigest"
         }
       },
       "allOf": [
@@ -1568,6 +1681,169 @@
                   "properties": {
                     "status": {
                       "const": "failed"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "fontObservation"
+            ],
+            "properties": {
+              "fontObservation": {
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "const": "observed"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "fontObservationDigest"
+            ]
+          }
+        }
+      ],
+      "dependentRequired": {
+        "fontObservationDigest": [
+          "fontObservation"
+        ]
+      }
+    },
+    "fontObservation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "const": "unavailable"
+            },
+            "reason": {
+              "enum": [
+                "browser_api_unavailable",
+                "protocol_unavailable",
+                "diagnostic_limit",
+                "not_requested"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "method",
+            "media",
+            "fileIdentity",
+            "uses"
+          ],
+          "properties": {
+            "status": {
+              "const": "observed"
+            },
+            "method": {
+              "const": "chromium-cdp"
+            },
+            "media": {
+              "enum": [
+                "screen",
+                "print"
+              ]
+            },
+            "fileIdentity": {
+              "const": "unavailable"
+            },
+            "uses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "textDigest",
+                  "textCodePointCount",
+                  "faces"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "anchorId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "fragmentId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "pageNumber": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "textDigest": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "textCodePointCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "faces": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "family",
+                        "isCustomFont",
+                        "glyphCount"
+                      ],
+                      "properties": {
+                        "family": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                        },
+                        "postscriptName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                        },
+                        "isCustomFont": {
+                          "type": "boolean"
+                        },
+                        "glyphCount": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        }
+                      }
                     }
                   }
                 }
