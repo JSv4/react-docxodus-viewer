@@ -1,15 +1,16 @@
 import type { CharSpan, DocxSession, EditResult, FormatOp, FormattingInspection } from 'docxodus/core';
+import { isAtomCharacter, xmlVisibleText } from './textModel';
 
 /**
- * ExactVisibleText in Docxodus 12.6.2 is descendant w:t text plus native list
- * numbering for body paragraphs. Keep that contract without Markdown projection.
- * Requires a canonical anchor; unknown XML retains the native metadata fallback.
+ * Native visible text is a block's run text and atoms plus list numbering for
+ * body paragraphs. Keep that contract without Markdown projection. Requires a
+ * canonical anchor; unknown XML retains the native metadata fallback.
  */
 export function visibleBlockText(session: DocxSession, anchorId: string): string | null {
   const xml = session.raw.getXml(anchorId);
   const parsed = new DOMParser().parseFromString(xml, 'application/xml');
   if (parsed.querySelector('parsererror')) return session.getAnchorInfo(anchorId)?.visibleText ?? null;
-  const text = Array.from(parsed.documentElement.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't')).map(node => node.textContent ?? '').join('');
+  const text = xmlVisibleText(parsed.documentElement);
   const prefix = /^(p|h|li):body:/.test(anchorId) ? session.getListMembership(anchorId)?.generatedLabel : undefined;
   return prefix ? text ? `${prefix} ${text}` : prefix : text;
 }
@@ -28,15 +29,17 @@ export function editableText(formatting: FormattingInspection | null) {
 }
 
 type TextChange = { start: number; removed: string; inserted: string };
-/** Older native text matches needed a nonempty range; borrow one adjacent code point. */
-function borrowInsertion(before: string, change: TextChange): TextChange {
+/**
+ * Some inline structures need a nonempty range; borrow one adjacent code point.
+ * Never borrow a tab, break, hyphen or symbol: writing its character back as
+ * text would drop the atom's own XML (a page break would become a line break).
+ */
+function borrowInsertion(before: string, change: TextChange): TextChange | null {
   if (change.removed.length || !before.length) return change;
-  if (change.start) {
-    const neighbour = Array.from(before.slice(0, change.start)).at(-1)!;
-    return { start: change.start - neighbour.length, removed: neighbour, inserted: neighbour + change.inserted };
-  }
-  const neighbour = String.fromCodePoint(before.codePointAt(0)!);
-  return { start: 0, removed: neighbour, inserted: change.inserted + neighbour };
+  const previous = Array.from(before.slice(0, change.start)).at(-1);
+  if (previous && !isAtomCharacter(previous)) return { start: change.start - previous.length, removed: previous, inserted: previous + change.inserted };
+  const next = change.start < before.length ? String.fromCodePoint(before.codePointAt(change.start)!) : undefined;
+  return next && !isAtomCharacter(next) ? { start: change.start, removed: next, inserted: change.inserted + next } : null;
 }
 
 /** Keep the original selection when identical spaces/letters make a diff ambiguous. */
@@ -50,6 +53,17 @@ export function textChangeAtSelection(before: string, after: string, span: CharS
   return !span.length && !inserted.length ? null : { start: span.start, removed: before.slice(span.start, end), inserted };
 }
 
+/**
+ * The selection's own change, where a text diff could misplace it. Inserting or
+ * deleting one of several equal characters has many diffs, and equal characters
+ * need not be equal content: "\n\n" may be a page break beside a line break.
+ * A mixed replacement still diffs, keeping its unchanged words intact.
+ */
+export function selectedChange(before: string, after: string, span: CharSpan, formatted: boolean): TextChange | null {
+  const change = textChangeAtSelection(before, after, span);
+  return change && (formatted || !change.removed.length || !change.inserted.length) ? change : null;
+}
+
 /** One changed span, expanded to a neighbouring character for pure insertions. */
 export function textChange(before: string, after: string, expandInsertion = true) {
   let start = 0;
@@ -61,7 +75,7 @@ export function textChange(before: string, after: string, expandInsertion = true
   while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
   if (oldEnd < before.length && /[\uDC00-\uDFFF]/.test(before[oldEnd])) { oldEnd++; newEnd++; }
   const change = { start, removed: before.slice(start, oldEnd), inserted: after.slice(start, newEnd) };
-  return expandInsertion ? borrowInsertion(before, change) : change;
+  return expandInsertion ? borrowInsertion(before, change) ?? change : change;
 }
 
 /**
@@ -74,7 +88,8 @@ export function textChanges(before: string, after: string) {
   if (!changed) return [];
   // A single insertion/deletion is already the smallest native edit.
   if (!changed.removed.length || !changed.inserted.length) return [changed];
-  const tokenize = (value: string) => value.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
+  // Each tab or break is its own token: merging one with adjacent spaces would rewrite it.
+  const tokenize = (value: string) => value.match(/[\t\n]|[^\S\t\n]+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) ?? [];
   const old = tokenize(changed.removed), next = tokenize(changed.inserted);
   // Bound work for unusually large pasted paragraphs.
   if (old.length * next.length > 1_000_000) return [changed];
@@ -105,11 +120,11 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   if (!formatting || editableText(formatting) !== before) throw new Error('This paragraph changed. Reload its text before applying your draft.');
   const canonical = formatting.anchorId;
   const [kind, scope] = canonical.split(':');
-  const selected = typingFormat && selection ? textChangeAtSelection(before, after, selection) : null;
+  const selected = selection ? selectedChange(before, after, selection, !!typingFormat) : null;
   const changes = selected ? [selected] : textChanges(before, after);
   if (!changes.length) return [];
   const exact = selected ?? textChange(before, after, false)!;
-  // 12.6.2 inserts inside text runs, including runs with leading tabs, and formats
+  // The engine inserts inside text runs, including runs with tabs, and formats
   // exactly the replacement in one undo/version unit. Let native code decide
   // whether a particular run's field/container structure allows this operation.
   const atomicFormat = atomicTyping && typingFormat && exact.inserted.length && changes.length === 1
@@ -125,7 +140,7 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
   const steps: Array<Parameters<DocxSession['executeBatch']>[0][number]> = changes.reverse().map(change => ({ tool: 'ParagraphEditor', action: 'replace text', mutation: () => {
     const current = editableText(session.getFormatting(anchorId));
     if (current.slice(change.start, change.start + change.removed.length) !== change.removed) throw new Error('This text changed before the edit could be applied.');
-    // 12.6.2 replaceMatch addresses only enclosingAnchor.id + span (its
+    // replaceMatch addresses only enclosingAnchor.id + span (its
     // ReplaceTextAtSpan bridge). We already have those verified native offsets.
     // Searching the entire package for a borrowed space or period produces
     // thousands of irrelevant matches and stalls large-document typing.
@@ -138,11 +153,12 @@ export function paragraphTextSteps(session: DocxSession, anchorId: string, befor
     // A zero-width span inserts into the neighbouring run and records one clean w:ins.
     // Keep the borrowed-neighbour write for inline structures that refuse a point insert.
     const version = session.getVersion();
+    const borrowed = borrowInsertion(current, change);
     try {
       const result = replace(change);
-      if (result.success || session.getVersion() !== version) return result;
-    } catch (cause) { if (session.getVersion() !== version) throw cause; }
-    return replace(borrowInsertion(current, change));
+      if (result.success || !borrowed || session.getVersion() !== version) return result;
+    } catch (cause) { if (!borrowed || session.getVersion() !== version) throw cause; }
+    return replace(borrowed);
   } }));
   // Unsupported inline structures and disjoint drafts retain the atomic batch.
   // Format only the actual new span, excluding any borrowed boundary character.
@@ -161,7 +177,7 @@ export function replaceParagraphText(session: DocxSession, anchorId: string, bef
   // these cases; never retry a changed version or an unrelated format failure.
   if (typingFormat && 'success' in result && !result.success &&
     result.error?.code === 'offset_out_of_range' && session.getVersion() === version) {
-    const exact = (selection && textChangeAtSelection(before, after, selection)) || textChange(before, after, false);
+    const exact = (selection && selectedChange(before, after, selection, true)) || textChange(before, after, false);
     if (exact && !exact.removed.length && exact.inserted.length) {
       return session.executeBatch(paragraphTextSteps(session, anchorId, before, after, typingFormat, selection, false));
     }

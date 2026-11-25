@@ -1,9 +1,11 @@
 import type { CharSpan, DocxSession, EditResult, FormatOp } from 'docxodus/core';
 import type { DocxSessionController } from '../session';
-import { editableText, paragraphTextSteps, replaceParagraphText, textChange, textChangeAtSelection } from './text';
+import { editableText, paragraphTextSteps, replaceParagraphText, selectedChange, textChange } from './text';
 import { shadowSelection } from './selection';
-import { canvasParagraphs, canvasText, caretAtPoint, domPoint, generatedContent, normalizedText, prepareCanvasBreaks, prepareCanvasHyphens, readCanvasDeletion, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
+import { canvasParagraphs, caretAtPoint, domPoint, normalizedText, prepareCanvasBreaks, readCanvasDeletion, readCanvasRange, restoreCanvasRange, samePoint } from './canvasDom';
+import { canvasText, generatedContent, inlineAtoms, isAtomCharacter, noteNumber } from './textModel';
 import type { CanvasPoint, CanvasRange } from './canvasDom';
+import { keepNoteNumber, prepareLineHeights } from '../rendering/liveBlocks';
 
 export interface CanvasEditorSnapshot { suspended: boolean; pending: boolean; composing: boolean; conflict: boolean; format: FormatOp | null }
 interface CanvasCallbacks {
@@ -151,15 +153,14 @@ export class CanvasEditor {
         for (const block of fragments) {
           block.dataset.sourceAnchorId = canonical;
           prepareCanvasBreaks(block);
-          block.querySelectorAll(`${generatedContent}, [data-docx-tab], del, img`).forEach(node => node.setAttribute('contenteditable', 'false'));
-          if (!text && !canvasText(block).trim() && !block.querySelector('img, br:not([data-rdv-empty]), [data-docx-tab]')) {
-            const markers = block.querySelectorAll('[data-list-marker="true"], a.footnote-ref, a.endnote-ref');
+          block.querySelectorAll(`${generatedContent}, ${inlineAtoms}, [data-docx-line-metric], del, img`).forEach(node => node.setAttribute('contenteditable', 'false'));
+          if (!text && !canvasText(block).trim() && !block.querySelector(`img, br:not([data-rdv-empty]), ${inlineAtoms}`)) {
+            const generated = `[data-list-marker="true"], a.footnote-ref, a.endnote-ref, ${noteNumber}`;
+            // Markers nest (label and suffix tab); keep each outermost one whole.
+            const markers = Array.from(block.querySelectorAll(generated)).filter(node => !node.parentElement!.closest(generated));
             block.replaceChildren(...markers, Object.assign(document.createElement('br'), { ariaHidden: 'true' }));
             block.lastElementChild?.setAttribute('data-rdv-empty', 'true');
           }
-        }
-        if (normalizedText(fragments.map(canvasText).join('')) !== normalizedText(text)) {
-          prepareCanvasHyphens(fragments, this.controller.read(session => session.raw.getXml(canonical)), text);
         }
         const supported = normalizedText(fragments.map(canvasText).join('')) === normalizedText(text);
         if (supported) baselines.set(canonical, text);
@@ -196,9 +197,16 @@ export class CanvasEditor {
     if (existing) return existing;
     const style = document.createElement('style');
     style.dataset.rdvCanvasStyle = 'true';
-    style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }';
+    style.textContent = '[data-rdv-editable="true"] { cursor: text; caret-color: #3c5636; outline: none; min-height: 1em; } [data-rdv-editable="true"]:focus { outline: none; } [data-list-marker="true"] { user-select: none; }' +
+      // Measured struts own the lines of these paragraphs. A line that only exists in
+      // the draft has no strut yet, and would otherwise overlap the one above it.
+      '[data-rdv-draft="true"][data-docx-mixed-lines] span:not([data-docx-line-metric], [data-list-marker], [data-list-marker] *) { line-height: normal !important; }';
     root.append(style);
     return style;
+  }
+  private markDraft(anchorId: string, active: boolean) {
+    if (!this.root) return;
+    for (const block of canvasParagraphs(this.root, anchorId)) if (active) block.dataset.rdvDraft = 'true'; else delete block.dataset.rdvDraft;
   }
   private scheduleCommit() {
     this.clearTimer();
@@ -216,6 +224,7 @@ export class CanvasEditor {
     const selection = !afterInput && this.range?.start.anchorId === anchorId && this.range.end.anchorId === anchorId
       ? { start: this.range.start.offset, length: this.range.end.offset - this.range.start.offset } : undefined;
     this.draft = { owner, anchorId, before, format: this.state.format, selection };
+    this.markDraft(anchorId, true);
     this.publish({ pending: true, suspended: true });
     return true;
   }
@@ -232,7 +241,7 @@ export class CanvasEditor {
       const shown = canvasParagraphs(this.root, draft.anchorId).map(canvasText).join('');
       // The converter uses NBSP to preserve spaces between runs; retain native text
       // outside the actual typed span so those presentation spaces never leak into DOCX.
-      const selected = draft.format && draft.selection ? textChangeAtSelection(normalizedText(draft.before), normalizedText(shown), draft.selection) : null;
+      const selected = draft.selection ? selectedChange(normalizedText(draft.before), normalizedText(shown), draft.selection, !!draft.format) : null;
       const delta = selected ?? textChange(normalizedText(draft.before), normalizedText(shown), false);
       if (delta) {
         const after = draft.before.slice(0, delta.start) + delta.inserted + draft.before.slice(delta.start + delta.removed.length);
@@ -240,6 +249,8 @@ export class CanvasEditor {
         check(this.controller.run(session => replaceParagraphText(session, draft.anchorId, draft.before, after, draft.format ?? undefined, draft.selection)));
       }
       this.draft = null;
+      // A changed paragraph keeps its draft lines until its committed ones replace them.
+      if (!delta) this.markDraft(draft.anchorId, false);
       this.baselines.set(draft.anchorId, this.text(draft.anchorId));
       this.publish({ pending: false, suspended: false, conflict: false });
       this.notifySelection();
@@ -267,7 +278,7 @@ export class CanvasEditor {
     this.applying = true;
     try {
       update();
-      for (const anchor of anchors) this.prepareParagraphs(anchor);
+      for (const anchor of anchors) { this.prepareParagraphs(anchor); if (this.draft?.anchorId !== anchor) this.markDraft(anchor, false); }
       this.renderedVersion = this.controller.getSnapshot().version;
       this.restore();
     } finally { this.applying = false; }
@@ -345,6 +356,8 @@ export class CanvasEditor {
       const block = parsed.body.firstElementChild as HTMLElement | null;
       if (!block) throw new Error('The edited paragraph could not be rendered.');
       block.dataset.sourceAnchorId = canonical;
+      keepNoteNumber(old[0], block);
+      prepareLineHeights(block, old[0] ?? (after ? canvasParagraphs(this.root, after).at(-1) : undefined));
       if (old[0]) { old[0].replaceWith(block); old.slice(1).forEach(fragment => fragment.remove()); }
       else if (after) canvasParagraphs(this.root, after).at(-1)?.after(block);
       this.prepareParagraphs(canonical);
@@ -356,10 +369,10 @@ export class CanvasEditor {
     if (!this.root) return;
     const grouped = new Map<string, Element[]>();
     for (const block of canvasParagraphs(this.root)) {
-      const markers = Array.from(block.querySelectorAll('[data-list-marker]')).filter(marker => !marker.querySelector('[data-list-marker]'));
+      // A marker nests its label and its suffix tab; only the label holds text.
+      const markers = Array.from(block.querySelectorAll('[data-list-marker]')).filter(marker => !marker.querySelector('[data-list-marker], [data-docx-tab]'));
       if (!markers.length) continue;
       const id = block.dataset.sourceAnchorId!;
-      if (!grouped.has(id) && this.controller.read(session => session.getListMembership(id)?.format) === 'bullet') continue;
       grouped.set(id, [...grouped.get(id) ?? [], ...markers]);
     }
     const labels = this.controller.getListLabels([...grouped.keys()]);
@@ -394,14 +407,18 @@ export class CanvasEditor {
   }
   private replace(session: DocxSession, anchor: string, start: number, end: number, value: string) {
     const before = editableText(session.getFormatting(anchor));
-    const steps = paragraphTextSteps(session, anchor, before, before.slice(0, start) + value + before.slice(end));
+    const steps = paragraphTextSteps(session, anchor, before, before.slice(0, start) + value + before.slice(end), undefined, { start, length: end - start });
     const results = steps.flatMap(step => { const result = check(step.mutation()); return Array.isArray(result) ? result : [result]; });
     if (this.state.format && value.length) results.push(check(session.applyFormat(anchor, { start, length: value.length }, this.state.format)));
     return results;
   }
   private join(session: DocxSession, first: string, second: string) {
     const left = editableText(session.getFormatting(first)), right = editableText(session.getFormatting(second));
-    const results = [check(session.mergeParagraphs(first, second))];
+    const merge = check(session.mergeParagraphs(first, second));
+    // A tracked join keeps both paragraphs until review. With revisions hidden they
+    // render as one block that belongs to neither, so the canvas cannot edit it.
+    if (!merge.removed.length) throw new Error('Paragraphs cannot be joined on the page while changes are tracked.');
+    const results = [merge];
     const joined = editableText(session.getFormatting(first));
     // Native merge separates non-whitespace endings with a space. Keyboard
     // deletion removes only the paragraph boundary, including inside a word.
@@ -494,7 +511,27 @@ export class CanvasEditor {
     this.capture(); this.scheduleCommit();
   }
 
+  /** Text of a paragraph as shown, including an uncommitted draft. */
+  private shownText(anchorId: string) { return this.root ? canvasParagraphs(this.root, anchorId).map(canvasText).join('') : ''; }
+  /** A tab, break or symbol is one character with several browser caret stops. Cross it in one step. */
+  private stepAtom(event: KeyboardEvent) {
+    if (!this.root || !this.range || !/^Arrow(Left|Right)$/.test(event.key) || event.ctrlKey || event.metaKey || event.altKey) return false;
+    const { start, end, backward } = this.range;
+    const focus = backward ? start : end, anchor = backward ? end : start;
+    if (start.anchorId !== end.anchorId || (!event.shiftKey && !samePoint(start, end))) return false;
+    const block = canvasParagraphs(this.root, focus.anchorId)[0];
+    if (!block || getComputedStyle(block).direction !== 'ltr') return false;
+    const step = event.key === 'ArrowRight' ? 1 : -1;
+    if (!/^[\t\n\ue000-\uf8ff]$/.test(this.shownText(focus.anchorId)[step > 0 ? focus.offset : focus.offset - 1] ?? '')) return false;
+    event.preventDefault();
+    const next = { ...focus, offset: focus.offset + step };
+    this.range = !event.shiftKey ? collapsed(next) : next.offset < anchor.offset
+      ? { start: next, end: anchor, backward: true } : { start: anchor, end: next, backward: false };
+    this.restoreFocus = true; this.restore(); this.notifySelection();
+    return true;
+  }
   private navigate(event: KeyboardEvent) {
+    if (this.stepAtom(event)) return;
     if (!this.root || !this.range || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || !samePoint(this.range.start, this.range.end)) return;
     const blocks = this.storyBlocks(this.range.start.anchorId).filter(block => block.dataset.rdvEditable === 'true');
     const active = (this.root.getRootNode() as ShadowRoot).activeElement as HTMLElement;
@@ -570,7 +607,16 @@ export class CanvasEditor {
       }
       if (range.start.anchorId !== range.end.anchorId || range.notes?.length) { event.preventDefault(); this.insertText(event.data ?? ''); return; }
       if (event.inputType.startsWith('delete') && samePoint(range.start, range.end)) {
-        const text = this.draft ? canvasParagraphs(root, range.start.anchorId).map(canvasText).join('') : this.text(range.start.anchorId);
+        const text = this.draft ? this.shownText(range.start.anchorId) : this.text(range.start.anchorId);
+        const target = /^deleteContent(Backward|Forward)$/.exec(event.inputType);
+        const at = range.start.offset - (target?.[1] === 'Backward' ? 1 : 0);
+        // The browser may stop inside an atom's layout wrapper; remove the native character itself.
+        if (target && isAtomCharacter(text[at] ?? '')) {
+          event.preventDefault();
+          const point = { anchorId: range.start.anchorId, offset: at };
+          this.insertText('', false, { start: point, end: { ...point, offset: at + 1 }, backward: false });
+          return;
+        }
         if (!range.start.offset && /Backward$/.test(event.inputType)) { event.preventDefault(); this.merge(-1); return; }
         if (range.start.offset === text.length && /Forward$/.test(event.inputType)) { event.preventDefault(); this.merge(1); return; }
       }

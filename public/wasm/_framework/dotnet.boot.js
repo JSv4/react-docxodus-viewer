@@ -1,7 +1,7 @@
 export const config = /*json-start*/{
   "mainAssemblyName": "DocxodusWasm.dll",
   "resources": {
-    "hash": "sha256-Bqbp3Qq9G+yuz4UCPcqrP41ae2uxbsyRfyAQN8Kn2xk=",
+    "hash": "sha256-LpvbPcMrYrlPI8CSU5LbsWYRkxrxD3GzmVXnBmaAgEs=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.js"
@@ -15,190 +15,193 @@ export const config = /*json-start*/{
     "wasmNative": [
       {
         "name": "dotnet.native.wasm",
-        "hash": "sha256-bCwcOaLyU6ejs4qogfqS8/TebbnIrzrjEku835S7oqY="
+        "hash": "sha256-bCAK3ZrpG8rozA9yrktkWqA4jXQYjytOUnIdGuRyfsg="
       }
     ],
     "coreAssembly": [
       {
         "virtualPath": "DocumentFormat.OpenXml.wasm",
         "name": "DocumentFormat.OpenXml.wasm",
-        "hash": "sha256-5tALPnGjTQx46qlMbp0yH5HxEDKRqUv4gBadOjkJwK8="
+        "hash": "sha256-7Wrv2XtXwzQ1/0RR6Dlv4msefJal+4SJhNe9UDp1IPk="
       },
       {
         "virtualPath": "DocumentFormat.OpenXml.Framework.wasm",
         "name": "DocumentFormat.OpenXml.Framework.wasm",
-        "hash": "sha256-3MzgFBhSSGxu56EFNfbA+SdsGEWIzDBtVKATkMl+iFE="
+        "hash": "sha256-uuTwhhYd7Q/UWTgmv4t7+wDeX0IGEuodX7P7MQrWx1Q="
       },
       {
         "virtualPath": "Docxodus.wasm",
         "name": "Docxodus.wasm",
-        "hash": "sha256-rKFUIbqbGl0PiohwLTzEStUTdPK4+MbT1got3uaPoYU="
+        "hash": "sha256-P/E2JKozltwtZm2wFj9Cir41Lx/2qVu6dobsxc1aRfI="
       },
       {
         "virtualPath": "DocxodusWasm.wasm",
         "name": "DocxodusWasm.wasm",
-        "hash": "sha256-eH1BiFyIZtbyaOLFOKI2lmg2LunaP1axdpVfvvcFInQ="
+        "hash": "sha256-+0Oe3hqkXGDVR7qOZkUSz9ngPbMxqD38ttcW3F3cm1w="
       },
       {
         "virtualPath": "System.Collections.Concurrent.wasm",
         "name": "System.Collections.Concurrent.wasm",
-        "hash": "sha256-CPSvyHynj9YDge0wu+rslRoLkx8jHkJDMwdkX7gWB4Y="
+        "hash": "sha256-/lKv/mk6BKu5QyvSheiZm7rM4/MKx6vBe/LWkaBoP2k="
       },
       {
         "virtualPath": "System.Collections.wasm",
         "name": "System.Collections.wasm",
-        "hash": "sha256-ZORoVo/JVQDmG5afuariJY9EJOGMMlvpHbSOi3oSmxQ="
+        "hash": "sha256-OjZ2rql1Bn1xH9RhwhjM7p1VIPyEjw+NPkr/fZXuiDQ="
       },
       {
         "virtualPath": "System.Collections.Immutable.wasm",
         "name": "System.Collections.Immutable.wasm",
-        "hash": "sha256-MR9tPJou8ZnSoAxCBgB1idlMahopCwPRDND+b7mue1A="
+        "hash": "sha256-sKfZ0g36a9UOcK9J+f//3rdqSpdUHw3F3nMvZlBY+7U="
       },
       {
         "virtualPath": "System.Collections.NonGeneric.wasm",
         "name": "System.Collections.NonGeneric.wasm",
-        "hash": "sha256-XsDKU36qCOu7THqI7O3tycrxDTiHW3XKz+GcOI/MQak="
+        "hash": "sha256-bHSlxn0oUVySk+oxivbe4s1VtbNe7LU7aCS/4rlTkVw="
       },
       {
         "virtualPath": "System.Collections.Specialized.wasm",
         "name": "System.Collections.Specialized.wasm",
-        "hash": "sha256-l5QlFk5xy6UKgUF1DKfNieZztX5lo5r1Nhat9VVjWX8="
+        "hash": "sha256-vyhcf5XDMsoEoXSlX3Sllv3iDCb+sU3bm7u4e7NIuXc="
       },
       {
         "virtualPath": "System.ComponentModel.wasm",
         "name": "System.ComponentModel.wasm",
-        "hash": "sha256-rmHX/vP8IHgIBRQl6c1mYGutMGDOL9irayG03Yuadg8="
+        "hash": "sha256-7OA+WnxIg5TssRh+xjETpuPUwNjf1b2sxNwMEornP6I="
       },
       {
         "virtualPath": "System.ComponentModel.Primitives.wasm",
         "name": "System.ComponentModel.Primitives.wasm",
-        "hash": "sha256-tj+lSNMd/pgkR/YCL7IaLCDY92Uh1Qxni4gcVkpTxDE="
+        "hash": "sha256-z9y5yzUQR8b6lxYQurUjVJNy84XU3h2MkgYFgAdYtK0="
       },
       {
         "virtualPath": "System.ComponentModel.TypeConverter.wasm",
         "name": "System.ComponentModel.TypeConverter.wasm",
-        "hash": "sha256-5CkF/MawwZUL75Gykk4kdx7O4zuUYKnZ78uqkt4Eap4="
+        "hash": "sha256-bpwuKLtSHPXI7ACpeLrwOVxqW9cbrVDNaSQ9JAIN0f0="
       },
       {
         "virtualPath": "System.Console.wasm",
         "name": "System.Console.wasm",
-        "hash": "sha256-2LGuKmxON14Z6ZgH6/p1Eve6PfPcOQBLpMjm+ZIvthU="
+        "hash": "sha256-ovQD1EW4f8BidPg9FvkKBF8q9sgP8h+bQBGOY/ZVQRU="
       },
       {
         "virtualPath": "System.wasm",
         "name": "System.wasm",
-        "hash": "sha256-vPEm2KqgXqruGwnz718iSgmDoB8Img7iH3FzO57b0Rg="
+        "hash": "sha256-mZ7y24m4d4nPhekDCaX/s4ndZUg4tuEzoGPjRPw1Xsw="
       },
       {
         "virtualPath": "System.IO.Compression.wasm",
         "name": "System.IO.Compression.wasm",
-        "hash": "sha256-jw8Z+iutj7gahsdiFOjkTuOpkvs3H+BSPucfWb7tGtk="
+        "hash": "sha256-4I+cNrKsWcJt3wsitcRdoVL3hegxxXOebJyQdcWoXT0="
       },
       {
         "virtualPath": "System.IO.Packaging.wasm",
         "name": "System.IO.Packaging.wasm",
-        "hash": "sha256-5GL0tEiyGGtrSATD2og+eQUc4W/q3rInG15QKvII6J4="
+        "hash": "sha256-Q0PYGso5fZQhvtFmf9GqORvcn4GBQYW76PetzTMEmYs="
       },
       {
         "virtualPath": "System.IO.Pipelines.wasm",
         "name": "System.IO.Pipelines.wasm",
-        "hash": "sha256-vK2kv8cqnoCnwc2F2NrgFXNS76+a0CZFX+ep3IIL7tY="
+        "hash": "sha256-Citwr9e3XjApHNP36wvYRyZCLSddsxeKUaIL2GeCTN0="
       },
       {
         "virtualPath": "System.Linq.wasm",
         "name": "System.Linq.wasm",
-        "hash": "sha256-q2CxdwWaSGSeBniUQ3RJfjY4ltXtAjPtPTyKM1sCU0Q="
+        "hash": "sha256-bdqa9qjMCOSjv9Ilo7t/aIGGwKHTQvNacNrgUeuQF6w="
       },
       {
         "virtualPath": "System.Linq.Expressions.wasm",
         "name": "System.Linq.Expressions.wasm",
-        "hash": "sha256-5plN5CtELB52mAVX/JTIriGFEg3NK7tPfU5PAXTGcTk="
+        "hash": "sha256-XBBrlSVVhUMthST+IlXcgev92ZT6D/rGXRFcpKiPvn8="
       },
       {
         "virtualPath": "System.Memory.wasm",
         "name": "System.Memory.wasm",
-        "hash": "sha256-npJL8ijZQyIJqwMLmSzD/GoNhcTaosZeK9uqkuY8jFs="
+        "hash": "sha256-fO6vlKMa8a0pSSFRu42PRjmVFeHpjY2F6skWxTnu1B0="
       },
       {
         "virtualPath": "System.Net.Http.wasm",
         "name": "System.Net.Http.wasm",
-        "hash": "sha256-zputV36NBukyksOChOW29McX6wiGWX7Ti1OHmZda4FI="
+        "hash": "sha256-MWRSd+CnbwXBc1uycPxmt/Isw1L9rwZxkaOFedhaAqM="
       },
       {
         "virtualPath": "System.Net.Primitives.wasm",
         "name": "System.Net.Primitives.wasm",
-        "hash": "sha256-eSkmLWnZ3RkSwQTH7dunFXMwU+BM4C35r9dvdzASvUk="
+        "hash": "sha256-naQGUHMR3exFVw/SHwPtOAD9q6Ei01lRotpocmxYixc="
       },
       {
         "virtualPath": "System.ObjectModel.wasm",
         "name": "System.ObjectModel.wasm",
-        "hash": "sha256-TRyYsXIbJAt/veMIZxlU/7cqt+iSswir5sN7GpuLqrM="
+        "hash": "sha256-8oLXV9V8hChkEleIJ8jEbgaQ49cArisIhAFlRj3orBE="
       },
       {
         "virtualPath": "System.Private.CoreLib.wasm",
         "name": "System.Private.CoreLib.wasm",
-        "hash": "sha256-BfQ5+r7hNXPpSdvH+v6+rUq5dmtp3TV4woGUSeWvEvs="
+        "hash": "sha256-lZzQ3mBGPSGIA/Cq/OtadmnwCrLvppmPxjCGgn6WxRk="
       },
       {
         "virtualPath": "System.Private.Uri.wasm",
         "name": "System.Private.Uri.wasm",
-        "hash": "sha256-jDrvRT6zW5eihcojN+sLLgqcxaXjbbTpNgUeaHUSlsY="
+        "hash": "sha256-tFFkix2Ik/S7KvZCHjwMSXG9SmpveCxnipPhtfsahMg="
       },
       {
         "virtualPath": "System.Private.Xml.wasm",
         "name": "System.Private.Xml.wasm",
-        "hash": "sha256-vlqsZqu/UnVIX3A5OeVNGTb0J9FCNO/CVWfMc/Y75hk="
+        "hash": "sha256-Hb3HdFsRWWc2B3hy1478TGFQA+zSyE6IUV5DISM6PF0="
       },
       {
         "virtualPath": "System.Private.Xml.Linq.wasm",
         "name": "System.Private.Xml.Linq.wasm",
-        "hash": "sha256-E/X5Skmf1xwBYn8GbGn1BpIhF8vEKcpAoHFKkknf2p4="
+        "hash": "sha256-cwdP4fa6qNIlOSTYKxmvAgEQNJnB5z03gPE8gZEZD7k="
       },
       {
         "virtualPath": "System.Runtime.wasm",
         "name": "System.Runtime.wasm",
-        "hash": "sha256-hhLgLYUJfzg5IxsHk9yMeSLn0fteYHDVMHJ9TgaincU="
+        "hash": "sha256-vYnnzqoIhP/Qz9ihUM/Q4oWxKHom9VfkUtR4rBBJkq4="
       },
       {
         "virtualPath": "System.Runtime.InteropServices.JavaScript.wasm",
         "name": "System.Runtime.InteropServices.JavaScript.wasm",
-        "hash": "sha256-/nzBcxeJ6Pk8vMMm352YHawTjPPdEY4QmCnhkUQcXng="
+        "hash": "sha256-L7F9JSEjudbPAvVjH0qIzdKGbD/6iMBkezTXYsJEcAE="
       },
       {
         "virtualPath": "System.Security.Cryptography.wasm",
         "name": "System.Security.Cryptography.wasm",
-        "hash": "sha256-wGmJJtBt9++wvboG4UibI/Bh6oEPjppmbv0Nj5sAihg="
+        "hash": "sha256-zokORC8fm9+NbGfM21kmAghCyXRUvbhV5ryKVMbDHuo="
       },
       {
         "virtualPath": "System.Text.Encodings.Web.wasm",
         "name": "System.Text.Encodings.Web.wasm",
-        "hash": "sha256-e7BLpV1GGtOfs6DSmgKGqYhxGzi/5pcG4Nroy+NrMjo="
+        "hash": "sha256-2Vu3SpdQgznRda5xz2hBE1VPjL2/qy7jqYJ/9X7aAbw="
       },
       {
         "virtualPath": "System.Text.Json.wasm",
         "name": "System.Text.Json.wasm",
-        "hash": "sha256-Q13w2nlUE/04bh2vI1R0qKieN4IQJlDgvfINUS9wUmM="
+        "hash": "sha256-JfAC/QiBAJYPoU9qL8aLegm+qm/yvm8bb54n4S7TnCc="
       },
       {
         "virtualPath": "System.Text.RegularExpressions.wasm",
         "name": "System.Text.RegularExpressions.wasm",
-        "hash": "sha256-yA9LSVZbMtUKFexT4J/7z9s1RyvAFh7KKTc3ow12sVA="
+        "hash": "sha256-RuPN0Zb4xKF2dj3PUg8WfX6LATpUDdrGhklyshBAUvA="
       },
       {
         "virtualPath": "System.Xml.Linq.wasm",
         "name": "System.Xml.Linq.wasm",
-        "hash": "sha256-e5txtle0V/jlZ+5laxHe+k2o2xewHh66AVpDrj8yXlc="
+        "hash": "sha256-mhrhqbcdU5bX1y5th/2l7O/RTTxzxI2wcDTxJp2SrvY="
       },
       {
         "virtualPath": "System.Xml.XDocument.wasm",
         "name": "System.Xml.XDocument.wasm",
-        "hash": "sha256-E6cRzM/uq6OK2g1kF1xJ0vVyBWrgtVJhY0e8tk1oFJo="
+        "hash": "sha256-eqXx9xsUFaffY+i1amXeDpG2rnAGioB6M2u8D9EhyCA="
       }
     ],
     "assembly": []
   },
   "debugLevel": 0,
   "globalizationMode": "invariant",
+  "environmentVariables": {
+    "MONO_INTERPRETER_OPTIONS": "-precise"
+  },
   "runtimeConfig": {
     "runtimeOptions": {
       "configProperties": {
@@ -234,5 +237,8 @@ export const config = /*json-start*/{
         "System.Threading.Thread.EnableAutoreleasePool": false
       }
     }
-  }
+  },
+  "runtimeOptions": [
+    "--no-jiterpreter-interp-entry-enabled"
+  ]
 }/*json-end*/;

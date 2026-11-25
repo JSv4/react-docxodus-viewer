@@ -106,3 +106,39 @@ test('host-rendered HTML can register its explicit layout token with a session',
   })).toBe('available');
   expect(await page.evaluate(() => window.layoutTest.errors)).toEqual([]);
 });
+
+test('read-only selections report native spans across tabs, breaks, notes and page breaks', async ({ page }) => {
+  await page.goto('/api-test.html');
+  await page.waitForFunction(() => !!window.rdv && !!window.mountViewers);
+  await page.evaluate(async () => {
+    const controller = new window.rdv.DocxSessionController();
+    const s = await controller.open('blank', {}, '/wasm/');
+    const anchor = Object.keys(s.project().anchorIndex)[0];
+    s.replaceText(anchor, 'Source');
+    s.raw.replaceXml(anchor, s.raw.getXml(anchor).replace('Source', '1.1</w:t><w:tab/><w:t>Alpha</w:t><w:br/><w:t>Beta</w:t><w:br w:type="page"/><w:t>Gamma</w:t><w:sym w:font="Wingdings" w:char="F0FE"/><w:t>Delta'));
+    s.insertFootnote(anchor, 4, 'A note.');
+    Reflect.set(window, 'selectionTest', { controller, anchor, selections: [] });
+    window.mountViewers([{ session: controller, wasmBasePath: '/wasm/', onTextSelectionChange: selection => Reflect.get(window, 'selectionTest').selections.push(selection) }]);
+  });
+  await expect(page.locator('#pagination-container .page-box')).toHaveCount(2);
+  for (const word of ['Alpha', 'Beta', 'Gamma', 'Delta']) {
+    await page.locator('#pagination-container').evaluate((container, word) => {
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text, start = node.data.indexOf(word);
+        if (start < 0) continue;
+        const selection = getSelection()!;
+        selection.setBaseAndExtent(node, start, node, start + word.length);
+        node.parentElement!.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, composed: true }));
+        return;
+      }
+      throw new Error(`Missing ${word}`);
+    }, word);
+    const result = await page.evaluate(() => {
+      const { controller, anchor, selections } = Reflect.get(window, 'selectionTest');
+      return { selection: selections.at(-1), native: controller.getFormatting(anchor).runs.map((run: { text: string }) => run.text).join('') };
+    });
+    expect(result.native).toBe('1.1\tAlpha\nBeta\nGamma\uf0feDelta');
+    expect(result.selection).toMatchObject({ text: word, blockText: result.native, span: { start: result.native.indexOf(word), length: word.length } });
+  }
+});

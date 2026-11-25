@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapePattern, textChange, textChangeAtSelection, textChanges } from './text';
+import { escapePattern, selectedChange, textChange, textChangeAtSelection, textChanges } from './text';
 
 describe('paragraph text changes', () => {
   it.each([
@@ -63,6 +63,28 @@ describe('paragraph text changes', () => {
     let result = before;
     for (const part of parts.reverse()) result = result.slice(0, part.start) + part.inserted + result.slice(part.start + part.removed.length);
     expect(result).toBe(after);
+  });
+  it('uses the selection to tell equal characters with different content apart', () => {
+    // "\n\n" may be a page break beside a line break; only the selection says which one goes.
+    expect(textChange('A\n\nB', 'A\nB', false)!.start).toBe(2);
+    expect(selectedChange('A\n\nB', 'A\nB', { start: 1, length: 1 }, false)).toEqual({ start: 1, removed: '\n', inserted: '' });
+    expect(selectedChange('A\t\tB', 'A\t\t\tB', { start: 1, length: 0 }, false)).toEqual({ start: 1, removed: '', inserted: '\t' });
+    // An unformatted mixed replacement still diffs, so unchanged words stay intact.
+    expect(selectedChange('old words', 'new words', { start: 0, length: 9 }, false)).toBeNull();
+    expect(selectedChange('old words', 'new words', { start: 0, length: 9 }, true)).toEqual({ start: 0, removed: 'old words', inserted: 'new words' });
+  });
+  it('never borrows a tab, break, hyphen or symbol to insert beside it', () => {
+    expect(textChange('A\nB', 'A\nxB')).toEqual({ start: 2, removed: 'B', inserted: 'xB' });
+    expect(textChange('\nB', 'x\nB')).toEqual({ start: 0, removed: '', inserted: 'x' });
+    expect(textChange('A\uf0fe', 'A\uf0fex')).toEqual({ start: 2, removed: '', inserted: 'x' });
+    expect(textChange('A\u2011', 'A\u2011x')).toEqual({ start: 2, removed: '', inserted: 'x' });
+  });
+  it('keeps an unchanged tab out of a neighbouring whitespace edit', () => {
+    const parts = textChanges('one \t two three', 'ONE\ttwo THREE');
+    expect(parts.every(part => !part.removed.includes('\t') && !part.inserted.includes('\t'))).toBe(true);
+    let result = 'one \t two three';
+    for (const part of parts.reverse()) result = result.slice(0, part.start) + part.inserted + result.slice(part.start + part.removed.length);
+    expect(result).toBe('ONE\ttwo THREE');
   });
   it('targets a later repeated word and escapes literal regular expression characters', () => {
     expect(textChange('alpha alpha', 'alpha bravo')!.start).toBe(6);

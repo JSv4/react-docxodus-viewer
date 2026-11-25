@@ -87,7 +87,7 @@ test('NVCA charter: all body/footnote paragraphs, editing under load, and OOXML 
   const targets = [...new Set([
     bodyIds[0], // title with two Word line breaks
     bodyIds.find(id => before[id].startsWith('AMENDED AND RESTATED') && id !== bodyIds[0])!,
-    bodyIds.find(id => before[id].startsWith('2.1Preferential'))!, // tab after a field result
+    bodyIds.find(id => before[id].startsWith('2.1\tPreferential'))!, // tab after a field result
     bodyIds.find(id => before[id].startsWith('Reservation of Shares.'))!, // w:noBreakHyphen
     ...[0.2, 0.4, 0.6, 0.8, 0.95].map(fraction => bodyIds[Math.floor(bodyIds.length * fraction)]),
     noteIds[0], noteIds[Math.floor(noteIds.length / 2)], noteIds.at(-1)!,

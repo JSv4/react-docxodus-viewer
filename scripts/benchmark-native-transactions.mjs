@@ -125,15 +125,18 @@ try {
           return JSON.stringify(nodeValue(new DOMParser().parseFromString(value, 'application/xml').documentElement));
         };
         const beforeXmlTree = normalizedXml(beforeXml);
+        // Native offsets count each run atom as one character; a tab stop definition is not one.
+        const width = node => node.localName === 't' ? node.textContent.length
+          : node.parentElement?.localName === 'r' && ['tab', 'ptab', 'br', 'cr', 'noBreakHyphen', 'softHyphen', 'sym'].includes(node.localName) ? 1 : 0;
         const markers = value => {
           const nodes = new DOMParser().parseFromString(value, 'application/xml').getElementsByTagNameNS(word, '*');
           let position = 0;
           const result = [];
           for (const node of nodes) {
-            if (node.localName === 't') position += node.textContent.length;
-            else if (['tab', 'br', 'cr', 'footnoteRef', 'endnoteRef'].includes(node.localName)) {
+            if (['tab', 'br', 'cr', 'footnoteRef', 'endnoteRef'].includes(node.localName)) {
               result.push({name:node.localName, offset:position, attributes:[...node.attributes].filter(attr => attr.namespaceURI === word).map(attr => [attr.localName,attr.value]).sort()});
             }
+            position += width(node);
           }
           return result;
         };
@@ -141,10 +144,11 @@ try {
         let position = 0, sourceRun;
         for (const run of xml.getElementsByTagNameNS(word, 'r')) {
           const text = [...run.getElementsByTagNameNS(word, 't')].map(t => t.textContent).join('');
-          if (position < offset && position + text.length > offset) {
+          const length = [...run.children].reduce((total, child) => total + width(child), 0);
+          if (position < offset && position + length > offset) {
             sourceRun = {text, start:position, children:[...run.children].map(child => child.localName)}; break;
           }
-          position += text.length;
+          position += length;
         }
         if (!sourceRun || (mixed && !sourceRun.children.includes('tab'))) throw new Error('Insertion fixture structure did not match');
         const match = {text:'', enclosingAnchor:{id:anchorId,kind:anchorId.split(':')[0],scope:anchorId.split(':')[1],unid:anchorId.split(':').at(-1)},span:{start:offset,length:0},fragments:[],contextBefore:'',contextAfter:'',groups:[]};
@@ -194,9 +198,10 @@ try {
         interiorInsertion = probeInsertion(anchor, at + 4);
         // Resolve the paragraph, rather than its containing footnote anchor,
         // from the current projection after the preceding history checks.
-        const note = Object.entries(s.project().anchorIndex).find(([id,item]) => /^(p|h|li):fn:/.test(id) && item.textPreview.startsWith('Consider adding other exceptions'))?.[0];
+        const note = Object.entries(s.project().anchorIndex).find(([id,item]) => /^(p|h|li):fn:/.test(id) && item.textPreview.startsWith('\tConsider adding other exceptions'))?.[0];
         if (!note) throw new Error('Missing NVCA footnote fixture');
-        mixedRunInsertion = probeInsertion(note, 24, true);
+        // The same point as before 15.0.0, now counting the leading tab.
+        mixedRunInsertion = probeInsertion(note, 25, true);
         if (!mixedRunInsertion.supported) throw new Error('The pinned engine must support interior insertion after leading tabs');
       }
       s.close();

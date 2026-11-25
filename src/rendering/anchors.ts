@@ -1,6 +1,7 @@
 /** Align converter paragraph kinds with the exact native snapshot being rendered. */
 export function reconcileSourceAnchors(html: string, anchors: readonly string[]) {
-  // Docxodus 12.6.2 can stamp a numbered paragraph as p while its session uses li.
+  // The converter has stamped a numbered paragraph as p while its session uses li
+  // (12.6.2; not reproduced on 17.0.0). Realigning is a no-op when they agree.
   // Scope + Unid is stable across paragraph/heading/list kind changes.
   const canonical = new Map(anchors.filter(id => /^(p|h|li):/.test(id)).map(id => [id.slice(id.indexOf(':')), id]));
   const parsed = new DOMParser().parseFromString(html, 'text/html');

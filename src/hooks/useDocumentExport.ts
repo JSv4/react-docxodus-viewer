@@ -23,7 +23,7 @@ export function downloadDocument(data: Uint8Array | string, filename: string, mi
 export interface UseDocumentExportOptions {
   wasmBasePath?: string;
   pdfExporter?: PdfExporter;
-  /** Static, unmodified dist/export-browser.bundle.js from Docxodus 12.6.2. */
+  /** Static, unmodified dist/export-browser.bundle.js from Docxodus 17.0.0. */
   browserModuleUrl?: string;
 }
 

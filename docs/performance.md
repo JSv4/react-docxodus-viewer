@@ -5,7 +5,53 @@ scripts below write to ignored `test-results/` paths by default; local archives
 use the ignored `benchmark-results/` directory. This document retains the
 measurement summaries, including failed runs, and reproduction commands.
 
-## Current 12.6.2 results
+## Current 17.0.0 results
+
+All nine interaction phases pass the **150 ms input-response gate** in six serial
+production runs on 17.0.0. The largest response is **144 ms**, for Enter in the profiled
+late-body run; the largest in the four runs compared below is **120 ms**. The preceding
+revision (`3c99c41`, 12.6.2) was measured the same way on the same machine for those
+four runs and failed on Enter.
+
+| Maximum observed input response | Module, 12.6.2 | Module, 17.0.0 | Studio, 12.6.2 | Studio, 17.0.0 |
+| --- | ---: | ---: | ---: | ---: |
+| Continuous typing and caret movement | 24 ms | 24 ms | 24 ms | 24 ms |
+| Pause/resume, Bold and reflow | 40 ms | 32 ms | 48 ms | 72 ms |
+| Collapsed Enter | 288 ms | 120 ms | 320 ms | 112 ms |
+| Styled typing phases | 24 ms | 40 ms | 24 ms | 80 ms |
+| Full 150 ms gate (two runs each) | Fail | Pass | Fail | Pass |
+
+Enter in a document with numbered lists previously saved and reopened the package to
+recompute labels, a cost added by the list-numbering fix after the 12.6.2 measurements
+below. Live labels are now correct, so that snapshot is gone: reading 171 NVCA labels
+takes 61–73 ms against 168–204 ms, a large part of the improvement.
+
+The comparison uses the default target region. One profiled studio run each covers the
+other regions on 17.0.0: the footnote reaches 120 ms and the late body 144 ms, both on
+Enter, with every other phase at 72 ms or less. Samples are quantized Chrome Event Timing
+from Chromium 143.0.7499.4 on Linux x64 at 1480×1050 without CPU throttling.
+
+The native benchmark passes every text, formatting, marker and undo check. Formatted
+insertion inside the footnote run with a leading tab takes **8.6 ms** (29.5–32.7 ms on
+12.6.2), and ordinary body insertion 46.5–47.0 ms. Its fixture lookup and offsets now
+count that tab.
+
+The NVCA performance guards pass: unchanged paragraphs are not reformatted, an
+insertion is one native write and one block render without a conversion or save, and
+unchanged geometry keeps its pages. Single runs of both versions:
+
+| NVCA phase | 12.6.2 | 17.0.0 |
+| --- | ---: | ---: |
+| Open to first complete layout | 3.6 s | 4.7 s |
+| Full conversion within open | 1.1 s | 1.6 s |
+| Zoom change | 134–184 ms | 135–176 ms |
+| Body edit, typing start to settled layout | 777–826 ms | 784–825 ms |
+| Footnote edit, typing start to settled layout | 1.1 s | 1.5 s |
+
+Opening and footnote reflow are slower: 17.0.0 measures line heights before flow and
+its layout does more work. Edits that keep their geometry are unaffected.
+
+## Historical 12.6.2 results
 
 All five final production NVCA runs at application revision `af634f9` pass the
 strict **150 ms input-response gate across all nine phases**. The largest
@@ -53,7 +99,7 @@ layout events, and trace digests.
 The two original 184 ms events below were not captured again, and their exact
 causes remain unproven. These later findings do not retroactively attribute them.
 
-### Current validation and limits
+### Validation and limits
 
 Lint, types, library/demo builds, the complete API identity audit, and generated
 pagination checks pass. All **82 unit tests and 55 browser contracts** pass,
@@ -500,7 +546,7 @@ published 12.6.0 release. [#799](https://github.com/JSv4/Docxodus/issues/799)
 extends that operation to ordinary interior insertions in 12.6.1, and
 [#802](https://github.com/JSv4/Docxodus/issues/802) adds leading-tab runs in 12.6.2.
 Other excluded structures and disjoint drafts retain the public atomic batch to
-preserve neighboring formatting and one-step undo. See the [upgrade notes](12.6.2-upgrade.md). No native runtime
+preserve neighboring formatting and one-step undo. See the [12.6.2 notes](12.6.2-upgrade.md). No native runtime
 patch or private editing primitive is integrated here.
 
 ## Cooperative layout and reproducible interaction measurements
@@ -512,11 +558,13 @@ updates run ahead of background layout tasks; owner/version checks discard
 superseded layouts before handoff. Zoom changes during preparation trigger fresh
 measurements at the final scale.
 
-The adapter is generated from the pinned 12.6.2 pagination implementation by
+The adapter is generated from the pinned 17.0.0 pagination implementation by
 `node scripts/generate-cooperative-pagination.mjs`. It uses the same engine
-instance and native helpers, with asynchronous traversal calls and checkpoints.
-The generator verifies the upstream file's SHA-256; `npm run check:api` also
-verifies the generated output. A dependency upgrade requires reviewing this
+instance and native methods, with asynchronous traversal calls and checkpoints.
+Module-private helpers that the adapted methods call are copied with their complete
+dependency closure. The generator verifies the SHA-256 of each of the five upstream
+files and fails on any unresolved name; `npm run check:api` also verifies the
+generated output. A dependency upgrade requires reviewing this
 adapter and rerunning native page/fragment equivalence tests. There is no runtime
 code generation. Attribution is in [third-party-notices.md](third-party-notices.md).
 

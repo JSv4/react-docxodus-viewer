@@ -8,6 +8,7 @@ import { cacheSessionPageMaps } from './rendering/sessionPageMap';
 interface RenderChange { from: number; to: number; anchors: string[] | null; preservesDefinitions?: boolean }
 // During atomic callbacks getVersion() still reports the base version. Only
 // explicitly read-only calls may pass through without invalidating local edits.
+const REVIEW_SETTINGS = new Set<string>(['setTrackedChanges', 'setRevisionAuthor', 'setRevisionIdentities'] satisfies (keyof DocxSession)[]);
 const READ_ONLY = new Set<string>([
   'project', 'projectAnchor', 'getVersion', 'getPackageManifest', 'getPageMapStatus', 'getPageCitation', 'checkPreconditions',
   'renderBlock', 'previewBatch', 'getTableMetadata', 'resolveTableCellAnchor', 'resolveTableCellCoordinate',
@@ -16,6 +17,7 @@ const READ_ONLY = new Set<string>([
   'findByAnnotation', 'findByLabel', 'findByBookmark', 'exists', 'findByText', 'findAllByText', 'findByRegex', 'findByKind',
   'getAnchorInfo', 'getAnchorInfos', 'getBlockMetadata', 'getBlockMetadatas', 'getListMembership', 'getSectionInfo',
   'listStyles', 'getFormatting', 'listInlineSpans', 'listAnnotations', 'save',
+  'listNotes', 'getAnchorLocations', 'getListLevels', 'getTableProperties', 'getRevisionAuthorNameStatus',
 ] satisfies (keyof DocxSession)[]);
 function covered(changes: RenderChange[], from: number, to: number): string[] | null {
   const anchors = new Set<string>();
@@ -295,8 +297,8 @@ export class DocxSessionController {
       } else if (local || (!READ_ONLY.has(name) && !['run', 'executeBatch', 'runWithPreconditions'].includes(name))) {
         this.pendingChanges.splice(start, this.pendingChanges.length - start, { from, to, anchors: local ? edit!.modified.map(ref => ref.id) : null, preservesDefinitions: !!(local || split) });
       }
-      if (name === 'setTrackedChanges' || name === 'setRevisionAuthor' || name === 'registerPageMap') this.configurationChanged = true;
-      if (name === 'setTrackedChanges' || name === 'setRevisionAuthor') { this.metadataChanged = true; this.clearReadCache(); }
+      if (REVIEW_SETTINGS.has(name) || name === 'registerPageMap') this.configurationChanged = true;
+      if (REVIEW_SETTINGS.has(name)) { this.metadataChanged = true; this.clearReadCache(); }
       if (result && typeof result === 'object' && 'then' in result) {
         throw new Error('Session callbacks must be synchronous. Await external work before calling run().');
       }
@@ -378,10 +380,14 @@ export class DocxSessionController {
     return this.bridge.renderBlocks(ids, options);
   }
 
-  /** Recompute generated list labels after structural edits without stale native counters. */
-  getListLabels(ids: readonly string[]) {
-    if (!this.bridge) throw new Error('Open a document session first.');
-    return ids.length ? this.bridge.listLabels(ids) : {};
+  /** Current generated list labels. Bullets have no counter and are left out. */
+  getListLabels(ids: readonly string[]): Record<string, string | undefined> {
+    if (!this.native) throw new Error('Open a document session first.');
+    const native = this.native;
+    return Object.fromEntries(ids.map(id => {
+      const list = native.getListMembership(id);
+      return [id, list?.format === 'bullet' ? undefined : list?.generatedLabel];
+    }));
   }
 
   /** Read-only selectors run without emitting mutation notifications. */

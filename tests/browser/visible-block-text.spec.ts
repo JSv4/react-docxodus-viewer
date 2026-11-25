@@ -18,7 +18,22 @@ test('lightweight visible text matches native enriched metadata including number
       const xml = new DOMParser().parseFromString(s.raw.getXml(first), 'application/xml');
       const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
       const text = xml.getElementsByTagNameNS(w, 't')[0];
-      for (const name of ['br', 'tab', 'noBreakHyphen']) text.after(xml.createElementNS(w, `w:${name}`));
+      for (const name of ['br', 'tab', 'noBreakHyphen', 'softHyphen', 'cr', 'ptab']) text.after(xml.createElementNS(w, `w:${name}`));
+      const pageBreak = xml.createElementNS(w, 'w:br'); pageBreak.setAttributeNS(w, 'w:type', 'page');
+      const symbols = ['F0FE', '00A9', 'D800', 'nope'].map(char => {
+        const symbol = xml.createElementNS(w, 'w:sym');
+        symbol.setAttributeNS(w, 'w:font', 'Wingdings'); symbol.setAttributeNS(w, 'w:char', char);
+        return symbol;
+      });
+      text.after(pageBreak, ...symbols);
+      // Removed text is outside every native coordinate, including a move source's ordinary w:t.
+      const run = text.parentElement!;
+      for (const name of ['del', 'moveFrom']) {
+        const removal = xml.createElementNS(w, `w:${name}`);
+        for (const [attribute, value] of [['id', name === 'del' ? '901' : '902'], ['author', 'Reviewer'], ['date', '2026-01-01T00:00:00Z']]) removal.setAttributeNS(w, `w:${attribute}`, value);
+        const removed = xml.createElementNS(w, 'w:r'), content = xml.createElementNS(w, name === 'del' ? 'w:delText' : 'w:t');
+        content.textContent = 'removed'; removed.append(content, xml.createElementNS(w, 'w:tab')); removal.append(removed); run.after(removal);
+      }
       s.raw.replaceXml(first, new XMLSerializer().serializeToString(xml));
       const inserted = s.insertParagraph(first, 'after', 'An empty list item.');
       const second = inserted.created.find(ref => /^(p|h|li)$/.test(ref.kind))!.id;

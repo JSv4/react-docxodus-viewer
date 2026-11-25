@@ -1,7 +1,9 @@
 # Docxodus
 
 The portable page-map checks and generated cooperative pagination adapter are
-derived from Docxodus 12.6.2, under the following license.
+derived from Docxodus 17.0.0, under the following license. The adapter includes
+code from `pagination.js`, `line-metrics.js`, `word-text.js`, `markup-balloons.js`
+and `exact-row-text.js`.
 
 The MIT License (MIT)
 

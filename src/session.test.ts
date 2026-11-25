@@ -34,13 +34,14 @@ class NativeSession {
     finally { this.#batchVersion = null; }
   }
   setRevisionAuthor() {}
+  setRevisionIdentities() {}
   setTrackedChanges() {}
   registerPageMap() { return { success: true }; }
   save() { return new Uint8Array([this.#version]); }
 }
 
 function nativeBridge(session: NativeSession): bridge.NativeSession {
-  return { session: session as unknown as DocxSession, anchorIndex: () => ({}), renderBlocks: () => null, listLabels: () => ({}) };
+  return { session: session as unknown as DocxSession, anchorIndex: () => ({}), renderBlocks: () => null };
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -129,6 +130,25 @@ describe('DocxSessionController', () => {
     controller.run(s => s.setRevisionAuthor('Editor'));
     expect(controller.getQuerySnapshot()).toBe(controller.getSnapshot());
     expect(controller.getQuerySnapshot()).not.toBe(documentSnapshot);
+    const named = controller.getQuerySnapshot();
+    // Identities change which revisions are the reviewer's own without changing the version.
+    controller.run(s => s.setRevisionIdentities([{ providerId: 'AD', userId: 'S::reviewer::1' }]));
+    expect(controller.getQuerySnapshot()).toBe(controller.getSnapshot());
+    expect(controller.getQuerySnapshot()).not.toBe(named);
+  });
+
+  it.each(['listNotes', 'getAnchorLocations', 'getListLevels', 'getTableProperties', 'getRevisionAuthorNameStatus'])('keeps local edits proven across the read-only %s query', async name => {
+    const native = new NativeSession(true);
+    Object.assign(native, { [name]: vi.fn(() => null) });
+    vi.spyOn(bridge, 'openNativeSession').mockReturnValue(nativeBridge(native));
+    const controller = new DocxSessionController();
+    const owner = await controller.open(new Uint8Array([1]));
+    const match = { enclosingAnchor: { id: 'p:body:a' } } as Parameters<DocxSession['replaceMatch']>[0];
+    controller.run(s => s.executeBatch([{ tool: 'test', action: 'edit', mutation: () => {
+      (s as unknown as Record<string, () => unknown>)[name]();
+      return s.replaceMatch(match, 'change');
+    } }]));
+    expect(controller.getRenderChanges(owner, 0)).toEqual(['p:body:a']);
   });
 
   it('reads atomic shadow changes without reusing cached base-version formatting', async () => {

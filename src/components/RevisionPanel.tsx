@@ -74,8 +74,9 @@ function isValidPropertyValue(value: string | undefined): value is string {
 
 // Make property names more readable
 function formatPropertyName(name: string): string {
-  // Convert camelCase to Title Case with spaces
+  // Convert camelCase to Title Case with spaces. "mark" names a paragraph mark's own formatting.
   return name
+    .replace(/^mark(?=[A-Z])/, 'paragraphMark')
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (str) => str.toUpperCase())
     .trim();
