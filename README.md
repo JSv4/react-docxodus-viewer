@@ -11,7 +11,12 @@ browser editor or ribbon.
 
 ## Install
 
-Requires React 18+ and an ESM-capable application bundler.
+Requires React 18+ and an ES-module app build that resolves npm package imports,
+such as Vite, webpack, Rollup or esbuild. The package ships ES modules only and
+imports `react` and `docxodus` by package name, which browsers can't resolve on
+their own, and React itself is published as CommonJS. CommonJS hosts can load it
+with `await import()`. The WebAssembly runtime is not bundled: it is copied into
+your public folder and loaded at runtime from `wasmBasePath`.
 
 ```sh
 npm install react-docxodus-viewer docxodus@17.0.0
@@ -30,6 +35,10 @@ export default function App() {
   return <DocumentViewer wasmBasePath="/docxodus/wasm/" fitMode="page-width" />;
 }
 ```
+
+If your build doesn't import CSS from JavaScript, link
+`node_modules/react-docxodus-viewer/dist/react-docxodus-viewer.css` in your page
+instead.
 
 ## Embeddable editor
 
